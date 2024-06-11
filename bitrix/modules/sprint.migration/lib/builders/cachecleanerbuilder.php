@@ -6,10 +6,8 @@ use Sprint\Migration\AbstractBuilder;
 use Sprint\Migration\Locale;
 use function BXClearCache;
 
-
 class CacheCleanerBuilder extends AbstractBuilder
 {
-
     protected function isBuilderEnabled()
     {
         return true;
@@ -19,7 +17,7 @@ class CacheCleanerBuilder extends AbstractBuilder
     {
         $this->setTitle(Locale::getMessage('BUILDER_CacheCleaner1'));
         $this->setDescription(Locale::getMessage('BUILDER_CacheCleaner2'));
-        $this->setGroup('configurator');
+        $this->setGroup('Tools');
     }
 
     protected function execute()

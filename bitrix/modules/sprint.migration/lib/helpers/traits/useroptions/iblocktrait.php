@@ -4,7 +4,6 @@ namespace Sprint\Migration\Helpers\Traits\UserOptions;
 
 use CIBlock;
 use Sprint\Migration\Exceptions\HelperException;
-use Sprint\Migration\HelperManager;
 use Sprint\Migration\Locale;
 use Sprint\Migration\Traits\HelperManagerTrait;
 
@@ -12,13 +11,14 @@ trait IblockTrait
 {
     use HelperManagerTrait;
 
-    private $titles = [];
-    private $props = [];
-    private $iblock = [];
+    private $titles       = [];
+    private $props        = [];
+    private $iblock       = [];
     private $lastIblockId = 0;
 
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -29,7 +29,7 @@ trait IblockTrait
          * @deprecated
          */
         if (func_num_args() > 1) {
-            $this->throwException(__METHOD__, '$params is no longer supported, see examples');
+            throw new HelperException('$params is no longer supported, see examples');
         }
 
         $this->initializeIblockVars($iblockId);
@@ -40,8 +40,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $formData
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -52,7 +53,7 @@ trait IblockTrait
          * @deprecated
          */
         if (func_num_args() > 2) {
-            $this->throwException(__METHOD__, '$params is no longer supported, see examples');
+            throw new HelperException('$params is no longer supported, see examples');
         }
 
         $this->initializeIblockVars($iblockId);
@@ -63,8 +64,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $formData
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -75,7 +77,7 @@ trait IblockTrait
          * @deprecated
          */
         if (func_num_args() > 2) {
-            $this->throwException(__METHOD__, '$params is no longer supported, see examples');
+            throw new HelperException('$params is no longer supported, see examples');
         }
 
         $this->initializeIblockVars($iblockId);
@@ -86,8 +88,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $params
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -97,8 +100,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $params
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -109,6 +113,7 @@ trait IblockTrait
 
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return string
      */
@@ -122,22 +127,27 @@ trait IblockTrait
             $prefix = defined('CATALOG_PRODUCT') ? 'tbl_product_list_' : 'tbl_iblock_list_';
         }
 
+        //md5 тут выбран сознательно, так сохраняется настройка в битриксе
         return $prefix . md5($this->iblock['IBLOCK_TYPE_ID'] . '.' . $iblockId);
     }
 
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return string
      */
     public function getSectionGridId($iblockId)
     {
         $this->initializeIblockVars($iblockId);
-        return 'tbl_iblock_section_' . md5($this->iblock['IBLOCK_TYPE_ID'] . "." . $iblockId);
+
+        //md5 тут выбран сознательно, так сохраняется настройка в битриксе
+        return 'tbl_iblock_section_' . md5($this->iblock['IBLOCK_TYPE_ID'] . '.' . $iblockId);
     }
 
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -150,6 +160,7 @@ trait IblockTrait
 
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -159,8 +170,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $listData
+     *
      * @throws HelperException
      */
     public function buildElementList($iblockId, $listData = [])
@@ -171,8 +183,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $listData
+     *
      * @throws HelperException
      */
     public function saveElementList($iblockId, $listData = [])
@@ -184,6 +197,7 @@ trait IblockTrait
 
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -197,8 +211,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $formData
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -212,8 +227,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $formData
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -228,6 +244,7 @@ trait IblockTrait
 
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -241,8 +258,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $listData
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -256,8 +274,9 @@ trait IblockTrait
     }
 
     /**
-     * @param $iblockId
+     * @param       $iblockId
      * @param array $listData
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -270,9 +289,9 @@ trait IblockTrait
         ]);
     }
 
-
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return array|void
      * @deprecated
@@ -285,17 +304,16 @@ trait IblockTrait
             return $result;
         }
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_IB_FORM_OPTIONS_NOT_FOUND'
             )
         );
     }
 
-
     /**
      * @param $iblockId
+     *
      * @throws HelperException
      * @return bool
      */
@@ -305,7 +323,7 @@ trait IblockTrait
 
         /** @compability */
         if (empty($iblockId)) {
-            $this->throwException(__METHOD__, 'empty param $iblockId is no longer supported, see examples');
+            throw new HelperException('empty param $iblockId is no longer supported, see examples');
         }
 
         if ($this->lastIblockId == $iblockId) {
@@ -392,7 +410,7 @@ trait IblockTrait
             foreach ($columns as $index => $columnCode) {
                 $columns[$index] = $this->revertCode($columnCode);
             }
-            return $columns;
+            return array_values($columns);
         }
         return $columns;
     }
@@ -406,5 +424,27 @@ trait IblockTrait
             return implode(',', $columns);
         }
         return $columns;
+    }
+
+    protected function transformCustomNames($customNames)
+    {
+        $result = [];
+        if (is_array($customNames)) {
+            foreach ($customNames as $code => $title) {
+                $result[$this->transformCode($code)] = $title;
+            }
+        }
+        return $result;
+    }
+
+    protected function revertCustomNames($customNames)
+    {
+        $result = [];
+        if (is_array($customNames)) {
+            foreach ($customNames as $code => $title) {
+                $result[$this->revertCode($code)] = $title;
+            }
+        }
+        return $result;
     }
 }

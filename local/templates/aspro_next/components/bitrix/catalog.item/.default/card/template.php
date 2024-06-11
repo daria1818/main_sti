@@ -139,10 +139,7 @@ use \Bitrix\Main\Localization\Loc;
 		{
 			switch ($blockName)
 			{
-				case 'price': 
-				echo '<pre style="display:none">';
-							print_r($price);
-							echo "</pre>";?>
+				case 'price': ?>
 					<div class="product-item-info-container product-item-price-container" data-entity="price-block">
 						<?
 						if ($arParams['SHOW_OLD_PRICE'] === 'Y')
@@ -177,11 +174,6 @@ use \Bitrix\Main\Localization\Loc;
 							}
 							?>
 						</span>
-						<script>
-							let price = document.querySelector('<?=$itemIds["PRICE"]?>');
-							console.log(price);
-						</script>	
-
 					</div>
 					<?
 					break;

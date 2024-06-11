@@ -16,14 +16,10 @@ class AgentHelper extends Helper
      *
      * @return array
      */
-    public function getList($filter = [])
+    public function getList(array $filter = [])
     {
-        $res = [];
         $dbres = CAgent::GetList(["MODULE_ID" => "ASC"], $filter);
-        while ($item = $dbres->Fetch()) {
-            $res[] = $item;
-        }
-        return $res;
+        return $this->fetchAll($dbres);
     }
 
     /**
@@ -133,7 +129,7 @@ class AgentHelper extends Helper
      */
     public function saveAgent($fields = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['MODULE_ID', 'NAME']);
+        $this->checkRequiredKeys($fields, ['MODULE_ID', 'NAME']);
 
         $exists = $this->getAgent([
             'MODULE_ID' => $fields['MODULE_ID'],
@@ -179,19 +175,7 @@ class AgentHelper extends Helper
             return $ok;
         }
 
-        $ok = $this->getMode('test') ? true : $exists['ID'];
-        if ($this->getMode('out_equal')) {
-            $this->outIf(
-                $ok,
-                Locale::getMessage(
-                    'AGENT_EQUAL',
-                    [
-                        '#NAME#' => $fields['NAME'],
-                    ]
-                )
-            );
-        }
-        return $ok;
+        return $this->getMode('test') ? true : $exists['ID'];
     }
 
     /**
@@ -204,7 +188,7 @@ class AgentHelper extends Helper
      */
     public function updateAgent($fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['MODULE_ID', 'NAME']);
+        $this->checkRequiredKeys($fields, ['MODULE_ID', 'NAME']);
         $this->deleteAgent($fields['MODULE_ID'], $fields['NAME']);
         return $this->addAgent($fields);
     }
@@ -219,7 +203,7 @@ class AgentHelper extends Helper
      */
     public function addAgent($fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['MODULE_ID', 'NAME']);
+        $this->checkRequiredKeys($fields, ['MODULE_ID', 'NAME']);
 
         global $DB;
 
@@ -228,6 +212,7 @@ class AgentHelper extends Helper
             'ACTIVE'         => 'Y',
             'IS_PERIOD'      => 'N',
             'NEXT_EXEC'      => $DB->GetNowDate(),
+            'SORT'           => 100,
         ], $fields);
 
         $agentId = CAgent::AddAgent(
@@ -237,16 +222,16 @@ class AgentHelper extends Helper
             $fields['AGENT_INTERVAL'],
             '',
             $fields['ACTIVE'],
-            $fields['NEXT_EXEC']
+            $fields['NEXT_EXEC'],
+            $fields['SORT']
         );
 
         if ($agentId) {
             return $agentId;
         }
 
-        $this->throwApplicationExceptionIfExists(__METHOD__);
-        $this->throwException(
-            __METHOD__,
+        $this->throwApplicationExceptionIfExists();
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_AGENT_NOT_ADDED',
                 [
@@ -254,7 +239,6 @@ class AgentHelper extends Helper
                 ]
             )
         );
-        return false;
     }
 
     /**

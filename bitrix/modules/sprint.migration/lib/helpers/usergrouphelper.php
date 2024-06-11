@@ -53,8 +53,7 @@ class UserGroupHelper extends Helper
             return $item;
         }
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_USER_GROUP_CODE_NOT_FOUND'
             )
@@ -156,7 +155,7 @@ class UserGroupHelper extends Helper
     public function saveGroup($code, $fields = [])
     {
         $fields['STRING_ID'] = $code;
-        $this->checkRequiredKeys(__METHOD__, $fields, ['STRING_ID', 'NAME']);
+        $this->checkRequiredKeys($fields, ['STRING_ID', 'NAME']);
 
         $exists = $this->getGroup($fields['STRING_ID']);
         $exportExists = $this->prepareExportGroup($exists);
@@ -191,19 +190,7 @@ class UserGroupHelper extends Helper
             return $ok;
         }
 
-        $ok = $this->getMode('test') ? true : $exists['ID'];
-        if ($this->getMode('out_equal')) {
-            $this->outNoticeIf(
-                $ok,
-                Locale::getMessage(
-                    'USER_GROUP_EQUAL',
-                    [
-                        '#NAME#' => $fields['NAME'],
-                    ]
-                )
-            );
-        }
-        return $ok;
+        return $this->getMode('test') ? true : $exists['ID'];
     }
 
     /**
@@ -256,7 +243,7 @@ class UserGroupHelper extends Helper
     public function addGroup($code, $fields = [])
     {
         $fields['STRING_ID'] = $code;
-        $this->checkRequiredKeys(__METHOD__, $fields, ['STRING_ID', 'NAME']);
+        $this->checkRequiredKeys($fields, ['STRING_ID', 'NAME']);
 
         $group = new CGroup;
         $groupId = $group->Add($this->prepareFields($fields));
@@ -265,7 +252,7 @@ class UserGroupHelper extends Helper
             return intval($groupId);
         }
 
-        $this->throwException(__METHOD__, $group->LAST_ERROR);
+        throw new HelperException($group->LAST_ERROR);
     }
 
     /**
@@ -280,8 +267,7 @@ class UserGroupHelper extends Helper
     public function updateGroup($groupId, $fields = [])
     {
         if (empty($fields)) {
-            $this->throwException(
-                __METHOD__,
+            throw new HelperException(
                 Locale::getMessage(
                     'ERR_SET_FIELDS_FOR_UPDATE_GROUP'
                 )
@@ -293,7 +279,7 @@ class UserGroupHelper extends Helper
             return intval($groupId);
         }
 
-        $this->throwException(__METHOD__, $group->LAST_ERROR);
+        throw new HelperException($group->LAST_ERROR);
     }
 
     /**
@@ -379,7 +365,7 @@ class UserGroupHelper extends Helper
 
     protected function prepareFields($fields)
     {
-        if (!empty($fields['SECURITY_POLICY']) && is_array($fields['SECURITY_POLICY'])) {
+        if (is_array($fields['SECURITY_POLICY'])) {
             $fields['SECURITY_POLICY'] = serialize($fields['SECURITY_POLICY']);
         }
 

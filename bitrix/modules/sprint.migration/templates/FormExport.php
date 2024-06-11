@@ -9,7 +9,8 @@
  * @var $form
  * @var $statuses
  * @var $fields
- * @var $validators
+ * @var $fieldsMode
+ * @var $author
  * @formatter:off
  */
 
@@ -22,6 +23,8 @@ namespace Sprint\Migration;
 class <?php echo $version ?> extends <?php echo $extendClass ?>
 
 {
+    protected $author = "<?php echo $author ?>";
+
     protected $description = "<?php echo $description ?>";
 
     protected $moduleVersion = "<?php echo $moduleVersion ?>";
@@ -33,23 +36,22 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
     public function up()
     {
         $helper = $this->getHelperManager();
-        $formHelper = $helper->Form();
 <?php if (!empty($formExport)): ?>
-        $formId = $formHelper->saveForm(<?= var_export($form, 1)?>);
+        $formId = $helper->Form()->saveForm(<?= var_export($form, 1)?>);
 <?php else:?>
-        $formId = $formHelper->getFormIdIfExists('<?= $form['SID']?>');
+        $formId = $helper->Form()->getFormIdIfExists('<?= $form['SID']?>');
 <?php endif?>
 <?php if (!empty($statuses)): ?>
-        $formHelper->saveStatuses($formId, <?= var_export($statuses, 1)?>);
+        $helper->Form()->saveStatuses($formId, <?= var_export($statuses, 1)?>);
 <?php endif;?>
-<?php if (!empty($fields)): ?>
-        $formHelper->saveFields($formId, <?= var_export($fields, 1)?>);
+<?php if (!empty($fields) && $fieldsMode == 'all'): ?>
+        $helper->Form()->saveFields($formId, <?= var_export($fields, 1)?>);
 <?php endif;?>
-    }
-
-    public function down()
-    {
-        //your code ...
+<?php if (!empty($fields) && $fieldsMode == 'some'): ?>
+    <?php foreach ($fields as $field) { ?>
+        $helper->Form()->saveField($formId, <?= var_export($field, 1)?>);
+    <?php } ?>
+<?php endif;?>
     }
 }
 

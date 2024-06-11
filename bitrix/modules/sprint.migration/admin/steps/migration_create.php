@@ -8,11 +8,7 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
 }
 
 $stepCode = !empty($_POST["step_code"]) ? htmlspecialchars($_POST["step_code"]) : '';
-$hasSteps = (
-    ($stepCode == 'migration_create')
-    || ($stepCode == 'migration_reset')
-
-);
+$hasSteps = (($stepCode == 'migration_create') || ($stepCode == 'migration_reset'));
 
 if ($hasSteps && check_bitrix_sessid('send_sessid')) {
     /** @var $versionConfig VersionConfig */
@@ -22,7 +18,7 @@ if ($hasSteps && check_bitrix_sessid('send_sessid')) {
 
     $builder = $versionManager->createBuilder($builderName, $_POST);
 
-    if ($builder && $stepCode == 'migration_create') {
+    if ($stepCode == 'migration_create') {
         $builder->buildExecute();
         $builder->buildAfter();
 
@@ -38,13 +34,13 @@ if ($hasSteps && check_bitrix_sessid('send_sessid')) {
         } else {
             ?>
             <script>
-                migrationMigrationRefresh(function () {
-                    migrationScrollList();
+                migrationListRefresh(function () {
+                    migrationListScroll();
                     migrationEnableButtons(1);
                 });
             </script><?php
         }
-    } elseif ($builder && $stepCode == 'migration_reset') {
+    } elseif ($stepCode == 'migration_reset') {
         $builder->renderHtml();
         ?>
         <script>

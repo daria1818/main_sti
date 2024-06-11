@@ -2,6 +2,7 @@
 
 namespace Sprint\Migration\Builders;
 
+use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RebuildException;
 use Sprint\Migration\Locale;
 use Sprint\Migration\Module;
@@ -9,7 +10,6 @@ use Sprint\Migration\VersionBuilder;
 
 class EventBuilder extends VersionBuilder
 {
-
     protected function isBuilderEnabled()
     {
         return true;
@@ -18,33 +18,33 @@ class EventBuilder extends VersionBuilder
     protected function initialize()
     {
         $this->setTitle(Locale::getMessage('BUILDER_EventExport1'));
-        $this->setDescription(Locale::getMessage('BUILDER_EventExport2'));
+        $this->setGroup('Main');
+
         $this->addVersionFields();
     }
 
     /**
      * @throws RebuildException
-     * @throws \Sprint\Migration\Exceptions\MigrationException
+     * @throws MigrationException
      */
     protected function execute()
     {
         $helper = $this->getHelperManager();
 
         $eventTypes = $this->addFieldAndReturn('event_types', [
-            'title' => Locale::getMessage('BUILDER_EventExport_event_types'),
-            'width' => 350,
-            'select' => $this->getEventTypesStructure(),
+            'title'    => Locale::getMessage('BUILDER_EventExport_event_types'),
+            'width'    => 350,
+            'select'   => $this->getEventTypesSelect(),
             'multiple' => 1,
         ]);
 
         $result = [];
         foreach ($eventTypes as $eventName) {
-
             $types = $helper->Event()->exportEventTypes($eventName);
             $messages = $helper->Event()->exportEventMessages($eventName);
 
             $result[$eventName] = [
-                'types' => $types,
+                'types'    => $types,
                 'messages' => $messages,
             ];
         }
@@ -57,27 +57,17 @@ class EventBuilder extends VersionBuilder
         );
     }
 
-
-    /**
-     * @return array
-     */
-    protected function getEventTypesStructure()
+    protected function getEventTypesSelect(): array
     {
-        $helper = $this->getHelperManager();
-        $eventTypes = $helper->Event()->getEventTypes([
+        $items = $this->getHelperManager()->Event()->getEventTypes([
             'LID' => LANGUAGE_ID,
         ]);
 
-        $structure = [];
-        foreach ($eventTypes as $item) {
-            $eventName = $item['EVENT_NAME'];
-            $structure[$eventName] = [
-                'title' => '[' . $eventName . '] ' . $item['NAME'],
-                'value' => $eventName,
-            ];
-        }
+        $items = array_map(function ($item) {
+            $item['NAME'] = '[' . $item['EVENT_NAME'] . '] ' . $item['NAME'];
+            return $item;
+        }, $items);
 
-        return $structure;
+        return $this->createSelect($items, 'EVENT_NAME', 'NAME');
     }
-
 }

@@ -1,13 +1,13 @@
 {
   "name": "andreyryabin/sprint.migration",
   "description": "bitrix migration module",
-  "homepage": "http://marketplace.1c-bitrix.ru/solutions/sprint.migration/",
+  "homepage": "https://marketplace.1c-bitrix.ru/solutions/sprint.migration/",
   "type": "bitrix-module",
   "keywords": [
     "bitrix",
     "sprint",
     "migration",
-    "andrey",
+    "andreyryabin",
     "ryabin"
   ],
   "authors": [
@@ -19,9 +19,8 @@
   ],
   "license": "MIT",
   "require": {
-    "php": ">=5.6.0",
+    "php": ">=7.4",
     "composer/installers": "~1",
-    "ext-json": "*",
-    "ext-iconv": "*"
+    "ext-json": "*"
   }
 }

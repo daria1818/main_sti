@@ -22,20 +22,21 @@ $getOnclickMenu = function ()  {
     return CUtil::PhpToJSObject($menu);
 }
 ?>
-<div id="migration-container" data-sessid="<?= bitrix_sessid() ?>">
-    <div class="sp-group">
-        <div class="sp-group-row2">
-            <div class="sp-block sp-block-scroll sp-white">
+<div id="migration_container" data-sessid="<?= bitrix_sessid() ?>">
+    <div class="sp-table">
+        <div class="sp-row2">
+            <div class="sp-col sp-col-scroll sp-white">
                 <div id="migration_migrations" class="sp-scroll"></div>
             </div>
-            <div class="sp-block sp-block-scroll">
+            <div class="sp-col sp-col-scroll">
                 <div id="migration_progress" class="sp-scroll"></div>
+                <div id="migration_actions"></div>
             </div>
         </div>
     </div>
-    <div class="sp-group">
-        <div class="sp-group-row2">
-            <div class="sp-block">
+    <div class="sp-table">
+        <div class="sp-row2">
+            <div class="sp-col">
                 <input type="button"
                        value="<?= Locale::getMessage('UP_START') ?>"
                        onclick="migrationMigrationsUpConfirm();"
@@ -45,7 +46,7 @@ $getOnclickMenu = function ()  {
                    class="adm-btn"
                    hidefocus="true">&equiv;</a>
             </div>
-            <div class="sp-block">
+            <div class="sp-col">
                 <input placeholder="<?= Locale::getMessage('SEARCH') ?>"
                        style=""
                        type="text"
@@ -69,14 +70,10 @@ $getOnclickMenu = function ()  {
                             value="migration_view_status"><?= Locale::getMessage('TOGGLE_STATUS') ?></option>
                 </select>
                 <input type="button" value="<?= Locale::getMessage('SEARCH') ?>" class="sp-search"/>
-
             </div>
         </div>
     </div>
     <div class="sp-separator"></div>
-    <?php foreach (['default', 'configurator'] as $builderGroup): ?>
-        <?php include __DIR__ . '/builder_group.php' ?>
-    <?php endforeach ?>
-
+    <?php include __DIR__ . '/builder_group.php' ?>
     <div class="sp-separator"></div>
 </div>

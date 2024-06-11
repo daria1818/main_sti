@@ -57,7 +57,7 @@ $aMenuLinks = Array(
         "/gbt/sda/", 
         Array(), 
         Array(), 
-        'CUser::IsAuthorized()'
+        '$USER->IsAuthorized()'
     ),
 );
 ?>

@@ -6,6 +6,7 @@ use CGridOptions;
 use CUserOptions;
 use Sprint\Migration\Exceptions\HelperException;
 use Sprint\Migration\Helper;
+use Sprint\Migration\Helpers\Traits\UserOptions\HlblockTrait;
 use Sprint\Migration\Helpers\Traits\UserOptions\IblockTrait;
 use Sprint\Migration\Helpers\Traits\UserOptions\UserGroupTrait;
 use Sprint\Migration\Helpers\Traits\UserOptions\UserTrait;
@@ -52,6 +53,7 @@ class UserOptionsHelper extends Helper
     use IblockTrait;
     use UserTrait;
     use UserGroupTrait;
+    use HlblockTrait;
 
     /**
      * @param array $params
@@ -60,7 +62,7 @@ class UserOptionsHelper extends Helper
      */
     public function exportList($params = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $params, ['name']);
+        $this->checkRequiredKeys($params, ['name']);
 
         $params = array_merge(
             [
@@ -103,7 +105,7 @@ class UserOptionsHelper extends Helper
      */
     public function buildList($data = [], $params = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $params, ['name']);
+        $this->checkRequiredKeys($params, ['name']);
 
         /** @compability with old format */
         if (!isset($data['columns'])) {
@@ -182,20 +184,9 @@ class UserOptionsHelper extends Helper
             );
             $this->outDiffIf($ok, $exists, $data);
             return $ok;
-        } else {
-            if ($this->getMode('out_equal')) {
-
-                $this->out(
-                    Locale::getMessage(
-                        'USER_OPTION_LIST_EQUAL',
-                        [
-                            '#NAME#' => $params['name'],
-                        ]
-                    )
-                );
-            }
-            return true;
         }
+
+        return true;
     }
 
     public function exportGrid($gridId)
@@ -210,6 +201,7 @@ class UserOptionsHelper extends Helper
 
             foreach ($options['views'] as $viewCode => $view) {
                 $view['columns'] = $this->revertCodesFromColumns($view['columns']);
+                $view['custom_names'] = $this->revertCustomNames($view['custom_names']);
                 $options['views'][$viewCode] = $view;
             }
 
@@ -222,6 +214,7 @@ class UserOptionsHelper extends Helper
     {
         foreach ($options['views'] as $viewCode => $view) {
             $view['columns'] = $this->transformCodesToColumns($view['columns']);
+            $view['custom_names'] = $this->transformCustomNames($view['custom_names']);
             $options['views'][$viewCode] = $view;
         }
 
@@ -255,19 +248,9 @@ class UserOptionsHelper extends Helper
             );
             $this->outDiffIf($ok, $exists, $params);
             return $ok;
-        } else {
-            if ($this->getMode('out_equal')) {
-                $this->out(
-                    Locale::getMessage(
-                        'USER_OPTION_GRID_EQUAL',
-                        [
-                            '#NAME#' => $gridId,
-                        ]
-                    )
-                );
-            }
-            return true;
         }
+
+        return true;
     }
 
     /**
@@ -279,7 +262,7 @@ class UserOptionsHelper extends Helper
     {
         /** @compability */
         if (isset($params['name_prefix'])) {
-            $this->throwException(__METHOD__, 'name_prefix is no longer supported, see examples');
+            throw new HelperException('name_prefix is no longer supported, see examples');
         }
 
         $params = array_merge(
@@ -317,7 +300,7 @@ class UserOptionsHelper extends Helper
                     continue;
                 }
 
-                list($fieldCode, $fieldTitle) = explode('#', $fieldString);
+                [$fieldCode, $fieldTitle] = explode('#', $fieldString);
 
                 $fieldCode = str_replace('--', '', strval($fieldCode));
                 $fieldTitle = str_replace('--', '', strval($fieldTitle));
@@ -352,7 +335,7 @@ class UserOptionsHelper extends Helper
     {
         /** @compability */
         if (isset($params['name_prefix'])) {
-            $this->throwException(__METHOD__, 'name_prefix is no longer supported, see examples');
+            throw new HelperException('name_prefix is no longer supported, see examples');
         }
 
         $params = array_merge(
@@ -375,7 +358,7 @@ class UserOptionsHelper extends Helper
         $tabVals = [];
 
         foreach ($formData as $tabTitle => $fields) {
-            list($tabTitle, $tabId) = explode('|', $tabTitle);
+            [$tabTitle, $tabId] = explode('|', $tabTitle);
 
             if (!$tabId) {
                 $tabId = 'edit' . ($tabIndex + 1);
@@ -388,7 +371,7 @@ class UserOptionsHelper extends Helper
             foreach ($fields as $fieldKey => $fieldValue) {
                 if (is_numeric($fieldKey)) {
                     /** @compability */
-                    list($fcode, $ftitle) = explode('|', $fieldValue);
+                    [$fcode, $ftitle] = explode('|', $fieldValue);
                 } else {
                     $fcode = $fieldKey;
                     $ftitle = $fieldValue;
@@ -450,18 +433,7 @@ class UserOptionsHelper extends Helper
             );
             $this->outDiffIf($ok, $exists, $formData);
             return $ok;
-        } else {
-            if ($this->getMode('out_equal')) {
-                $this->out(
-                    Locale::getMessage(
-                        'USER_OPTION_FORM_EQUAL',
-                        [
-                            '#NAME#' => $params['name'],
-                        ]
-                    )
-                );
-            }
-            return true;
         }
+        return true;
     }
 }

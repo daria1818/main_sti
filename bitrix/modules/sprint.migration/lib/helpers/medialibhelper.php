@@ -2,12 +2,12 @@
 
 namespace Sprint\Migration\Helpers;
 
-use Bitrix\Main\Db\SqlQueryException;
 use CFile;
 use CMedialib;
 use CMedialibCollection;
 use CMedialibItem;
 use CTask;
+use Exception;
 use Sprint\Migration\Exceptions\HelperException;
 use Sprint\Migration\Helper;
 use Sprint\Migration\Locale;
@@ -51,7 +51,7 @@ class MedialibHelper extends Helper
                 return (int)$type['id'];
             }
         }
-        $this->throwException(__METHOD__, 'type not found');
+        throw new HelperException('type not found');
     }
 
     /**
@@ -154,21 +154,18 @@ SELECT MI.ID, MI.NAME, MI.DESCRIPTION, MI.KEYWORDS, MI.SOURCE_ID, MCI.COLLECTION
         WHERE {$whereQuery} {$limitQuery} ;
 TAG;
 
-        $result = [];
         try {
-            $result = $sqlhelper->query($sqlQuery)->fetchAll();
-        } catch (SqlQueryException $e) {
-            $this->throwException(__METHOD__, $e->getMessage());
+            return $sqlhelper->query($sqlQuery)->fetchAll();
+        } catch (Exception $e) {
+            throw new HelperException($e->getMessage(), $e->getCode(), $e);
         }
-
-        return $result;
     }
 
     /**
      * @param array|int $collectionId
      * @param array     $params
      *
-     * @throws SqlQueryException
+     * @throws HelperException
      * @return int
      */
     public function getElementsCount($collectionId, $params = [])
@@ -187,7 +184,11 @@ SELECT COUNT(*) CNT
         WHERE {$where};
 TAG;
 
-        $result = $sqlhelper->query($sqlQuery)->fetch();
+        try {
+            $result = $sqlhelper->query($sqlQuery)->fetch();
+        } catch (Exception $e) {
+            throw new HelperException($e->getMessage(), $e->getCode(), $e);
+        }
         return (int)$result['CNT'];
     }
 
@@ -200,7 +201,7 @@ TAG;
      */
     public function addCollection($typeId, $fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['NAME']);
+        $this->checkRequiredKeys($fields, ['NAME']);
 
         if (!is_numeric($typeId)) {
             $typeId = $this->getTypeIdByCode($typeId);
@@ -233,7 +234,7 @@ TAG;
      */
     public function saveCollection($typeId, $fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['NAME']);
+        $this->checkRequiredKeys($fields, ['NAME']);
 
         $parentId = !empty($fields['PARENT_ID']) ? (int)$fields['PARENT_ID'] : 0;
         $name = (string)$fields['NAME'];
@@ -284,8 +285,7 @@ TAG;
             return $parentId;
         }
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_SAVE_COLLECTION_BY_PATH',
                 [
@@ -328,7 +328,7 @@ TAG;
      */
     public function saveElement($fields = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['NAME', 'FILE', 'COLLECTION_ID']);
+        $this->checkRequiredKeys($fields, ['NAME', 'FILE', 'COLLECTION_ID']);
 
         $elements = $this->getElements(
             $fields['COLLECTION_ID'],
@@ -429,7 +429,7 @@ TAG;
      */
     private function editElement($fields = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['NAME', 'FILE', 'COLLECTION_ID']);
+        $this->checkRequiredKeys($fields, ['NAME', 'FILE', 'COLLECTION_ID']);
 
         if (!is_array($fields['FILE'])) {
             $fields['FILE'] = CFile::MakeFileArray($fields['FILE']);

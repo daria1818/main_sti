@@ -85,7 +85,7 @@ class CSeoMetaEvents
         }
     }
 
-    function PageStart()
+    public static function PageStart()
     {
         global $APPLICATION, $PAGEN_1;
 
@@ -272,7 +272,7 @@ class CSeoMetaEvents
         }
     }
 
-    public function ChangeContent(&$content) {
+    public static function ChangeContent(&$content) {
         global $APPLICATION;
         $seoData = new OGraphTWCard();
 

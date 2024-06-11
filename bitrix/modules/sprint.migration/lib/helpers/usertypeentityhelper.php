@@ -114,9 +114,8 @@ class UserTypeEntityHelper extends Helper
             return $userFieldId;
         }
 
-        $this->throwApplicationExceptionIfExists(__METHOD__);
-        $this->throwException(
-            __METHOD__,
+        $this->throwApplicationExceptionIfExists();
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_USERTYPE_NOT_ADDED',
                 [
@@ -156,9 +155,8 @@ class UserTypeEntityHelper extends Helper
             return $fieldId;
         }
 
-        $this->throwApplicationExceptionIfExists(__METHOD__);
-        $this->throwException(
-            __METHOD__,
+        $this->throwApplicationExceptionIfExists();
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_USERTYPE_NOT_UPDATED',
                 [
@@ -210,12 +208,15 @@ class UserTypeEntityHelper extends Helper
             $filter = [];
         }
 
+        return array_map(function ($item) {
+            return $this->getUserTypeEntityById($item['ID']);
+        }, $this->getList($filter));
+    }
+
+    public function getList(array $filter = []): array
+    {
         $dbres = CUserTypeEntity::GetList([], $filter);
-        $result = [];
-        while ($item = $dbres->Fetch()) {
-            $result[] = $this->getUserTypeEntityById($item['ID']);
-        }
-        return $result;
+        return $this->fetchAll($dbres);
     }
 
     /**
@@ -357,8 +358,7 @@ class UserTypeEntityHelper extends Helper
         if ($entity->Delete($item['ID'])) {
             return true;
         }
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_USERTYPE_NOT_DELETED',
                 [
@@ -455,12 +455,12 @@ class UserTypeEntityHelper extends Helper
     {
         if (func_num_args() > 1) {
             /** @compability */
-            list($entityId, $fieldName, $fields) = func_get_args();
+            [$entityId, $fieldName, $fields] = func_get_args();
             $fields['ENTITY_ID'] = $entityId;
             $fields['FIELD_NAME'] = $fieldName;
         }
 
-        $this->checkRequiredKeys(__METHOD__, $fields, ['ENTITY_ID', 'FIELD_NAME']);
+        $this->checkRequiredKeys($fields, ['ENTITY_ID', 'FIELD_NAME']);
 
         $exists = $this->getUserTypeEntity(
             $this->revertEntityId($fields['ENTITY_ID']),
@@ -509,19 +509,7 @@ class UserTypeEntityHelper extends Helper
             return $ok;
         }
 
-        $ok = $this->getMode('test') ? true : $exists['ID'];
-        if ($this->getMode('out_equal')) {
-            $this->outIf(
-                $ok,
-                Locale::getMessage(
-                    'USER_TYPE_ENTITY_EQUAL',
-                    [
-                        '#NAME#' => $fields['FIELD_NAME'],
-                    ]
-                )
-            );
-        }
-        return $ok;
+        return $this->getMode('test') ? true : $exists['ID'];
     }
 
     /**
@@ -550,7 +538,7 @@ class UserTypeEntityHelper extends Helper
 
             $extendedMessage = $userTypeMessage . PHP_EOL . $e->getMessage();
 
-            $this->throwException(__METHOD__, $extendedMessage);
+            throw new HelperException($extendedMessage);
         }
 
         unset($fields['ID']);

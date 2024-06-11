@@ -7,20 +7,24 @@ use CEventType;
 use Sprint\Migration\Exceptions\HelperException;
 use Sprint\Migration\Helper;
 use Sprint\Migration\Locale;
+use Sprint\Migration\Support\ExportRules;
 
 class EventHelper extends Helper
 {
-
     /**
      * Получает тип почтового события по фильтру или типу почтового события
+     *
      * @param $eventName
+     *
      * @return array
      */
     public function getEventType($eventName)
     {
-        $filter = is_array($eventName) ? $eventName : [
-            'EVENT_NAME' => $eventName,
-        ];
+        $filter = is_array($eventName)
+            ? $eventName
+            : [
+                'EVENT_NAME' => $eventName,
+            ];
 
         $dbres = CEventType::GetList($filter);
         return $dbres->Fetch();
@@ -28,14 +32,18 @@ class EventHelper extends Helper
 
     /**
      * Получает список типов почтовых событий по фильтру или типу почтового события
+     *
      * @param $eventName
+     *
      * @return array
      */
     public function getEventTypes($eventName)
     {
-        $filter = is_array($eventName) ? $eventName : [
-            'EVENT_NAME' => $eventName,
-        ];
+        $filter = is_array($eventName)
+            ? $eventName
+            : [
+                'EVENT_NAME' => $eventName,
+            ];
 
         $dbres = CEventType::GetList($filter);
         return $this->fetchAll($dbres);
@@ -43,14 +51,18 @@ class EventHelper extends Helper
 
     /**
      * Получает почтовый шаблон по фильтру или типу почтового события
+     *
      * @param $eventName
+     *
      * @return mixed
      */
     public function getEventMessage($eventName)
     {
-        $filter = is_array($eventName) ? $eventName : [
-            'EVENT_NAME' => $eventName,
-        ];
+        $filter = is_array($eventName)
+            ? $eventName
+            : [
+                'EVENT_NAME' => $eventName,
+            ];
 
         $by = 'id';
         $order = 'asc';
@@ -68,14 +80,18 @@ class EventHelper extends Helper
 
     /**
      * Получает почтовые шаблоны по фильтру или типу почтового события
+     *
      * @param $eventName
+     *
      * @return array
      */
     public function getEventMessages($eventName)
     {
-        $filter = is_array($eventName) ? $eventName : [
-            'EVENT_NAME' => $eventName,
-        ];
+        $filter = is_array($eventName)
+            ? $eventName
+            : [
+                'EVENT_NAME' => $eventName,
+            ];
 
         $by = 'id';
         $order = 'asc';
@@ -95,9 +111,52 @@ class EventHelper extends Helper
         return $result;
     }
 
+    public function getEventMessageById($messageId)
+    {
+        $item = CEventMessage::GetByID($messageId)->Fetch();
+        if ($item) {
+            return $this->prepareEventMessage($item);
+        }
+        return false;
+    }
+
+    public function getEventMessageUidFilterById($messageId)
+    {
+        $item = CEventMessage::GetByID($messageId)->Fetch();
+        if ($item) {
+            return [
+                'EVENT_NAME' => $item['EVENT_NAME'],
+                'SUBJECT'    => $item['SUBJECT'],
+            ];
+        }
+        return $messageId;
+    }
+
+    public function getEventMessageIdByUidFilter($templateId)
+    {
+        if (empty($templateId)) {
+            return false;
+        }
+
+        if (is_numeric($templateId)) {
+            return $templateId;
+        }
+
+        if (is_array($templateId) && isset($templateId['EVENT_NAME'])) {
+            $item = $this->getEventMessage($templateId);
+            if ($item) {
+                return $item['ID'];
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Получает список сайтов для почтового шаблона
+     *
      * @param $messageId
+     *
      * @return array
      */
     public function getEventMessageSites($messageId)
@@ -109,7 +168,9 @@ class EventHelper extends Helper
     /**
      * Получает почтовые шаблоны по фильтру или типу почтового события
      * Данные подготовлены для экспорта в миграцию или схему
+     *
      * @param $eventName
+     *
      * @return array
      */
     public function exportEventMessages($eventName)
@@ -125,7 +186,9 @@ class EventHelper extends Helper
     /**
      * Получает список типов почтовых событий по фильтру или типу почтового события
      * Данные подготовлены для экспорта в миграцию или схему
+     *
      * @param $eventName
+     *
      * @return array
      */
     public function exportEventTypes($eventName)
@@ -140,18 +203,20 @@ class EventHelper extends Helper
 
     /**
      * Добавляет тип почтового события если его не существует
-     * @param $eventName
+     *
+     * @param       $eventName
      * @param array $fields
+     *
      * @throws HelperException
      * @return bool|int|mixed
      */
     public function addEventTypeIfNotExists($eventName, $fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['LID']);
+        $this->checkRequiredKeys($fields, ['LID']);
 
         $item = $this->getEventType([
             'EVENT_NAME' => $eventName,
-            'LID' => $fields['LID'],
+            'LID'        => $fields['LID'],
         ]);
 
         if ($item) {
@@ -163,19 +228,23 @@ class EventHelper extends Helper
 
     /**
      * Добавляет почтовый шаблон если его не существует
-     * @param $eventName
+     *
+     * @param       $eventName
      * @param array $fields
+     *
      * @throws HelperException
      * @return bool|int
      */
     public function addEventMessageIfNotExists($eventName, $fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['SUBJECT', 'LID']);
+        $this->checkRequiredKeys($fields, ['SUBJECT', 'LID']);
 
-        $item = $this->getEventMessage([
-            'EVENT_NAME' => $eventName,
-            'SUBJECT' => $fields['SUBJECT'],
-        ]);
+        $item = $this->getEventMessage(
+            [
+                'EVENT_NAME' => $eventName,
+                'SUBJECT'    => $fields['SUBJECT'],
+            ]
+        );
 
         if ($item) {
             return $item['ID'];
@@ -186,8 +255,10 @@ class EventHelper extends Helper
 
     /**
      * Обновляет почтовые шаблоны по типу почтового события или фильтру
+     *
      * @param $eventName
      * @param $fields
+     *
      * @throws HelperException
      * @return bool
      */
@@ -204,8 +275,10 @@ class EventHelper extends Helper
 
     /**
      * Обновляет почтовый шаблон по id
+     *
      * @param $id
      * @param $fields
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -216,36 +289,26 @@ class EventHelper extends Helper
         //Удаление "лишних" значений из массива, наличие которых вызовет ошибку при \CAllEventMessage::Update() (bitrix\modules\main\classes\general\event.php#355)
         //Код удаления взят из соседнего метода \CAllEventMessage::Add() (bitrix\modules\main\classes\general\event.php#310), который сам удаляет эти значения,
         //а в \CAllEventMessage::Update() Битрикс видимо забыл это перенести
-        $arDeleteFields = [
-            'EVENT_MESSAGE_TYPE_ID',
-            'EVENT_MESSAGE_TYPE_ID',
-            'EVENT_MESSAGE_TYPE_NAME',
-            'EVENT_MESSAGE_TYPE_EVENT_NAME',
-            'SITE_ID',
-            'EVENT_TYPE',
-        ];
 
-        foreach ($arDeleteFields as $deleteField) {
-            if (array_key_exists($deleteField, $fields)) {
-                unset($fields[$deleteField]);
-            }
-        }
+        unset($fields['EVENT_MESSAGE_TYPE_ID']);
+        unset($fields['EVENT_MESSAGE_TYPE_NAME']);
+        unset($fields['EVENT_MESSAGE_TYPE_EVENT_NAME']);
+        unset($fields['SITE_ID']);
+        unset($fields['EVENT_TYPE']);
 
         if ($event->Update($id, $fields)) {
             return $id;
         }
 
-        $this->throwException(
-            __METHOD__,
-            $event->LAST_ERROR
-        );
-        return false;
+        throw new HelperException($event->LAST_ERROR);
     }
 
     /**
      * Обновляет тип почтового события по id
+     *
      * @param $id
      * @param $fields
+     *
      * @throws HelperException
      * @return mixed
      */
@@ -256,32 +319,33 @@ class EventHelper extends Helper
             return $id;
         }
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_EVENT_TYPE_NOT_UPDATED'
             )
         );
-
-        return false;
     }
 
     /**
      * Сохраняет почтовый шаблон
      * Создаст если не было, обновит если существует и отличается
-     * @param $eventName
+     *
+     * @param       $eventName
      * @param array $fields
+     *
      * @throws HelperException
      * @return bool|int|mixed
      */
     public function saveEventMessage($eventName, $fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['SUBJECT', 'LID']);
+        $this->checkRequiredKeys($fields, ['SUBJECT', 'LID']);
 
-        $exists = $this->getEventMessage([
-            'EVENT_NAME' => $eventName,
-            'SUBJECT' => $fields['SUBJECT'],
-        ]);
+        $exists = $this->getEventMessage(
+            [
+                'EVENT_NAME' => $eventName,
+                'SUBJECT'    => $fields['SUBJECT'],
+            ]
+        );
 
         $exportExists = $this->prepareExportEventMessage($exists);
         $fields = $this->prepareExportEventMessage($fields);
@@ -317,36 +381,26 @@ class EventHelper extends Helper
             return $ok;
         }
 
-        $ok = $this->getMode('test') ? true : $eventName;
-        if ($this->getMode('out_equal')) {
-            $this->outNoticeIf(
-                $ok,
-                Locale::getMessage(
-                    'EVENT_MESSAGE_EQUAL',
-                    [
-                        '#NAME#' => $eventName . ':' . $fields['SUBJECT'],
-                    ]
-                )
-            );
-        }
-        return $ok;
+        return $this->getMode('test') ? true : $eventName;
     }
 
     /**
      * Сохраняет тип почтового события
      * Создаст если не было, обновит если существует и отличается
-     * @param $eventName
+     *
+     * @param       $eventName
      * @param array $fields
+     *
      * @throws HelperException
      * @return bool|int|mixed
      */
     public function saveEventType($eventName, $fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['LID']);
+        $this->checkRequiredKeys($fields, ['LID']);
 
         $exists = $this->getEventType([
             'EVENT_NAME' => $eventName,
-            'LID' => $fields['LID'],
+            'LID'        => $fields['LID'],
         ]);
 
         $exportExists = $this->prepareExportEventType($exists);
@@ -385,34 +439,24 @@ class EventHelper extends Helper
             return $ok;
         }
 
-        $ok = $this->getMode('test') ? true : $eventName;
-        if ($this->getMode('out_equal')) {
-            $this->outNoticeIf(
-                $ok,
-                Locale::getMessage(
-                    'EVENT_TYPE_EQUAL',
-                    [
-                        '#NAME#' => $eventName . ':' . $fields['LID'],
-                    ]
-                )
-            );
-        }
-        return $ok;
+        return $this->getMode('test') ? true : $eventName;
     }
 
     /**
      * Удаляет тип почтового события
+     *
      * @param array $fields
+     *
      * @throws HelperException
      * @return bool
      */
     public function deleteEventType($fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['LID', 'EVENT_NAME']);
+        $this->checkRequiredKeys($fields, ['LID', 'EVENT_NAME']);
 
         $exists = $this->getEventType([
             'EVENT_NAME' => $fields['EVENT_NAME'],
-            'LID' => $fields['LID'],
+            'LID'        => $fields['LID'],
         ]);
 
         if (empty($exists)) {
@@ -423,8 +467,7 @@ class EventHelper extends Helper
             return true;
         }
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_CANT_DELETE_EVENT_TYPE',
                 [
@@ -432,23 +475,26 @@ class EventHelper extends Helper
                 ]
             )
         );
-        return false;
     }
 
     /**
      * Удаляет почтовый шаблон
+     *
      * @param array $fields
+     *
      * @throws HelperException
      * @return bool
      */
     public function deleteEventMessage($fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['SUBJECT', 'EVENT_NAME']);
+        $this->checkRequiredKeys($fields, ['SUBJECT', 'EVENT_NAME']);
 
-        $exists = $this->getEventMessage([
-            'EVENT_NAME' => $fields['EVENT_NAME'],
-            'SUBJECT' => $fields['SUBJECT'],
-        ]);
+        $exists = $this->getEventMessage(
+            [
+                'EVENT_NAME' => $fields['EVENT_NAME'],
+                'SUBJECT'    => $fields['SUBJECT'],
+            ]
+        );
 
         if (empty($exists)) {
             return false;
@@ -458,8 +504,7 @@ class EventHelper extends Helper
             return true;
         };
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_CANT_DELETE_EVENT_MESSAGE',
                 [
@@ -467,19 +512,20 @@ class EventHelper extends Helper
                 ]
             )
         );
-        return false;
     }
 
     /**
      * Добавляет тип почтового события
-     * @param $eventName
+     *
+     * @param       $eventName
      * @param array $fields
+     *
      * @throws HelperException
      * @return bool|int
      */
     public function addEventType($eventName, $fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['LID', 'NAME']);
+        $this->checkRequiredKeys($fields, ['LID', 'NAME']);
         $fields['EVENT_NAME'] = $eventName;
 
         $event = new CEventType;
@@ -489,9 +535,8 @@ class EventHelper extends Helper
             return $id;
         }
 
-        $this->throwApplicationExceptionIfExists(__METHOD__);
-        $this->throwException(
-            __METHOD__,
+        $this->throwApplicationExceptionIfExists();
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_EVENT_TYPE_NOT_ADDED',
                 [
@@ -499,27 +544,28 @@ class EventHelper extends Helper
                 ]
             )
         );
-        return false;
     }
 
     /**
      * Добавляет почтовый шаблон
-     * @param $eventName
+     *
+     * @param       $eventName
      * @param array $fields
+     *
      * @throws HelperException
      * @return bool|int
      */
     public function addEventMessage($eventName, $fields)
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['LID', 'SUBJECT']);
+        $this->checkRequiredKeys($fields, ['LID', 'SUBJECT']);
 
         $default = [
-            'ACTIVE' => 'Y',
+            'ACTIVE'     => 'Y',
             'EMAIL_FROM' => '#DEFAULT_EMAIL_FROM#',
-            'EMAIL_TO' => '#EMAIL_TO#',
-            'BCC' => '',
-            'BODY_TYPE' => 'text',
-            'MESSAGE' => '',
+            'EMAIL_TO'   => '#EMAIL_TO#',
+            'BCC'        => '',
+            'BODY_TYPE'  => 'text',
+            'MESSAGE'    => '',
         ];
 
         $fields = array_merge($default, $fields);
@@ -532,9 +578,8 @@ class EventHelper extends Helper
             return $id;
         }
 
-        $this->throwApplicationExceptionIfExists(__METHOD__);
-        $this->throwException(
-            __METHOD__,
+        $this->throwApplicationExceptionIfExists();
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_EVENT_MESSAGE_NOT_ADDED',
                 [
@@ -542,12 +587,12 @@ class EventHelper extends Helper
                 ]
             )
         );
-        return false;
     }
 
     /**
      * @param $filter
      * @param $fields
+     *
      * @throws HelperException
      * @return bool
      * @deprecated use updateEventMessage

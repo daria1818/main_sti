@@ -9,9 +9,7 @@ use Sprint\Migration\Traits\HelperManagerTrait;
 class SchemaManager extends ExchangeEntity
 {
     use HelperManagerTrait;
-
-    /** @var VersionConfig */
-    protected $versionConfig = null;
+    use OutTrait;
 
     private $progress = [];
 
@@ -19,19 +17,14 @@ class SchemaManager extends ExchangeEntity
 
     /**
      * SchemaManager constructor.
-     * @param string $configName
+     * @param VersionConfig $configName
      * @param array $params
      * @throws Exception
      */
-    public function __construct($configName = '', $params = [])
+    public function __construct(VersionConfig $versionConfig, $params = [])
     {
-        if ($configName instanceof VersionConfig) {
-            $this->versionConfig = $configName;
-        } else {
-            $this->versionConfig = new VersionConfig(
-                $configName
-            );
-        }
+        $this->setVersionConfig($versionConfig);
+        $this->setRestartParams($params);
         $this->params = $params;
     }
 
@@ -158,31 +151,7 @@ class SchemaManager extends ExchangeEntity
 
         $schema->export();
 
-        $files = $schema->getSchemaFiles();
-        if (!empty($files)) {
-            $this->outNotice(
-                Locale::getMessage(
-                    'ERR_SCHEMA_CREATED',
-                    [
-                        '#NAME#' => $schema->getTitle(),
-
-                    ]
-                )
-            );
-            foreach ($files as $file) {
-                $this->out($file);
-            }
-        } else {
-            $this->outWarning(
-                Locale::getMessage(
-                    'ERR_SCHEMA_EMPTY',
-                    [
-                        '#NAME#' => $schema->getTitle(),
-
-                    ]
-                )
-            );
-        }
+        $schema->outSchemaFiles();
 
         if (!$this->testMode) {
             $schema->setModified();
@@ -239,12 +208,6 @@ class SchemaManager extends ExchangeEntity
 
         return true;
     }
-
-    protected function getVersionConfig()
-    {
-        return $this->versionConfig;
-    }
-
     /**
      * @param $name
      * @return AbstractSchema
@@ -269,7 +232,6 @@ class SchemaManager extends ExchangeEntity
     {
         $file = $this->getQueueFile($schema->getName());
         if (is_file($file)) {
-            /** @noinspection PhpIncludeInspection */
             $items = include $file;
             if (
                 $items &&
@@ -299,14 +261,7 @@ class SchemaManager extends ExchangeEntity
     protected function getQueueFile($name)
     {
         $name = 'queue__' . strtolower($name);
-        return Module::getDocRoot() . '/bitrix/tmp/sprint.migration/' . $name . '.php';
+        return Module::getDocRoot() . '/bitrix/tmp/'.Module::ID.'/' . $name . '.php';
     }
 
-    /**
-     * @return ExchangeManager
-     */
-    protected function getExchangeManager()
-    {
-        return new ExchangeManager($this);
-    }
 }

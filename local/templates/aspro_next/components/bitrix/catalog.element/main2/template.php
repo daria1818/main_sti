@@ -911,9 +911,13 @@ if (!$showProps && $arResult['OFFERS']) {
         <div class="prices_block">
           <div class="cost prices clearfix">
             <? $arUserGroups = $USER->GetUserGroupArray(); ?>
-            <? $arCurPriceType = current($arResult['PRICE_MATRIX']['COLS']);
-            $arCurPrice = current($arResult['PRICE_MATRIX']['MATRIX'][$arCurPriceType['ID']]);
-            $min_price_id = $arCurPriceType['ID']; ?>
+            <? $min_price_id = 0;
+            if (is_array($arResult['PRICE_MATRIX']) && isset($arResult['PRICE_MATRIX']['COLS'])) {
+              $arCurPriceType = current($arResult['PRICE_MATRIX']['COLS']);
+              $arCurPrice = current($arResult['PRICE_MATRIX']['MATRIX'][$arCurPriceType['ID']]);
+              $min_price_id = $arCurPriceType['ID'];
+            }
+             ?>
             <? if (count($arResult["OFFERS"]) > 0) { ?>
               <div class="with_matrix" style="display:none;">
                 <div class="price price_value_block"><span class="values_wrapper"></span></div>
@@ -1637,7 +1641,7 @@ if ($arResult['CATALOG'] && $actualItem['CAN_BUY'] && $arParams['USE_PREDICTION'
 ?>
 <? $this->SetViewTarget('PRODUCT_FILES_INFO'); ?>
 <? $instr_prop = ($arParams["DETAIL_DOCS_PROP"] ? $arParams["DETAIL_DOCS_PROP"] : "INSTRUCTIONS"); ?>
-<? if ((count($arResult["PROPERTIES"][$instr_prop]["VALUE"]) && is_array($arResult["PROPERTIES"][$instr_prop]["VALUE"])) || count($arResult["SECTION_FULL"]["UF_FILES"])) : ?>
+<? if (isset($arResult["PROPERTIES"][$instr_prop]["VALUE"]) || isset($arResult["SECTION_FULL"]["UF_FILES"])) : ?>
   <?
   $arFiles = array();
   if ($arResult["PROPERTIES"][$instr_prop]["VALUE"]) {
@@ -1652,7 +1656,7 @@ if ($arResult['CATALOG'] && $actualItem['CAN_BUY'] && $arParams['USE_PREDICTION'
       }
     }
   }
-  if ($arFiles) : ?>
+  if (!empty($arFiles)) : ?>
     <div class="wraps">
       <hr>
       <h4><?= ($arParams["BLOCK_DOCS_NAME"] ? $arParams["BLOCK_DOCS_NAME"] : GetMessage("DOCUMENTS_TITLE")) ?></h4>

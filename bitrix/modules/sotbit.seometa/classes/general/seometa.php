@@ -49,7 +49,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return ($fullMask) ? trim($iblock['SECTION_PAGE_URL'], '/') : '/'.trim(str_replace('#SITE_DIR#', '', $iblock['SECTION_PAGE_URL']), '/');
     }
 
-    public function SetFilterResult($FilterResult, $Section) {
+    public static function SetFilterResult($FilterResult, $Section) {
         if(!empty($FilterResult)) {
             foreach($FilterResult['ITEMS'] as $key => &$item)
                 if($item['PROPERTY_TYPE'] == 'S' && $item['USER_TYPE'] == 'directory')
@@ -64,13 +64,15 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         self::$FilterResult['PARAMS_SECTION']['ID'] = $Section;
     }
 
-    public function AddAdditionalFilterResults($FilterAdditionalResult, $kombox = false) {
+    public static function AddAdditionalFilterResults($FilterAdditionalResult, $kombox = false) {
         $ar_exceptions = explode(";",COption::GetOptionString( self::MODULE_ID,'FILTER_EXCEPTION_SETTINGS', '', SITE_ID));
 
         if(is_array($ar_exceptions)){
             foreach ($ar_exceptions as $except){
-                if(array_key_exists(trim($except), $FilterAdditionalResult))
-                    unset($FilterAdditionalResult[trim($except)]);
+                if($FilterAdditionalResult) {
+                    if(array_key_exists(trim($except), $FilterAdditionalResult))
+                        unset($FilterAdditionalResult[trim($except)]);
+                }
             }
         }
 
@@ -194,7 +196,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         }
     }
 
-    function GetValuesForEnum($enum_fields = false, $Xvalue = array()) {
+    public static function GetValuesForEnum($enum_fields = false, $Xvalue = array()) {
         $CacheConstantCheck = self::CacheConstantCheck();
         if($CacheConstantCheck == 'N') {
             $vars = array();
@@ -224,7 +226,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $vars;
     }
 
-    function CacheConstantCheck() {
+    public static function CacheConstantCheck() {
         if(COption::GetOptionString(self::MODULE_ID, "MANAGED_CACHE_ON", 'Y', SITE_ID) == "Y") {
             define("BX_COMP_MANAGED_CACHE", true);
 
@@ -237,7 +239,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         }
     }
 
-    function GetValuesForEnum_NoCache($enum_fields = false, $Xvalue = array()) {
+    public static function GetValuesForEnum_NoCache($enum_fields = false, $Xvalue = array()) {
         $ListValues = array();
         if(!$enum_fields)
             return $ListValues;
@@ -291,7 +293,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $ListValues;
     }
 
-    public function FilterCheck() {
+    public static function FilterCheck() {
         if( !empty(self::$FilterResult)) {
             $FilterResult = self::$FilterResult;
             self::$Checker = array();
@@ -313,7 +315,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         }
     }
 
-    public function getRules($arParams) {
+    public static function getRules($arParams) {
         $rows = array();
         $filter = array(
             '=ACTIVE' => 'Y',
@@ -350,7 +352,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $rows;
     }
 
-    public function SetMetaCondition($rule, $SectionId, $IblockId) {
+    public static function SetMetaCondition($rule, $SectionId, $IblockId) {
         $return = array();
         self::$CheckerRule = self::$Checker;
         $result = self::ParseArray($rule['RULES']);
@@ -388,7 +390,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function ParseArray($array) {
+    private static function ParseArray($array) {
         $result = self::PrepareConditions($array['CHILDREN']);
         if(isset($array['DATA']['All']) && isset($array['DATA']['True']) && $array['DATA']['All'] == 'AND' && $array['DATA']['True'] == 'True')
             $return = self::ANDConditions($result);
@@ -401,7 +403,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function PrepareConditions($conditions) {
+    private static function PrepareConditions($conditions) {
         $MassCond = array();
         $return = 0;
         foreach($conditions as $condition) {
@@ -488,7 +490,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $MassCond;
     }
 
-    private function CheckElementsEqual($idSection, $idCondition, $type = 0) {
+    private static function CheckElementsEqual($idSection, $idCondition, $type = 0) {
         $return = 0;
         $FilterResult = self::$FilterResult;
         if($type === 0) {
@@ -546,7 +548,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function CheckElementsNot($idSection, $idCondition, $type = 0) {
+    private static function CheckElementsNot($idSection, $idCondition, $type = 0) {
         $return = 0;
         $FilterResult = self::$FilterResult;
         $Check = 0;
@@ -597,7 +599,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function CheckElementsContain($idSection, $idCondition, $type = 0) {
+    private static function CheckElementsContain($idSection, $idCondition, $type = 0) {
         $return = 0;
         $FilterResult = self::$FilterResult;
         if($type == 0) {
@@ -631,7 +633,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function CheckElementsNotCont($idSection, $idCondition, $type = 0) {
+    private static function CheckElementsNotCont($idSection, $idCondition, $type = 0) {
         $return = 0;
         $CheckedElements = '';
         $FilterResult = self::$FilterResult;
@@ -666,7 +668,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function CheckElementsGreat($idSection, $idCondition, $type = 0) {
+    private static function CheckElementsGreat($idSection, $idCondition, $type = 0) {
         $return = 0;
         $FilterResult = self::$FilterResult;
         if($type === 0) {
@@ -701,7 +703,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function CheckElementsLess($idSection, $idCondition, $type = 0) {
+    private static function CheckElementsLess($idSection, $idCondition, $type = 0) {
         $return = 0;
         $FilterResult = self::$FilterResult;
         if($type === 0) {
@@ -736,7 +738,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function CheckElementsEqGr($idSection, $idCondition, $type = 0) {
+    private static function CheckElementsEqGr($idSection, $idCondition, $type = 0) {
         $return = 0;
         $FilterResult = self::$FilterResult;
         if($type === 0) {
@@ -781,7 +783,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function CheckElementsEqLs($idSection, $idCondition, $type = 0) {
+    private static function CheckElementsEqLs($idSection, $idCondition, $type = 0) {
         $return = 0;
         $FilterResult = self::$FilterResult;
         if($type === 0) {
@@ -826,7 +828,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function ANDConditions($conditions) {
+    private static function ANDConditions($conditions) {
         $return = 0;
         if(in_array(0, $conditions))
             $return = 0;
@@ -836,7 +838,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function ORConditions($conditions) {
+    private static function ORConditions($conditions) {
         $return = 0;
         if(in_array(1, $conditions))
             $return = 1;
@@ -846,7 +848,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function ANDFalseConditions($conditions) {
+    private static function ANDFalseConditions($conditions) {
         $return = 0;
         foreach($conditions as $key => $condition)
             if($key == 0)
@@ -866,7 +868,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    private function ORFalseConditions($conditions) {
+    private static function ORFalseConditions($conditions) {
         $return = 0;
         foreach($conditions as $key => $condition)
             if($key == 0)
@@ -886,7 +888,7 @@ class CSeoMeta extends Bitrix\Iblock\Template\Functions\FunctionBase {
         return $return;
     }
 
-    public function UserFields($str, $SectionID, $IblockId) {
+    public static function UserFields($str, $SectionID, $IblockId) {
         preg_match_all('/\#(.+)\#/', $str, $matches);
 
         if(isset($matches[0]) && is_array($matches[0]) && count($matches[0]) > 0) {

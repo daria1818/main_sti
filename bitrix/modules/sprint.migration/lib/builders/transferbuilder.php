@@ -2,16 +2,15 @@
 
 namespace Sprint\Migration\Builders;
 
-use Exception;
 use Sprint\Migration\AbstractBuilder;
 use Sprint\Migration\Enum\VersionEnum;
-use Sprint\Migration\Exceptions\ExchangeException;
+use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Locale;
+use Sprint\Migration\VersionConfig;
 use Sprint\Migration\VersionManager;
 
 class TransferBuilder extends AbstractBuilder
 {
-
     protected function isBuilderEnabled()
     {
         return true;
@@ -20,7 +19,7 @@ class TransferBuilder extends AbstractBuilder
     protected function initialize()
     {
         $this->setTitle(Locale::getMessage('BUILDER_Transfer1'));
-        $this->setGroup('configurator');
+        $this->setGroup('Tools');
 
         $configFrom = $this->getVersionConfig()->getName();
         $items = $this->getVersionConfig()->getList();
@@ -35,10 +34,10 @@ class TransferBuilder extends AbstractBuilder
         }
 
         $this->addField('transfer_filter', [
-            'title' => Locale::getMessage('BUILDER_TransferSelect'),
+            'title'       => Locale::getMessage('BUILDER_TransferSelect'),
             'placeholder' => '',
-            'width' => 250,
-            'select' => [
+            'width'       => 250,
+            'select'      => [
                 [
                     'title' => Locale::getMessage('BUILDER_TransferInstalled'),
                     'value' => VersionEnum::STATUS_INSTALLED,
@@ -59,32 +58,30 @@ class TransferBuilder extends AbstractBuilder
         ]);
 
         $this->addField('transfer_to', [
-            'title' => Locale::getMessage('BUILDER_TransferTo'),
+            'title'       => Locale::getMessage('BUILDER_TransferTo'),
             'placeholder' => '',
-            'width' => 250,
-            'select' => $structure,
+            'width'       => 250,
+            'select'      => $structure,
         ]);
     }
 
     /**
-     * @throws ExchangeException
-     * @throws Exception
+     * @throws MigrationException
      */
     protected function execute()
     {
         $vmFrom = new VersionManager(
-            $this->getVersionConfig()->getName()
+            $this->getVersionConfig()
         );
 
         $vmTo = new VersionManager(
-            $this->getFieldValue('transfer_to')
+            new VersionConfig($this->getFieldValue('transfer_to'))
         );
 
         $transferresult = $vmFrom->transferMigration(
             $this->getFieldValue('transfer_filter'),
             $vmTo
         );
-
 
         $cnt = 0;
         foreach ($transferresult as $item) {

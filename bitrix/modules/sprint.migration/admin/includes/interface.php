@@ -2,8 +2,13 @@
 
 use Sprint\Migration\Locale;
 use Sprint\Migration\Out;
+
 global $APPLICATION;
-$APPLICATION->SetTitle(Locale::getMessage('TITLE'));
+if (isset($_REQUEST['schema'])) {
+    $APPLICATION->SetTitle(Locale::getMessage('MENU_SCHEMAS'));
+} else {
+    $APPLICATION->SetTitle(Locale::getMessage('TITLE'));
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     CUtil::JSPostUnescape();
@@ -19,7 +24,6 @@ if (isset($_REQUEST['schema'])) {
 
 if ($versionConfig->getVal('show_admin_interface')) {
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        /** @noinspection PhpIncludeInspection */
         require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_js.php");
 
         try {
@@ -37,10 +41,8 @@ if ($versionConfig->getVal('show_admin_interface')) {
                 include __DIR__ . '/../steps/migration_settag.php';
                 include __DIR__ . '/../steps/migration_transfer.php';
             }
-        } catch (Exception $e) {
-            Out::outError($e->getMessage());
         } catch (Throwable $e) {
-            Out::outError($e->getMessage());
+            Out::outException($e);
         }
 
         require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_admin_js.php");
@@ -49,7 +51,7 @@ if ($versionConfig->getVal('show_admin_interface')) {
 }
 
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_after.php");
-CUtil::InitJSCore(["jquery"]);
+CJSCore::Init(["jquery3"]);
 
 if ($versionConfig->getVal('show_admin_interface')) {
     if (isset($_REQUEST['schema'])) {

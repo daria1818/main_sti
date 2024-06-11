@@ -8,7 +8,6 @@ use Sprint\Migration\VersionBuilder;
 
 class BlankBuilder extends VersionBuilder
 {
-
     protected function isBuilderEnabled()
     {
         return true;
@@ -17,7 +16,8 @@ class BlankBuilder extends VersionBuilder
     protected function initialize()
     {
         $this->setTitle(Locale::getMessage('BUILDER_Version1'));
-        $this->setDescription(Locale::getMessage('BUILDER_Version2'));
+        $this->setGroup('Tools');
+
         $this->addVersionFields();
     }
 
