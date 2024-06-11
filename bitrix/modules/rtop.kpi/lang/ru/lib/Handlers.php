@@ -1,0 +1,15 @@
+<?
+$MESS['HANDLERS_ENTITY_ID_FIELD'] = "ID";
+$MESS['HANDLERS_ENTITY_NAME_FIELD'] = "Название";
+$MESS['HANDLERS_ENTITY_CODE_FIELD'] = "Код";
+$MESS['HANDLERS_ENTITY_TYPE_FIELD'] = "Тип";
+$MESS['HANDLERS_ENTITY_FUNCTION_FIELD'] = "Функция";
+$MESS['HANDLERS_ENTITY_AUTO_FIELD'] = "Крон/агент";
+$MESS['HANDLERS_ENTITY_PERIOD_FIELD'] = "Период";
+$MESS['HANDLERS_TYPE_php'] = "PHP";
+$MESS['HANDLERS_TYPE_js'] = "JS";
+$MESS['HANDLERS_TYPE_custom'] = "Кастомизация";
+$MESS['HANDLERS_PERIOD_day'] = "День";
+$MESS['HANDLERS_PERIOD_month'] = "Месяц";
+$MESS['HANDLERS_PERIOD_quarter'] = "Квартал";
+?>

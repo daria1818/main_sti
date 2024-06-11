@@ -1,0 +1,2400 @@
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2867
+    [PROPERTY_ID] => 1501
+    [VALUE] => Biodentine
+    [DEF] => N
+    [SORT] => 600
+    [XML_ID] => 65c40631-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2887
+    [PROPERTY_ID] => 1501
+    [VALUE] => BioRoot
+    [DEF] => N
+    [SORT] => 2600
+    [XML_ID] => 6bc306ad-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 753
+    [PROPERTY_ID] => 539
+    [VALUE] => A1
+    [DEF] => N
+    [SORT] => 500
+    [XML_ID] => afd37958-8232-11e2-b9f9-00155d7f070a
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2933
+    [PROPERTY_ID] => 1501
+    [VALUE] => Capillary
+    [DEF] => N
+    [SORT] => 7200
+    [XML_ID] => 6bc306db-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2932
+    [PROPERTY_ID] => 1501
+    [VALUE] => CitricAcid
+    [DEF] => N
+    [SORT] => 7100
+    [XML_ID] => 6bc306da-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2931
+    [PROPERTY_ID] => 1501
+    [VALUE] => DermaDam
+    [DEF] => N
+    [SORT] => 7000
+    [XML_ID] => 6bc306d9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2923
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultradent
+    [DEF] => N
+    [SORT] => 6200
+    [XML_ID] => 6bc306d1-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2927
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endo-Eze
+    [DEF] => N
+    [SORT] => 6600
+    [XML_ID] => 6bc306d5-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2893
+    [PROPERTY_ID] => 1501
+    [VALUE] => Endomethasone
+    [DEF] => N
+    [SORT] => 3200
+    [XML_ID] => 6bc306b3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2916
+    [PROPERTY_ID] => 1501
+    [VALUE] => File-Eze
+    [DEF] => N
+    [SORT] => 5500
+    [XML_ID] => 6bc306ca-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2922
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraPak
+    [DEF] => N
+    [SORT] => 6100
+    [XML_ID] => 6bc306d0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2898
+    [PROPERTY_ID] => 1501
+    [VALUE] => Guttasolv
+    [DEF] => N
+    [SORT] => 3700
+    [XML_ID] => 6bc306b8-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2899
+    [PROPERTY_ID] => 1501
+    [VALUE] => Hydrol
+    [DEF] => N
+    [SORT] => 3800
+    [XML_ID] => 6bc306b9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2919
+    [PROPERTY_ID] => 1501
+    [VALUE] => NaviTips
+    [DEF] => N
+    [SORT] => 5800
+    [XML_ID] => 6bc306cd-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2925
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opaldam
+    [DEF] => N
+    [SORT] => 6400
+    [XML_ID] => 6bc306d3-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2865
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescence
+    [DEF] => N
+    [SORT] => 400
+    [XML_ID] => 65c4062f-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2921
+    [PROPERTY_ID] => 1501
+    [VALUE] => Opalescenсe Endo
+    [DEF] => N
+    [SORT] => 6000
+    [XML_ID] => 6bc306cf-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2929
+    [PROPERTY_ID] => 1501
+    [VALUE] => Sable Seek
+    [DEF] => N
+    [SORT] => 6800
+    [XML_ID] => 6bc306d7-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2904
+    [PROPERTY_ID] => 1501
+    [VALUE] => Septo-pack
+    [DEF] => N
+    [SORT] => 4300
+    [XML_ID] => 6bc306be-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2937
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultra-Blend
+    [DEF] => N
+    [SORT] => 7600
+    [XML_ID] => 6bc306df-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2938
+    [PROPERTY_ID] => 1501
+    [VALUE] => Ultrablend
+    [DEF] => N
+    [SORT] => 7700
+    [XML_ID] => 6bc306e0-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2915
+    [PROPERTY_ID] => 1501
+    [VALUE] => UltraCal
+    [DEF] => N
+    [SORT] => 5400
+    [XML_ID] => 6bc306c9-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2918
+    [PROPERTY_ID] => 1501
+    [VALUE] => Viscostat
+    [DEF] => N
+    [SORT] => 5700
+    [XML_ID] => 6bc306cc-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)
+Array
+(
+    [ID] => 2951
+    [PROPERTY_ID] => 1501
+    [VALUE] => UniCore
+    [DEF] => N
+    [SORT] => 9000
+    [XML_ID] => 6bc306ed-7e74-11ed-9a4b-ac1f6b3a2cb3
+    [TMP_ID] => 
+)

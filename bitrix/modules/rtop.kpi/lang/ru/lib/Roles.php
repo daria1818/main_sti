@@ -1,0 +1,5 @@
+<?
+$MESS["ROLE_ENTITY_ID_FIELD"] = "ID";
+$MESS["ROLE_ENTITY_CODE_FIELD"] = "Код";
+$MESS["ROLE_ENTITY_ROLE_FIELD"] = "Роль";
+?>

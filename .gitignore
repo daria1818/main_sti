@@ -1,0 +1,481 @@
+# Numerous always-ignore extensions
+*.diff
+*.err
+*.orig
+*.log*
+*.rej
+*.swo
+*.swp
+*.zip
+*.vi
+*~
+*.lock
+!**/yarn.lock
+!**/composer.lock
+*.sql
+*.tar*
+*.xls*
+*.tgz
+*.gz
+*.txt
+sitemap*.xml
+*.css
+*.js
+*.ico
+fonts
+images
+# Dotenv
+.env
+.env.*
+!.env.example
+
+# OS or Editor folders
+.DS_Store
+._*
+Thumbs.db
+.cache
+.config
+.project
+.settings
+.tmproj
+*.esproj
+nbproject
+*.sublime-project
+*.sublime-workspace
+.idea
+*.komodoproject
+.komodotools
+.atom
+.vscode
+.directory
+
+node_modules
+bower_components
+docker-compose.override.yml
+
+!bitrix/activities/custom/*
+/upload/
+/mailing/
+/sandbox/
+/local/php_interface/vendor/
+/restore.php
+/yandex*.*
+/google*.*
+
+# Project ignore rules
+/vendor
+log_*
+/tests/
+/logs/
+
+# core bitrix
+/bitrix/.settings.php
+/bitrix/*
+!/bitrix/components
+/bitrix/components/*
+!/bitrix/components/bitrix
+/bitrix/components/bitrix/*
+
+!/bitrix/components/bitrix/crm.kanban
+/bitrix/components/bitrix/crm.kanban/*
+!/bitrix/components/bitrix/crm.kanban/class.php
+
+!/bitrix/components/aspro
+/bitrix/components/aspro/*
+!/bitrix/components/aspro/com.banners.next
+/bitrix/components/aspro/com.banners.next/*
+!/bitrix/components/aspro/com.banners.next/component.php
+
+!/bitrix/components/rubyroid
+/bitrix/components/rubyroid/*
+!/bitrix/components/rubyroid/rubyroid.cartpay
+/bitrix/components/rubyroid/rubyroid.cartpay/*
+!/bitrix/components/rubyroid/rubyroid.cartpay/class.php
+
+!/bitrix/components/bitrix/crm.entity.editor
+/bitrix/components/bitrix/crm.entity.editor/*
+!/bitrix/components/bitrix/crm.entity.editor/templates
+/bitrix/components/bitrix/crm.entity.editor/templates/*
+!/bitrix/components/bitrix/crm.entity.editor/templates/.default
+/bitrix/components/bitrix/crm.entity.editor/templates/.default/*
+!/bitrix/components/bitrix/crm.entity.editor/templates/.default/template.php
+
+!/bitrix/components/bitrix/sale.products.gift.basket
+/bitrix/components/bitrix/sale.products.gift.basket/*
+!/bitrix/components/bitrix/sale.products.gift.basket/class.php
+
+!/bitrix/components/bitrix/sale.order.ajax
+/bitrix/components/bitrix/sale.order.ajax/*
+!/bitrix/components/bitrix/sale.order.ajax/class.php
+
+!/bitrix/components/bitrix/catalog
+/bitrix/components/bitrix/catalog/*
+!/bitrix/components/bitrix/catalog/component.php
+
+!/bitrix/components/bitrix/catalog.smart.filter
+/bitrix/components/bitrix/catalog.smart.filter/*
+!/bitrix/components/bitrix/catalog.smart.filter/class.php
+
+!/bitrix/components/bitrix/catalog.item
+/bitrix/components/bitrix/catalog.item/*
+!/bitrix/components/bitrix/catalog.item/templates
+/bitrix/components/bitrix/catalog.item/templates/*
+!/bitrix/components/bitrix/catalog.item/templates/.default
+/bitrix/components/bitrix/catalog.item/templates/.default/*
+!/bitrix/components/bitrix/catalog.item/templates/.default/card
+/bitrix/components/bitrix/catalog.item/templates/.default/card/*
+!/bitrix/components/bitrix/catalog.item/templates/.default/card/template.php
+# !/bitrix/php_interface/
+# !/bitrix/templates/
+# /bitrix/templates/*
+# !/bitrix/templates/aspro_next
+
+!/bitrix/modules/
+/bitrix/modules/*
+!/bitrix/modules/salescenter
+/bitrix/modules/salescenter/*
+!/bitrix/modules/salescenter/lib
+/bitrix/modules/salescenter/lib/*
+# !/bitrix/modules/salescenter/lib/controller
+# /bitrix/modules/salescenter/lib/controller/*
+# !/bitrix/modules/salescenter/lib/controller/order.php
+!/bitrix/modules/salescenter/lib/builder
+/bitrix/modules/salescenter/lib/builder/*
+!/bitrix/modules/salescenter/lib/builder/orderbuilder.php
+
+!/bitrix/modules/main
+/bitrix/modules/main/*
+!/bitrix/modules/main/bx_root.php
+!/bitrix/modules/main/include
+/bitrix/modules/main/include/*
+!/bitrix/modules/main/include/epilog_admin.php
+!/bitrix/modules/main/interface
+/bitrix/modules/main/interface/*
+!/bitrix/modules/main/interface/auth
+/bitrix/modules/main/interface/auth/*
+!/bitrix/modules/main/interface/auth/authorize.php
+
+!/bitrix/modules/sotbit.seometa
+/bitrix/modules/sotbit.seometa/*
+!/bitrix/modules/sotbit.seometa/classes
+
+#old
+!/bitrix/modules/sale
+/bitrix/modules/sale/*
+# !/bitrix/modules/sale/general
+# /bitrix/modules/sale/general/*
+# !/bitrix/modules/sale/general/order_loader.php
+#old
+!/bitrix/modules/sale/admin
+/bitrix/modules/sale/admin/*
+!/bitrix/modules/sale/admin/order.php
+!/bitrix/modules/sale/admin/order_export.php
+!/bitrix/modules/sale/lib
+/bitrix/modules/sale/lib/*
+!/bitrix/modules/sale/lib/discount
+/bitrix/modules/sale/lib/discount/*
+!/bitrix/modules/sale/lib/discount/gift
+/bitrix/modules/sale/lib/discount/gift/*
+!/bitrix/modules/sale/lib/discount/gift/manager.php
+!/bitrix/modules/sale/lib/helpers
+/bitrix/modules/sale/lib/helpers/*
+!/bitrix/modules/sale/lib/helpers/order
+/bitrix/modules/sale/lib/helpers/order/*
+!/bitrix/modules/sale/lib/helpers/order/builder
+/bitrix/modules/sale/lib/helpers/order/builder/*
+!/bitrix/modules/sale/lib/helpers/order/builder/orderbuilder.php
+
+!/bitrix/modules/intranet
+/bitrix/modules/intranet/*
+!/bitrix/modules/intranet/install
+/bitrix/modules/intranet/install/*
+!/bitrix/modules/intranet/install/public
+/bitrix/modules/intranet/install/public/*
+!/bitrix/modules/intranet/install/public/bitrix24
+/bitrix/modules/intranet/install/public/bitrix24/*
+!/bitrix/modules/intranet/install/public/bitrix24/crm
+/bitrix/modules/intranet/install/public/bitrix24/crm/*
+!/bitrix/modules/intranet/install/public/bitrix24/crm/deal
+/bitrix/modules/intranet/install/public/bitrix24/crm/deal/*
+!/bitrix/modules/intranet/install/public/bitrix24/crm/deal/index.php
+
+!/bitrix/modules/iblock
+/bitrix/modules/iblock/*
+!/bitrix/modules/iblock/classes
+/bitrix/modules/iblock/classes/*
+!/bitrix/modules/iblock/classes/general
+/bitrix/modules/iblock/classes/general/*
+!/bitrix/modules/iblock/classes/general/cml2.php
+
+!/bitrix/modules/socialservices
+/bitrix/modules/socialservices/*
+!/bitrix/modules/socialservices/classes
+/bitrix/modules/socialservices/classes/*
+!/bitrix/modules/socialservices/classes/general
+/bitrix/modules/socialservices/classes/general/*
+!/bitrix/modules/socialservices/classes/general/authmanager.php
+
+!/bitrix/modules/rest
+/bitrix/modules/rest/*
+!/bitrix/modules/rest/lib
+/bitrix/modules/rest/lib/*
+!/bitrix/modules/rest/lib/api
+/bitrix/modules/rest/lib/api/*
+!/bitrix/modules/rest/lib/api/event.php
+!/bitrix/modules/rest/services
+/bitrix/modules/rest/services/*
+!/bitrix/modules/rest/services/rest
+/bitrix/modules/rest/services/rest/*
+!/bitrix/modules/rest/services/rest/index.php
+
+!/bitrix/modules/aspro.next
+/bitrix/modules/aspro.next/*
+!/bitrix/modules/aspro.next/lib
+!/bitrix/modules/aspro.next/classes
+
+#eshop логистик
+!/bitrix/modules/eshoplogistic.delivery
+#альфа банк
+!/bitrix/modules/kupilegko.payment
+#Агенты на кроне
+!/bitrix/modules/askaron.agents
+#Информационные блоки, инструменты
+!/bitrix/modules/asd.iblock
+#Миграции для разработчиков
+!/bitrix/modules/sprint.migration
+#Модуль доставки Деловые Линии
+!/bitrix/modules/dellindev.shipment
+#Настройки++
+!/bitrix/modules/askaron.settings
+#Оптимизация картинок
+!/bitrix/modules/dev2fun.imagecompress
+#Яндекс.Маркет для бизнеса
+!/bitrix/modules/yandex.market
+
+!/bitrix/modules/rtop.kpi
+
+!/bitrix/js/
+/bitrix/js/*
+!/bitrix/js/rpa
+/bitrix/js/rpa/*
+!/bitrix/js/rpa/kanban
+/bitrix/js/rpa/kanban/*
+!/bitrix/js/rpa/kanban/src
+/bitrix/js/rpa/kanban/src/*
+!/bitrix/js/rpa/kanban/src/item.js
+!/bitrix/js/rpa/timeline
+/bitrix/js/rpa/timeline/*
+!/bitrix/js/rpa/timeline/src
+/bitrix/js/rpa/timeline/src/*
+!/bitrix/js/rpa/timeline/src/task.js
+
+# !/bitrix/js/
+# /bitrix/js/*
+# !/bitrix/js/crm
+# /bitrix/js/crm/*
+# !/bitrix/js/crm/entity-editor
+# /bitrix/js/crm/entity-editor/*
+# !/bitrix/js/crm/entity-editor/js
+# /bitrix/js/crm/entity-editor/js/*
+# !/bitrix/js/crm/entity-editor/js/control.js
+# !/bitrix/js/crm/entity-editor/js/control.min.js
+
+# !/bitrix/js/crm/kanban
+# /bitrix/js/crm/kanban/*
+# !/bitrix/js/crm/kanban/js
+# /bitrix/js/crm/kanban/js/*
+# !/bitrix/js/crm/kanban/js/column.js
+# !/bitrix/js/crm/kanban/js/column.map.js
+
+!/bitrix/js/ui
+/bitrix/js/ui/*
+!/bitrix/js/ui/buttons
+/bitrix/js/ui/buttons/*
+!/bitrix/js/ui/buttons/src
+/bitrix/js/ui/buttons/src/*
+!/bitrix/js/ui/buttons/src/css
+/bitrix/js/ui/buttons/src/css/*
+!/bitrix/js/ui/buttons/src/css/ui.buttons.css
+!/bitrix/js/ui/viewer
+/bitrix/js/ui/viewer/*
+!/bitrix/js/ui/viewer/css
+/bitrix/js/ui/viewer/css/*
+!/bitrix/js/ui/viewer/css/style.css
+
+# !/bitrix/js/salescenter
+# /bitrix/js/salescenter/*
+# !/bitrix/js/salescenter/app
+# /bitrix/js/salescenter/app/*
+# !/bitrix/js/salescenter/app/config.php
+# !/bitrix/js/salescenter/app/dist
+# /bitrix/js/salescenter/app/dist/*
+# !/bitrix/js/salescenter/app/dist/app.bundle.js
+# !/bitrix/js/salescenter/app/dist/app.bundle.min.js
+# !/bitrix/js/salescenter/app/lang
+# /bitrix/js/salescenter/app/lang/*
+# !/bitrix/js/salescenter/app/lang/ru
+# /bitrix/js/salescenter/app/lang/ru/*
+# !/bitrix/js/salescenter/app/lang/ru/config.php
+
+# !/bitrix/js/rpa
+# /bitrix/js/rpa/*
+# !/bitrix/js/rpa/kanban
+# /bitrix/js/rpa/kanban/*
+# !/bitrix/js/rpa/kanban/dist
+# /bitrix/js/rpa/kanban/dist/*
+# !/bitrix/js/rpa/kanban/dist/kanban.bundle.js
+# !/bitrix/js/rpa/kanban/dist/kanban.bundle.js.map
+# !/bitrix/js/rpa/kanban/dist/kanban.bundle.map.js
+# !/bitrix/js/rpa/kanban/dist/kanban.bundle.min.js
+# !/bitrix/js/rpa/kanban/src
+# /bitrix/js/rpa/kanban/src/*
+# !/bitrix/js/rpa/kanban/src/item.js
+# !/bitrix/js/rpa/timeline
+# /bitrix/js/rpa/timeline/*
+# !/bitrix/js/rpa/timeline/dist
+# /bitrix/js/rpa/timeline/dist/*
+# !/bitrix/js/rpa/timeline/dist/timeline.bundle.js
+# !/bitrix/js/rpa/timeline/dist/timeline.bundle.js.map
+# !/bitrix/js/rpa/timeline/dist/timeline.bundle.map.js
+# !/bitrix/js/rpa/timeline/dist/timeline.bundle.min.js
+# !/bitrix/js/rpa/timeline/src
+# /bitrix/js/rpa/timeline/src/*
+# !/bitrix/js/rpa/timeline/src/task.js
+
+# !/bitrix/components/
+# /bitrix/components/*
+# !/bitrix/components/bitrix
+# !/bitrix/components/rtop
+# /bitrix/components/bitrix/*
+# !/bitrix/components/bitrix/crm.entity.editor
+# /bitrix/components/bitrix/crm.entity.editor/*
+# !/bitrix/components/bitrix/crm.entity.editor/templates
+# /bitrix/components/bitrix/crm.entity.editor/templates/*
+# !/bitrix/components/bitrix/crm.entity.editor/templates/.default
+# /bitrix/components/bitrix/crm.entity.editor/templates/.default/*
+# !/bitrix/components/bitrix/crm.entity.editor/templates/.default/template.php
+# !/bitrix/components/bitrix/crm.entity.editor/templates/.default/lang
+# /bitrix/components/bitrix/crm.entity.editor/templates/.default/lang/*
+# !/bitrix/components/bitrix/crm.entity.editor/templates/.default/lang/ru
+# /bitrix/components/bitrix/crm.entity.editor/templates/.default/lang/ru/*
+
+# !/bitrix/components/bitrix/crm.contact
+# /bitrix/components/bitrix/crm.contact/*
+# !/bitrix/components/bitrix/crm.contact/templates
+# /bitrix/components/bitrix/crm.contact/templates/*
+# !/bitrix/components/bitrix/crm.contact/templates/.default
+# /bitrix/components/bitrix/crm.contact/templates/.default/*
+# !/bitrix/components/bitrix/crm.contact/templates/.default/list.php
+
+# !/bitrix/components/bitrix/catalog.product.search
+# /bitrix/components/bitrix/catalog.product.search/*
+# !/bitrix/components/bitrix/catalog.product.search/class.php
+
+# !/bitrix/components/bitrix/salescenter.app
+# /bitrix/components/bitrix/salescenter.app/*
+# !/bitrix/components/bitrix/salescenter.app/class.php
+# !/bitrix/components/bitrix/salescenter.app/lang
+# /bitrix/components/bitrix/salescenter.app/lang/*
+# !/bitrix/components/bitrix/salescenter.app/lang/ru
+# /bitrix/components/bitrix/salescenter.app/lang/ru/*
+# !/bitrix/components/bitrix/salescenter.app/lang/ru/class.php
+
+# !/bitrix/components/bitrix/crm.document.view
+# /bitrix/components/bitrix/crm.document.view/*
+# !/bitrix/components/bitrix/crm.document.view/templates
+# /bitrix/components/bitrix/crm.document.view/templates/*
+# !/bitrix/components/bitrix/crm.document.view/templates/.default
+# /bitrix/components/bitrix/crm.document.view/templates/.default/*
+# !/bitrix/components/bitrix/crm.document.view/templates/.default/script.js
+
+# !/bitrix/components/bitrix/catalog.element
+# /bitrix/components/bitrix/catalog.element/*
+# !/bitrix/components/bitrix/catalog.element/templates
+# /bitrix/components/bitrix/catalog.element/templates/*
+# !/bitrix/components/bitrix/catalog.element/templates/.default
+# /bitrix/components/bitrix/catalog.element/templates/.default/*
+# !/bitrix/components/bitrix/catalog.element/templates/.default/template.php
+
+# !/bitrix/templates/bitrix24
+# /bitrix/templates/bitrix24/*
+# !/bitrix/templates/bitrix24/template_styles.css
+
+#!bitrix/templates/aspro_next/
+
+/form-N3KyL.php
+/form-OnDPU.php
+/form-8PWrm.php
+/form-8rhJy.php
+/form-jeV0x.php
+/form-8NQU9.php
+/form-i7PHY.php
+/form-xSf3Q.php
+/form-NcLna.php
+/form-9Ohxy.php
+
+/form-0rnBG.php
+/form-R4d8s.php
+/form-MbGDN.php
+/form-Uy7pC.php
+/form-0K7zS.php
+/form-af3bc.php
+/form-5f1xn.php
+/form-jijik.php
+/form-i0teg.php
+/form-zwrox.php
+/form-37u4w.php
+/form-buepx.php
+/form-1dda8.php
+/form-co9ym.php
+/form-7qcwn.php
+/form-uxvms.php
+/form-escuw.php
+/form-lnbg0.php
+/form-wlnp6.php
+/form-7i3sr.php
+/form-fzlua.php
+/form-mwpcs.php
+/form-rjfvk.php
+/form-g8tnu.php
+/form-jqpua.php
+/form-sak3h.php
+/form-dobrt.php
+/form-kashv.php
+/form-ezqyx.php
+/form-dnlsy.php
+/form-1ih2e.php
+/form-neomb.php
+/form-rmliz.php
+/form-qabf1.php
+/form-yaukb.php
+/form-wbeaf.php
+/form-dyux4.php
+/form-ceurj.php
+/form-w2pyz.php
+/form-ovnmg.php
+
+
+/.vscode-server
+/.vscode-server-insiders
+/.npm
+/.git_old
+/CRON
+/debug
+/images
+/vendor
+log_*
+/test/
+logs
+test*
+/gr.php
+/grep_123.php
+*_old.php
+docker
+*.back
+*.bak
+migrations
+migrations.archive
+old_bitrix
+stavropol
+novorossiisk
+.well-known

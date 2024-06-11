@@ -1,0 +1,1 @@
+<img alt="stionline.png" src="/upload/medialibrary/d2e/d2e09adaa2ddb81136dcc5c21e275b09.png" title="stionline.png" width="220" height="249">

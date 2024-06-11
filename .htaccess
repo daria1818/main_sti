@@ -1,0 +1,415 @@
+Options -Indexes
+ErrorDocument 404 /404.php
+
+<IfModule mod_php5.c>
+	php_flag allow_call_time_pass_reference 1
+	php_flag session.use_trans_sid off
+
+	#php_value display_errors 1
+
+	php_value mbstring.internal_encoding UTF-8
+</IfModule>
+
+<IfModule mod_rewrite.c>
+	Options +FollowSymLinks
+	RewriteEngine On
+
+	RewriteCond %{HTTP_HOST} ^www\.(.*)$
+	RewriteRule ^(.*)$ https://%1/$1 [L,R=301]
+	
+
+	RewriteCond %{REQUEST_URI} [A-Z]
+	RewriteRule (.*) https://%{HTTP_HOST}/${lc:$1} [R=301,L]
+	
+	RewriteCond %{REQUEST_URI} ^/novorossiisk/(.*)$ 
+	RewriteRule ^(.*)$ /%1 [R=301,L]
+
+	RewriteCond %{REQUEST_URI} ^/stavropol/(.*)$ 
+	RewriteRule ^(.*)$ /%1 [R=301,L]
+	
+	RewriteCond %{QUERY_STRING} ^num=(\d+)$
+	RewriteRule ^(.*)$ /$1? [R=301,L]
+
+	RewriteCond %{QUERY_STRING} ^view=(\w+)$
+  	RewriteRule ^(.*)$ /$1? [R=301,L]
+
+  	RewriteCond %{REQUEST_URI} ^/catalog/otbelivanie-zubov/kabinetnoe-otbelivanie/zashchita_myagkikh_tkaney/umbrella/$
+  	RewriteRule ^(.*)$ /catalog/landing_umbrella/ [L]
+
+  	RewriteCond %{QUERY_STRING} !(sort=(\w+)) [NC]
+	RewriteCond %{QUERY_STRING} view=(\w+) [NC]
+	RewriteCond %{QUERY_STRING} num=(\d+) [NC]
+	RewriteRule ^(.*)$ /$1? [R=301,L]
+
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-l
+	RewriteCond %{REQUEST_FILENAME} !-d
+	RewriteCond %{REQUEST_FILENAME} !/bitrix/urlrewrite.php$
+	RewriteRule ^(.*)$ /bitrix/urlrewrite.php [L]
+	RewriteRule .* - [E=REMOTE_USER:%{HTTP:Authorization}]
+	RewriteCond %{THE_REQUEST} /(.*)index.php.*$
+	RewriteCond %{THE_REQUEST} !bitrix/admin/
+	RewriteRule .* /%1 [R=301,L]
+
+
+	
+	RewriteCond %{REQUEST_URI} ^(.*/[^/\.]+)$
+	RewriteCond %{REQUEST_URI} !^/bitrix/
+	RewriteRule ^(.*)$ http://%{HTTP_HOST}/$1/ [R=301,L]
+
+
+	Redirect 301 /catalog/code_24/ems_vozdushno_abrazivnye_tekhnologii/apparaty_serii_air_flow_master/air_flow_prophylaxis_master /products/air-flow-prophylaxis-master/
+	Redirect 301 /catalog/code_43/materialy_i_preparaty/code_56/bioroot_rcs/ /products/bioroot-rcs/
+
+	Redirect 301 /catalog/stomatologicheskie-instrumenty/stomatologicheskoe_oborudovanie_1/ /catalog/stomatologicheskie-instrumenty/stomatologicheskoe_oborudovanie/
+
+	Redirect 301 /catalog/code_127/ /catalog/laboratoriya/
+	Redirect 301 /catalog/maski/ /catalog/sredstva_zashchity/shapochki_bakhily_ochki_maski/
+	Redirect 301 /catalog/otbelivanie-zubov/?num=32 /catalog/otbelivanie-zubov/
+
+	Redirect 301 /products/opalescence-whitening-toothpaste-133-g-90979/ /products/opalescence-whitening-toothpaste-133-g/
+
+	Redirect 301 /products/consepsis-indispense/ /products/consepsis-scrub-indispense/ 
+
+	Redirect 301 /catalog/code_127/ /catalog/laboratoriya/
+
+	Redirect 301 /catalog/code_120/ /catalog/ortopedicheskaya-stomatologiya/
+
+	Redirect 301 /catalog/code_33/ /catalog/otbelivanie-zubov/
+
+	Redirect 301 /catalog/code_78/ /catalog/parodonthologiya/
+
+	Redirect 301 /catalog/code_24/ /catalog/professionalnaya-gigiena/
+
+	Redirect 301 /catalog/code_1/ /catalog/restavraciya/
+
+	Redirect 301 /catalog/code_83/ /catalog/hirurgiya/
+
+	Redirect 301 /catalog/code_43/ /catalog/endhodontiya/
+
+	Redirect 301 /catalog/code_8/ /catalog/kompozitnye-materialy-svetovogo-otverzhdeniya/
+
+	Redirect 301 /catalog/parodontologiya/ /catalog/parodonthologiya/
+
+	Redirect 301 /catalog/restavraciya/code_8/ /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/
+
+	Redirect 301 /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/code_9/ /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/charisma-diamond/
+
+	Redirect 301 /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/code_10/ /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/charisma-opal/
+
+	Redirect 301 /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/code_11/ /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/charisma-opal-flow/
+
+	Redirect 301 /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/code_12/ /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/charisma-main/
+
+	Redirect 301 /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/code_13/ /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/charisma-flow/
+
+	Redirect 301 /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/code_17/ /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/amelogen-plus/
+
+	Redirect 301 /catalog/restavraciya/code_21/ /catalog/restavraciya/adgeziya-i-protravlivanie/
+
+	Redirect 301 /catalog/restavraciya/code_23/ /catalog/restavraciya/fotopolimerizacionnye-ustrojstva/
+
+	Redirect 301 /catalog/restavraciya/code_206/ /catalog/restavraciya/post-bonding/
+
+	Redirect 301 /catalog/restavraciya/code_226/ /catalog/restavraciya/polimerizatory-valo/
+
+	Redirect 301 /catalog/restavraciya/post-bonding/code_19/ /catalog/restavraciya/post-bonding/permaseal/
+
+	Redirect 301 /catalog/restavraciya/code_227/ /catalog/restavraciya/fissurnye-silanty/
+
+	Redirect 301 /catalog/restavraciya/fissurnye-silanty/code_20/  /catalog/restavraciya/fissurnye-silanty/ultraseal-xt-plus/
+
+	Redirect 301 /catalog/restavraciya/code_28/ /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/
+
+	Redirect 301 /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/code_30/ /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/lechebnye-i-izoliruyushchie-prokladki/
+
+	Redirect 301 /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/code_6/ /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/materialy-dlya-vremennogo-plombirovaniya/
+
+	Redirect 301 /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/code_22/ /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/sredstva-dlya-remonta-skolov-keramiki/
+
+	Redirect 301 /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/code_29/ /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/sredstva-dlya-retrakcii-desny-i-ostanovki-krovotechenij/
+
+	Redirect 301 /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/code_31/ /catalog/restavraciya/vspomogatelnye-materialy-i-aksessuary/shlifovanie-i-polirovanie-kompozitnyh-restavracij/
+
+	Redirect 301 /catalog/otbelivanie-zubov/code_34/ /catalog/otbelivanie-zubov/domashnee-otbelivanie/
+
+	Redirect 301 /catalog/otbelivanie-zubov/code_35/ /catalog/otbelivanie-zubov/kabinetnoe-otbelivanie/
+
+	Redirect 301 /catalog/otbelivanie-zubov/otbelivanie_devitalnykh_zubov/code_40/ /catalog/otbelivanie-zubov/otbelivanie_devitalnykh_zubov/opalescense-endo/
+
+	Redirect 301 /catalog/professionalnaya-gigiena/sredstva_dlya_professionalnoy_gigieny/code_27/ /catalog/professionalnaya-gigiena/sredstva_dlya_professionalnoy_gigieny/sredstva-udaleniya-zubnyh-otlozhenij/
+	Redirect 301 /catalog/professionalnaya-gigiena/sredstva_dlya_professionalnoy_gigieny/prophylaxis/ /catalog/professionalnaya-gigiena/sredstva_dlya_professionalnoy_gigieny/sredstva-udaleniya-zubnyh-otlozhenij/
+
+	Redirect 301 /catalog/endhodontiya/code_66/ /catalog/endhodontiya/ultrazvukovaya-parodontalnaya-mikrohirurgiya/
+
+	Redirect 301 /catalog/endhodontiya/ultrazvukovaya-parodontalnaya-mikrohirurgiya/code_68/ /catalog/endhodontiya/ultrazvukovaya-parodontalnaya-mikrohirurgiya/cistema-hero-shaper/
+
+	Redirect 301 /catalog/endhodontiya/ultrazvukovaya-parodontalnaya-mikrohirurgiya/code_69/ /catalog/endhodontiya/ultrazvukovaya-parodontalnaya-mikrohirurgiya/sistema-r-endo/
+
+	Redirect 301 /catalog/endhodontiya/ultrazvukovaya-parodontalnaya-mikrohirurgiya/code_67/ /catalog/endhodontiya/ultrazvukovaya-parodontalnaya-mikrohirurgiya/sistema-revo-s/
+
+	Redirect 301 /catalog/endhodontiya/code_60/ /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/
+
+	Redirect 301 /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/code_61/ /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/h-fajly/
+
+	Redirect 301 /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/code_205/ /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/hero-shaper-manual-ni-ti/
+
+	Redirect 301 /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/code_62/ /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/k-fajly/
+
+	Redirect 301 /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/code_64/ /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/mmc-fajly/
+
+	Redirect 301 /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/code_65/ /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/mme-fajly/
+
+	Redirect 301 /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/code_63/ /catalog/endhodontiya/micro-mega-ruchnye-instrumenty-i-shtifty/rimery/
+
+	Redirect 301 /catalog/endhodontiya/code_52/ /catalog/endhodontiya/instrumenty-ems/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_77/ /catalog/endhodontiya/materialy_i_preparaty/vosstanovlenie-posle-ehndodonticheskogo-lecheniya/
+
+	Redirect 301 /catalog/endhodontiya/code_70/ /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/
+
+	Redirect 301 /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/code_76/ /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/tilos-mashinnye-niti-apikalnye-fajly/
+
+	Redirect 301 /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/code_74/ /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/tilos-mashinnye-stalnye-shaping-fajly/
+
+	Redirect 301 /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/code_73/ /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/tilos-ruchnye-niti-fajly/
+
+	Redirect 301 /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/code_72/ /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/tilos-ruchnye-fajly-iz-nerzhaveyushchej-stali/
+
+	Redirect 301 /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/code_71/ /catalog/endhodontiya/ultradent-instrumenty-sistemy-endo-eze-aet/bory-riitano/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_53/ /catalog/endhodontiya/materialy_i_preparaty/dezinfekciya-kornevogo-kanala/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_48/ /catalog/endhodontiya/materialy_i_preparaty/diagnosticheskie-sredstva/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_49/ /catalog/endhodontiya/materialy_i_preparaty/izolyaciya-rabochego-polya-i-profilaktika-kontaminacii/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_51/ /catalog/endhodontiya/materialy_i_preparaty/irriganty-i-lubrikanty-aksessuary/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_57/ /catalog/endhodontiya/materialy_i_preparaty/otbelivanie-devitalnogo-zuba/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_56/ /catalog/endhodontiya/materialy_i_preparaty/plombirovanie-kornevyh-kanalov/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_58/ /catalog/endhodontiya/materialy_i_preparaty/povtornoe-ehndodonticheskoe-lechenie/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_217/ /catalog/endhodontiya/materialy_i_preparaty/profilaktika-porazhenij-pulpy/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_54/ /catalog/endhodontiya/materialy_i_preparaty/sredstva-soderzhashchie-antibiotiki/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_55/ /catalog/endhodontiya/materialy_i_preparaty/sredstva-soderzhashchie-gidrookis-kalciya/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_218/ /catalog/endhodontiya/materialy_i_preparaty/ustranenie-perforacij/
+
+	Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_50/ /catalog/endhodontiya/materialy_i_preparaty/devitalizaciya-pulpy/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/code_101/ /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/gemostaticheskie-preparaty/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/code_98/ /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/germetizaciya-fissur/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/code_96/ /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/diagnostika-nachalnogo-kariesa/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/code_99/ /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/profilaktika-kariesa-i-snyatie-chuvstvitelnosti/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/code_100/ /catalog/detskaya-stomatologiya/materialy_i_preparaty_dlya_detskoy_stomatologii/ehndodonticheskoe-lechenie/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/code_102/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/plombirovanie-polostej/code_111/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/charisma-diamond-nano-gibridnye-kompozity/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/plombirovanie-polostej/code_114/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/charisma-opal-flow-tekuchie-submikronnye-kompozity/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/plombirovanie-polostej/code_104/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/adgezivnye-sistemy/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/plombirovanie-polostej/code_105/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/lechebnye-i-izoliruyushie-prokladki/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/plombirovanie-polostej/code_106/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/materiali-dlya-vremennogo-plombirovaniya/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/plombirovanie-polostej/code_103/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/sredstva-dlya-izolyacii-rabochego-polya/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/plombirovanie-polostej/code_118/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/fotopolimerizacionnye-ustroistva/
+
+	Redirect 301 /catalog/detskaya-stomatologiya/plombirovanie-polostej/code_119/ /catalog/detskaya-stomatologiya/plombirovanie-polostej/shlifovanie-i-polirovanie-kompozitov/
+
+	Redirect 301 /catalog/hirurgiya/ultrazvukovoe_khirurgicheskoe_oborudovanie/code_89/ /catalog/hirurgiya/ultrazvukovoe_khirurgicheskoe_oborudovanie/instrumenty-dlya-hirurgicheskoj-ehndodontii/
+
+	Redirect 301 /catalog/hirurgiya/ultrazvukovoe_khirurgicheskoe_oborudovanie/code_88/ /catalog/hirurgiya/ultrazvukovoe_khirurgicheskoe_oborudovanie/instrumenty-k-piezon-master-surgery/
+
+	Redirect 301 /catalog/ortopedicheskaya-stomatologiya/code_126/ /catalog/ortopedicheskaya-stomatologiya/remont-skolov-keramiki/
+
+	Redirect 301 /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/acode_215/ /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/a-silikon-dlya-registracii-prikusa-variotime-bite/
+
+	Redirect 301 /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/code_122/ /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/a-silikonovye-slepochnye-materialy-variotime/
+
+	Redirect 301 /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/code_213/ /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/aksessuary-dlya-smeshivaniya-slepochnyh-mass/
+
+	Redirect 301 /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/code_214/ /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/ottisknye-lozhki/
+
+	Redirect 301 /catalog/ortopedicheskaya-stomatologiya/code_123/ /catalog/ortopedicheskaya-stomatologiya/snyatie_ottiskov_i_registratsiya_prikusa/sredstva-dlya-retrakcii-desny-i-gemostaza/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_154/ /catalog/laboratoriya/keramika-dlya-pressovaniya-heraceram-press/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/code_162/ /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/adgeziv/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/code_161/ /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/aksessuary-dlya-pressovaniya/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/code_156/ /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/dentini/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/code_155/ /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/nabor-heraceram-press/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/code_157/ /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/opak-dentiny/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/code_159/ /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/rezhushchij-kraj/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/code_160/ /catalog/laboratoriya/keramicheskie_massy/keramika-dlya-pressovaniya-heraceram-press/transparenty/
+
+	Redirect 301 /catalog/laboratoriya/eramicheskie_massy/code_128/ /catalog/laboratoriya/metallokeramika-heraceram/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_142/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/vtorichnye-i-mamelon-dentiny/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_152/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/vehlyu-keramiki-vl/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_138/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/glazur/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_135/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/dentinii/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/dentiny/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/dentinii/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_136/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/desnevie-keramiki/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_145/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/inkrizeri/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/inkrizery/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/inkrizeri/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_147/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/inhansery-maski-i-korrektory/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_149/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/keramiki-rezhushchego-kraya-s-i-os/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_144/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/krasiteli/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_130/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/nabory-heraceram/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_143/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/opalovye-transparenty/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_132/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/pastoobraznye-opaki/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_139/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/plechevye-keramiki/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_131/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/poroshkovye-opaki/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_134/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/preopak-i-prajmer/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/code_128/code_153/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/transparenti/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/transparenty/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/transparenti/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_142/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/vtorichnye-i-mamelon-dentiny/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_152/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/vehlyu-keramiki-vl/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_138/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/glazur/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_135/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/dentiny/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_136/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/desnevie-keramiki/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_145/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/inkrizery/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_147/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/inhansery-maski-i-korrektory/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_149/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/keramiki-rezhushchego-kraya-s-i-os/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_144/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/krasiteli/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_130/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/nabory-heraceram/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_143/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/opalovye-transparenty/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_132/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/pastoobraznye-opaki/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_139/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/plechevye-keramiki/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_131/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/poroshkovye-opaki/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_134/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/preopak-i-prajmer/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/code_153/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/transparenti/
+
+	Redirect 301 /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/transparenty/ /catalog/laboratoriya/keramicheskie_massy/metallokeramika-heraceram/transparenti/
+
+	Redirect 301 /catalog/laboratoriya/code_194/ /catalog/laboratoriya/lite-i-modelirovanie/
+
+	Redirect 301 /catalog/laboratoriya/lite-i-modelirovanie/code_198/ /catalog/laboratoriya/lite-i-modelirovanie/dentalnye-splavy/
+
+	Redirect 301 /catalog/laboratoriya/lite-i-modelirovanie/code_195/ /catalog/laboratoriya/lite-i-modelirovanie/litejnoe-oborudovanie-i-prisposobleniya/
+
+	Redirect 301 /catalog/laboratoriya/lite-i-modelirovanie/code_197/ /catalog/laboratoriya/lite-i-modelirovanie/pakovochnye-massy/
+
+	Redirect 301 /catalog/laboratoriya/code_185/ /catalog/laboratoriya/semnoe-protezirovanie/
+
+	Redirect 301 /catalog/laboratoriya/semnoe-protezirovanie/code_192/ /catalog/laboratoriya/semnoe-protezirovanie/zuby-serii-premium/
+
+	Redirect 301 /catalog/laboratoriya/semnoe-protezirovanie/code_187/ /catalog/laboratoriya/semnoe-protezirovanie/plastmassy-goryachej-polimerizacii/
+
+	Redirect 301 /catalog/laboratoriya/semnoe-protezirovanie/code_188/ /catalog/laboratoriya/semnoe-protezirovanie/plastmassy-holodnoj-polimerizacii/
+
+	Redirect 301 /catalog/laboratoriya/semnoe-protezirovanie/code_186/ /catalog/laboratoriya/semnoe-protezirovanie/silikony-i-plastiny-kyuvety/
+
+	Redirect 301 /catalog/products/ /catalog/
+
+	Redirect 301 /catalog/code_91/ /catalog/detskaya-stomatologiya/
+	Redirect 301 /products/septoject_04_21/ /products/septoject-04-21/
+    Redirect 301 /products/nasadka_silikonovaya_perio_flow_1kh40_sht_/ /products/nasadka-silikonovaya-perio-flow-1kh40-sht/
+    Redirect 301 /products/smesitelnye-nakonechniki-kartridzhey-1-1-zelenye/ /products/smesitelnye_nakonechniki_kartridzhey_1_1_zelenye/
+    Redirect 301 /catalog/stomatologicheskie_instrumenty/stomatologicheskie_materialy_1/ /catalog/stomatologicheskie-instrumenty/stomatologicheskie_materialy/
+    Redirect 301 /catalog/stomatologicheskie_instrumenty/stomatologicheskoe_oborudovanie_1/ /catalog/stomatologicheskie-instrumenty/stomatologicheskoe_oborudovanie/
+    Redirect 301 /catalog/stomatologicheskie_instrumenty/ /catalog/stomatologicheskie-instrumenty/
+    Redirect 301 /catalog/sredstva_zashchity/sredstva_dlya_sterilizatsii/rulony_dlya_sterilizatsii/ /catalog/sredstva_zashchity/sredstva_dlya_sterilizatsii/rulony_dlia_sterilizatcii/
+    Redirect 301 /catalog/sredstva_zashchity/sredstva_dlya_sterilizatsii/kraft_pakety_dlya_sterilizatsii/ /catalog/sredstva_zashchity/sredstva_dlya_sterilizatsii/kraft-pakety/
+    Redirect 301 /catalog/sredstva_zashchity/shapochki_bakhily_ochki_maski/ochki_zashchitnye_meditsinskie/ /catalog/sredstva_zashchity/shapochki_bakhily_ochki_maski/ochki_medicinskie/
+    Redirect 301 /catalog/sredstva_zashchity/shapochki_bakhily_ochki_maski/meditsinskie_maski/ /catalog/sredstva_zashchity/shapochki_bakhily_ochki_maski/maski_medecinskie/
+    Redirect 301 /catalog/sredstva_zashchity/perchatki/nitrilovye_perchatki/ /catalog/sredstva_zashchity/perchatki/nitrilovie_perchatki/
+    Redirect 301 /catalog/code_1/code_8/charisma_classic/?num=16 /catalog/restavraciya/kompozitnye-materialy-svetovogo-otverzhdeniya/charisma_classic/
+    Redirect 301 /catalog/parodonthologiya/?num=32 /catalog/parodonthologiya/
+    Redirect 301 /catalog/otbelivanie-zubov/?num=32 /catalog/otbelivanie-zubov/
+    Redirect 301 /catalog/laboratoriya/lite-i-modelirovanie/?num=31 /catalog/laboratoriya/lite-i-modelirovanie/
+    Redirect 301 /catalog/endhodontiya/materialy_i_preparaty/code_51/?num=8 /catalog/endhodontiya/materialy_i_preparaty/irriganty-i-lubrikanty-aksessuary/
+    Redirect 301 /products/opalescense-endo-refill-shprits/* /products/opalescence-endo-refill-shprits/
+
+	 Redirect 301 /catalog/restavraciya/post-bonding/permaseal/ /products/permaseal-4-1-2-ml-postbonding/
+     Redirect 301 /products/permaseal-4-1-2-ml-postbonding/permaseal-4-1-2-ml-postbonding/ /products/permaseal-4-1-2-ml-postbonding/
+    Redirect 301 /products/opalescense-endo-refill-shprits/ /products/opalescence-endo-refill-shprits/
+	Redirect 301 /catalog/magazin_dlya_zubnyh_tekhnikov/keramicheskie_massy/heraceram_zirkonia/mamelon_i_vtorichnye_deniny/ /catalog/magazin_dlya_zubnyh_tekhnikov/keramicheskie_massy/heraceram_zirkonia/mamelon_i_vtorichnye_dentiny/
+</IfModule>
+
+<IfModule mod_rewrite.c>
+ RewriteEngine On
+
+
+
+ # Check if browser support WebP images
+ RewriteCond %{HTTP_ACCEPT} image/webp
+
+ # Check if WebP replacement image exists
+ RewriteCond %{DOCUMENT_ROOT}/$1.webp -f
+
+ # Serve WebP image instead
+ RewriteRule (.+)\.(jpe?g|png)$ $1.webp [T=image/webp,E=accept:1]
+</IfModule>
+
+<IfModule mod_headers.c>
+  	Header append Vary Accept env=REDIRECT_accept
+	<FilesMatch "redirect.php$"> 
+		Order Deny,Allow
+		Deny from all
+	</FilesMatch>
+</IfModule>
+
+<IfModule mod_dir.c>
+	DirectoryIndex index.php index.html
+</IfModule>
+
+<IfModule mod_expires.c>
+	ExpiresActive on
+	ExpiresByType image/jpeg "access plus 3 day"
+	ExpiresByType image/gif "access plus 3 day"
+</IfModule>
