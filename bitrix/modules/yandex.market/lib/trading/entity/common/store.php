@@ -48,10 +48,6 @@ class Store extends Market\Trading\Entity\Reference\Store
 				'ID' => static::PRODUCT_FIELD_QUANTITY,
 				'VALUE' => static::getLang('TRADING_ENTITY_COMMON_STORE_CATALOG_QUANTITY', null, static::PRODUCT_FIELD_QUANTITY),
 			],
-			[
-				'ID' => static::PRODUCT_FIELD_QUANTITY_RESERVED,
-				'VALUE' => static::getLang('TRADING_ENTITY_COMMON_STORE_CATALOG_QUANTITY_RESERVED', null, static::PRODUCT_FIELD_QUANTITY_RESERVED),
-			],
 		];
 	}
 
@@ -152,6 +148,30 @@ class Store extends Market\Trading\Entity\Reference\Store
 		return 'ID';
 	}
 
+	public function existsStores($field)
+	{
+		$result = [];
+
+		$query = Catalog\StoreTable::getList([
+			'filter' => [ '=ACTIVE' => 'Y' ],
+			'select' => [ 'ID', $field ],
+		]);
+
+		while ($row = $query->fetch())
+		{
+			if (
+				!isset($row[$field])
+				|| !is_scalar($row[$field])
+				|| (string)$row[$field] === ''
+			)
+			{ continue; }
+
+			$result[$row['ID']] = $row[$field];
+		}
+
+		return $result;
+	}
+
 	public function mapStores($field, $ids)
 	{
 		$result = [];
@@ -212,19 +232,29 @@ class Store extends Market\Trading\Entity\Reference\Store
 
 	public function getBasketData($productIds, $quantities = null, array $context = [])
 	{
-		$useTrace = !empty($context['TRACE']);
 		$stores = isset($context['STORES']) ? (array)$context['STORES'] : [];
+		$productIds = $this->filterBasketProducts($productIds, $context);
 
-		if (!$useTrace)
-		{
-			$result = [];
-		}
-		else
-		{
-			$amounts = $this->getAmounts($stores, $productIds);
-			$amounts = $this->fillMissingAmounts($amounts, $productIds);
+		$amounts = $this->getAmounts($stores, $productIds);
+		$amounts = $this->fillMissingAmounts($amounts, $productIds);
 
-			$result = $this->makeBasketData($amounts);
+		return $this->makeBasketData($amounts);
+	}
+
+	protected function filterBasketProducts($productIds, array $context)
+	{
+		if (!empty($context['TRACE'])) { return $productIds; }
+
+		$result = [];
+
+		foreach (array_chunk($productIds, 500) as $chunkIds)
+		{
+			$query = $this->queryTraceableProducts($chunkIds, [ 'ID' ]);
+
+			while ($row = $query->fetch())
+			{
+				$result[] = (int)$row['ID'];
+			}
 		}
 
 		return $result;
@@ -258,22 +288,105 @@ class Store extends Market\Trading\Entity\Reference\Store
 		return $result;
 	}
 
+	public function getChanged($stores, Main\Type\DateTime $date = null, $offset = null, $limit = 500)
+	{
+		$result = [];
+		$order = [];
+		$filter = [
+			'=TYPE' => [
+				Catalog\ProductTable::TYPE_PRODUCT,
+				Catalog\ProductTable::TYPE_SET,
+				Catalog\ProductTable::TYPE_OFFER,
+			],
+		];
+
+		if ($date !== null)
+		{
+			$order = [ 'TIMESTAMP_X' => 'ASC' ];
+			$filter['>=TIMESTAMP_X'] = $date;
+		}
+
+		$query = Catalog\ProductTable::getList([
+			'filter' => $filter,
+			'offset' => (int)$offset,
+			'limit' => (int)$limit,
+			'select' => [ 'ID' ],
+			'order' => $order,
+		]);
+
+		while ($row = $query->fetch())
+		{
+			$result[] = $row['ID'];
+		}
+
+		return $result;
+	}
+
 	public function getAmounts($stores, $productIds)
 	{
 		list($productFields, $storeIds) = $this->splitAmountStores($stores);
+		$needLimitByTotalQuantity = false;
+		$isReservesIncluded = false;
 		$quantityChain = [];
 
 		if (!empty($productFields))
 		{
+			$isReservesIncluded = true;
 			$quantityChain[] = $this->getQuantityFromProduct($productIds, $productFields);
 		}
 
 		if (!empty($storeIds))
 		{
+			$needLimitByTotalQuantity = true;
 			$quantityChain[] = $this->getQuantityFromStore($storeIds, $productIds);
 		}
 
-		return $this->mergeQuantityChain($quantityChain);
+		$result = $this->mergeQuantityChain($quantityChain);
+
+		if ($needLimitByTotalQuantity)
+		{
+			$result = $this->applyQuantityLimitByProduct($result, !$isReservesIncluded);
+		}
+
+		return $result;
+	}
+
+	public function getTotal($stores, $productIds)
+	{
+		list($productFields, $storeIds) = $this->splitAmountStores($stores);
+
+		if (!empty($productFields) && empty($storeIds)) { return []; } // already applied
+
+		$result = [];
+		$canReserve = $this->isCatalogReservationEnabled();
+
+		foreach (array_chunk($productIds, 500) as $chunkIds)
+		{
+			$select = [ 'ID', 'QUANTITY' ];
+
+			if ($canReserve)
+			{
+				$select[] = 'QUANTITY_RESERVED';
+			}
+
+			$query = $this->queryTraceableProducts($chunkIds, $select);
+
+			while ($row = $query->fetch())
+			{
+				$resultRow = [
+					'AVAILABLE' => (float)$row['QUANTITY'],
+				];
+
+				if ($canReserve)
+				{
+					$resultRow['TOTAL'] = (float)($row['QUANTITY'] + $row['QUANTITY_RESERVED']);
+				}
+
+				$result[$row['ID']] = $resultRow;
+			}
+		}
+
+		return $result;
 	}
 
 	protected function splitAmountStores($stores)
@@ -309,14 +422,14 @@ class Store extends Market\Trading\Entity\Reference\Store
 	{
 		$result = [];
 
-		if (!empty($productIds) && Main\Loader::includeModule('catalog'))
+		if (!empty($productIds))
 		{
 			foreach (array_chunk($productIds, 500) as $productIdChunk)
 			{
 				$query = Catalog\ProductTable::getList([
 					'filter' => [ '=ID' => $productIdChunk ],
 					'select' => array_merge(
-						[ 'ID', 'TIMESTAMP_X' ],
+						[ 'ID' ],
 						$fields
 					)
 				]);
@@ -332,7 +445,6 @@ class Store extends Market\Trading\Entity\Reference\Store
 
 					$result[] = [
 						'ID' => $row['ID'],
-						'TIMESTAMP_X' => $row['TIMESTAMP_X'],
 						'QUANTITY' => $quantity,
 					];
 				}
@@ -349,12 +461,7 @@ class Store extends Market\Trading\Entity\Reference\Store
 
 		Main\Type\Collection::normalizeArrayValuesByInt($storeList);
 
-		if (
-			!empty($storeList)
-			&& !empty($productIdList)
-			&& Main\Loader::includeModule('iblock')
-			&& Main\Loader::includeModule('catalog')
-		)
+		if (!empty($storeList) && !empty($productIdList))
 		{
 			foreach (array_chunk($productIdList, 500) as $productIdChunk)
 			{
@@ -378,21 +485,12 @@ class Store extends Market\Trading\Entity\Reference\Store
 					$amountList[$row['PRODUCT_ID']] += $row['AMOUNT'];
 				}
 
-				if (!empty($amountList))
+				foreach ($amountList as $productId => $quantity)
 				{
-					$queryProduct = Catalog\ProductTable::getList([
-						'filter' => [ '=ID' => array_keys($amountList) ],
-						'select' => [ 'ID', 'TIMESTAMP_X' ]
-					]);
-
-					while ($product = $queryProduct->fetch())
-					{
-						$result[] = [
-							'ID' => $product['ID'],
-							'TIMESTAMP_X' => $product['TIMESTAMP_X'],
-							'QUANTITY' => $amountList[$product['ID']]
-						];
-					}
+					$result[] = [
+						'ID' => $productId,
+						'QUANTITY' => $quantity,
+					];
 				}
 			}
 		}
@@ -475,6 +573,100 @@ class Store extends Market\Trading\Entity\Reference\Store
 		}
 
 		return $result;
+	}
+
+	protected function applyQuantityLimitByProduct(array $amounts, $includeReserves = false)
+	{
+		if ($includeReserves && !$this->isCatalogReservationEnabled()) { return $amounts; }
+
+		$productIds = array_column($amounts, 'ID');
+		$limits = $this->loadQuantityLimitFromProduct($productIds, $includeReserves);
+
+		foreach ($amounts as &$amount)
+		{
+			if (!isset($limits[$amount['ID']])) { continue; }
+
+			$limit = $limits[$amount['ID']];
+
+			if (isset($amount['QUANTITY_LIST']))
+			{
+				$limitTypes = [
+					Market\Data\Trading\Stocks::TYPE_FIT => true,
+					Market\Data\Trading\Stocks::TYPE_AVAILABLE => true,
+				];
+
+				foreach ($amount['QUANTITY_LIST'] as $type => $quantity)
+				{
+					if (!isset($limitTypes[$type])) { continue; }
+					if ($quantity <= $limit) { continue; }
+
+					$amount['QUANTITY_LIST'][$type] = $limit;
+				}
+			}
+
+			if (isset($amount['QUANTITY']) && $amount['QUANTITY'] > $limit)
+			{
+				$amount['QUANTITY'] = $limit;
+			}
+		}
+		unset($amount);
+
+		return $amounts;
+	}
+
+	protected function isCatalogReservationEnabled()
+	{
+		return Main\Config\Option::get('catalog', 'enable_reservation') !== 'N';
+	}
+
+	protected function loadQuantityLimitFromProduct(array $productIds, $includeReserves = false)
+	{
+		$result = [];
+
+		foreach (array_chunk($productIds, 500) as $chunkIds)
+		{
+			$select = [ 'ID', 'QUANTITY' ];
+
+			if ($includeReserves)
+			{
+				$select[] = 'QUANTITY_RESERVED';
+			}
+
+			$query = $this->queryTraceableProducts($chunkIds, $select);
+
+			while ($row = $query->fetch())
+			{
+				$quantity = $row['QUANTITY'];
+
+				if ($includeReserves)
+				{
+					$quantity += $row['QUANTITY_RESERVED'];
+				}
+
+				$result[$row['ID']] = $quantity;
+			}
+		}
+
+		return $result;
+	}
+
+	protected function queryTraceableProducts(array $productIds, array $select)
+	{
+		$traceByDefault = (Main\Config\Option::get('catalog', 'default_quantity_trace') === 'Y');
+		$canBuyZeroByDefault = (Main\Config\Option::get('catalog', 'default_can_buy_zero') === 'Y');
+
+		return Catalog\ProductTable::getList([
+			'filter' => [
+				'=ID' => $productIds,
+				'=QUANTITY_TRACE' => $traceByDefault
+					? [ Catalog\ProductTable::STATUS_DEFAULT, Catalog\ProductTable::STATUS_YES ]
+					: Catalog\ProductTable::STATUS_YES,
+				'=CAN_BUY_ZERO' => $canBuyZeroByDefault
+					? Catalog\ProductTable::STATUS_NO
+					: [ Catalog\ProductTable::STATUS_DEFAULT, Catalog\ProductTable::STATUS_NO ],
+			],
+			'select' => $select,
+		]);
 	}
 
 	protected function fillMissingAmounts(array $amounts, $productIds)

@@ -92,7 +92,7 @@ class Repeater
 		$setup = $this->getSetup($row['SETUP_ID']);
 		$result = new Main\Result();
 
-		if ($setup !== null)
+		if ($setup !== null && $setup->isActive())
 		{
 			$procedureResult = $this->repeatProcedure($setup, $row['PATH'], $row['DATA'], $row['ENTITY_TYPE'], $row['ENTITY_ID']);
 
@@ -175,7 +175,7 @@ class Repeater
 	{
 		if ($this->startTime === null)
 		{
-			$this->startTime = defined('START_EXEC_TIME') ? START_EXEC_TIME : microtime(true);
+			$this->startTime = microtime(true);
 		}
 
 		return $this->startTime;
@@ -186,6 +186,7 @@ class Repeater
 		if ($this->timeLimit === null)
 		{
 			$maxExecutionTime = (int)ini_get('max_execution_time') * 0.75;
+            $systemUsedTime = $this->getSystemUsedTime();
 			$optionName = 'trading_repeat_time_limit';
 			$optionDefault = 5;
 
@@ -197,14 +198,21 @@ class Repeater
 
 			$this->timeLimit = (int)Market\Config::getOption($optionName, $optionDefault);
 
-			if ($maxExecutionTime > 0 && $this->timeLimit > $maxExecutionTime)
+			if ($maxExecutionTime > 0 && $this->timeLimit > ($maxExecutionTime - $systemUsedTime))
 			{
-				$this->timeLimit = $maxExecutionTime;
+				$this->timeLimit = ($maxExecutionTime - $systemUsedTime);
 			}
 		}
 
 		return $this->timeLimit;
 	}
+
+    protected function getSystemUsedTime()
+    {
+        if (!defined('START_EXEC_TIME')) { return 0; }
+
+        return max(0, microtime(true) - START_EXEC_TIME);
+    }
 
 	protected function getProcessLimit()
 	{

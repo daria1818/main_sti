@@ -136,6 +136,7 @@ class TableLayout extends AbstractLayout
 	{
 		$fields = $this->extendFields($name, $this->fields);
 		$result = sprintf('<tr %s>', UserField\Helper\Attributes::stringify($attributes + array_filter([
+			'data-class' => $this->getFieldsetName('summary__field'),
 			'data-plugin' => 'Field.Fieldset.Row',
 			'data-element-namespace' => $this->hasParentFieldset() ? '.' . $this->fieldsetName : null,
 		])));
@@ -146,10 +147,32 @@ class TableLayout extends AbstractLayout
 
 			$row = UserField\Helper\Renderer::getEditRow($field, $value, $values);
 			$control = $this->prepareFieldControl($row['CONTROL'], $fieldKey, $field);
+			$rowAttributes = [];
+
+			if (isset($field['DEPEND']))
+			{
+				Market\Ui\Assets::loadPlugin('Ui.Input.DependField');
+
+				$rowAttributes['class'] = 'js-plugin-delayed';
+				$rowAttributes['data-plugin'] = 'Ui.Input.DependField';
+				$rowAttributes['data-depend'] = Market\Utils::jsonEncode($field['DEPEND'], JSON_UNESCAPED_UNICODE);
+				$rowAttributes['data-form-element'] = isset($attributes['class']) ? '.' . $attributes['class'] : 'tr';
+
+				if (!Market\Utils\UserField\DependField::test($field['DEPEND'], $values))
+				{
+					$rowAttributes['class'] .= ' is--hidden';
+				}
+			}
 
 			// write result
 
-			$result .= sprintf('<td>%s</td>', $control);
+			/** @noinspection HtmlUnknownAttribute */
+			$result .= sprintf(
+				'<td %s>%s%s</td>',
+				UserField\Helper\Attributes::stringify($rowAttributes),
+				isset($field['SETTINGS']['GLUE']) ? $field['SETTINGS']['GLUE'] : '',
+				$control
+			);
 		}
 
 		if ($allowDelete)

@@ -70,6 +70,14 @@ abstract class Order
 	}
 
 	/**
+	 * @return Main\Type\DateTime
+	 */
+	public function getCreationDate()
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getCreationDate');
+	}
+
+	/**
 	 * @return string
 	 */
 	public function getCurrency()
@@ -159,6 +167,11 @@ abstract class Order
 		// nothing by default
 	}
 
+	public function fillAccountNumber($accountNumber)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'fillAccountNumber');
+	}
+
 	/**
 	 * @param int|null $externalId
 	 * @param Platform $platform
@@ -179,10 +192,11 @@ abstract class Order
 
 	/**
 	 * @param array $values
+	 * @param bool $onlyEmpty
 	 *
 	 * @return Main\Result
 	 */
-	public function fillProperties(array $values)
+	public function fillProperties(array $values, $onlyEmpty = false)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'fillProperties');
 	}
@@ -215,6 +229,35 @@ abstract class Order
 	public function addProduct($productId, $count = 1, array $data = null)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'addProduct');
+	}
+
+	/**
+	 * @param array $basketMarkings
+	 *
+	 * @return Main\Result
+	 */
+	public function fillMarking(array $basketMarkings)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'fillMarking');
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function getExistsBasketItemCodes()
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getExistsBasketItemCodes');
+	}
+
+	/**
+	 * @param $basketCode
+	 * @param array $expected
+	 *
+	 * @return array
+	 */
+	public function debugBasketItem($basketCode, array $expected = [])
+	{
+		return [];
 	}
 
 	/**
@@ -270,6 +313,16 @@ abstract class Order
 	}
 
 	/**
+	 * @param array $stores
+	 *
+	 * @return Main\Result
+	 */
+	public function setBasketStore(array $stores)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'setBasketStore');
+	}
+
+	/**
 	 * @param string $basketCode
 	 * @param string|int $storeId
 	 *
@@ -278,6 +331,16 @@ abstract class Order
 	public function setBasketItemStore($basketCode, $storeId)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'setBasketItemStore');
+	}
+
+	/**
+	 * @param string $basketCode
+	 *
+	 * @return Main\Result
+	 */
+	public function deleteBasketItem($basketCode)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'deleteBasketItem');
 	}
 
 	/**
@@ -290,6 +353,12 @@ abstract class Order
 	public function createShipment($deliveryId, $price = null, array $data = null)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'createShipment');
+	}
+
+	/** @return int|null */
+	public function getDeliveryId()
+	{
+		return null;
 	}
 
 	/**
@@ -324,6 +393,12 @@ abstract class Order
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'setShipmentStore');
 	}
 
+	/** @return int|null */
+	public function getPaySystemId()
+	{
+		return null;
+	}
+
 	/**
 	 * @param int $paySystemId
 	 * @param float|null $price
@@ -344,6 +419,24 @@ abstract class Order
 	public function setNotes($notes)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'setNotes');
+	}
+
+	/**
+	 * @return array<int, int> contactType => contactId
+	 */
+	public function getContacts()
+	{
+		return [];
+	}
+
+	/**
+	 * @param array<int, int> $contacts contactType => contactId
+	 *
+	 * @return Main\Result
+	 */
+	public function fillContacts(array $contacts)
+	{
+		return new Main\Result();
 	}
 
 	/**
@@ -419,6 +512,11 @@ abstract class Order
 	public function setStatus($status, $payload = null)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'setStatus');
+	}
+
+	public function resetCashbox()
+	{
+		// nothing by default
 	}
 
 	/**

@@ -4,7 +4,7 @@ namespace Sprint\Migration;
 
 use CFile;
 use Exception;
-use Sprint\Migration\Exceptions\ExchangeException;
+use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RestartException;
 use Sprint\Migration\Traits\HelperManagerTrait;
 use XMLReader;
@@ -14,23 +14,7 @@ abstract class AbstractExchange
 {
     const EXCHANGE_VERSION = 2;
     use HelperManagerTrait;
-    use OutTrait {
-        out as protected;
-        outIf as protected;
-        outProgress as protected;
-        outNotice as protected;
-        outNoticeIf as protected;
-        outInfo as protected;
-        outInfoIf as protected;
-        outSuccess as protected;
-        outSuccessIf as protected;
-        outWarning as protected;
-        outWarningIf as protected;
-        outError as protected;
-        outErrorIf as protected;
-        outDiff as protected;
-        outDiffIf as protected;
-    }
+    use OutTrait;
 
     protected $exchangeEntity;
     protected $file;
@@ -41,20 +25,22 @@ abstract class AbstractExchange
      *
      * @param ExchangeEntity $exchangeEntity
      *
-     * @throws ExchangeException
+     * @throws MigrationException
      */
     public function __construct(ExchangeEntity $exchangeEntity)
     {
         $this->exchangeEntity = $exchangeEntity;
 
-        $enabled = (
-            class_exists('XMLReader')
-            && class_exists('XMLWriter')
-            && $this->isEnabled()
-        );
+        if (!class_exists('XMLReader') || !class_exists('XMLWriter')) {
+            throw new MigrationException(
+                Locale::getMessage(
+                    'ERR_EXCHANGE_DISABLED_XML'
+                )
+            );
+        }
 
-        if (!$enabled) {
-            throw new ExchangeException(
+        if (!$this->isEnabled()) {
+            throw new MigrationException(
                 Locale::getMessage(
                     'ERR_EXCHANGE_DISABLED'
                 )
@@ -76,13 +62,14 @@ abstract class AbstractExchange
     /**
      * @param $name
      *
-     * @throws ExchangeException
      * @return $this
      */
     public function setExchangeResource($name)
     {
         $this->setExchangeFile(
-            $this->exchangeEntity->getResourceFile($name)
+            $this->exchangeEntity->getVersionConfig()->getVal('exchange_dir') . '/' .
+            $this->exchangeEntity->getClassName() . '_files/' .
+            $name
         );
         return $this;
     }

@@ -13,18 +13,15 @@ class LogMessageType extends StringType
 	protected static $debugCounter = 0;
 	protected static $debugBase;
 
-	public static function GetAdminListViewHtml($arUserField, $arHtmlControl)
+	public static function GetAdminListViewHtml($userField, $htmlControl)
 	{
-		if ((string)$arHtmlControl['VALUE'] !== '')
-		{
-			$result = static::renderMessage($arHtmlControl['VALUE']);
-		}
-		else
-		{
-			$result = '&nbsp;';
-		}
+		$value = Helper\MixedValue::asSingle($userField, $htmlControl);
 
-		return $result;
+		if ($value !== null && !is_scalar($value)) { $value = print_r($value, true); }
+
+		$value = (string)$value;
+
+		return $value !== '' ? static::renderMessage($value) : '&nbsp;';
 	}
 
 	protected static function renderMessage($message)
@@ -38,7 +35,7 @@ class LogMessageType extends StringType
 			break;
 
 			default:
-				$result = $message;
+				$result = nl2br($message);
 			break;
 		}
 
@@ -90,7 +87,7 @@ class LogMessageType extends StringType
 		$result = null;
 		$offset = 0;
 
-		while (preg_match('/\[([a-z]+)\]\s*=&gt;\s*Array/i', $message, $matches, PREG_OFFSET_CAPTURE, $offset))
+		while (preg_match('/\[([a-z]+)\]\s*=(?:&gt;|>)\s*Array/i', $message, $matches, PREG_OFFSET_CAPTURE, $offset))
 		{
 			if ($matches[1][0] !== 'pager')
 			{

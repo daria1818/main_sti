@@ -212,27 +212,27 @@ class Table extends Market\Reference\Storage\Table
 
 	public static function getMapDescription()
 	{
-		global $USER_FIELD_MANAGER;
-
 		$result = parent::getMapDescription();
 		$result['NAME'] = static::extendNameDescription($result['NAME']);
 
         if (isset($result['PROMO_TYPE']))
         {
-            $result['PROMO_TYPE']['USER_TYPE'] = $USER_FIELD_MANAGER->GetUserType('enumeration');
-            $result['PROMO_TYPE']['USER_TYPE']['CLASS_NAME'] = 'Yandex\Market\Ui\UserField\EnumerationType';
+            $result['PROMO_TYPE']['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('enumeration');
             $result['PROMO_TYPE']['VALUES'] = Discount\Manager::getTypeEnum();
         }
 
 		if (isset($result['DESCRIPTION']))
 		{
-			$result['DESCRIPTION']['USER_TYPE']['CLASS_NAME'] = '\Yandex\Market\Ui\UserField\HtmlType';
+			$result['DESCRIPTION']['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('html');
 		}
 
 		if (isset($result['SETUP']))
 		{
 			$result['SETUP']['MULTIPLE'] = 'Y';
-			$result['SETUP']['USER_TYPE']['CLASS_NAME'] = '\Yandex\Market\Ui\UserField\SetupLinkType';
+			$result['SETUP']['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('setupLink');
+			$result['SETUP']['SETTINGS'] = [
+				'ENTITY_TYPE' => Market\Export\Run\Manager::ENTITY_TYPE_PROMO,
+			];
 		}
 
 		if (isset($result['START_DATE']))
@@ -283,8 +283,7 @@ class Table extends Market\Reference\Storage\Table
                     return $result;
                 });
 
-                $result['DISCOUNT_CURRENCY']['USER_TYPE'] = $USER_FIELD_MANAGER->GetUserType('enumeration');
-                $result['DISCOUNT_CURRENCY']['USER_TYPE']['CLASS_NAME'] = 'Yandex\Market\Ui\UserField\EnumerationType';
+                $result['DISCOUNT_CURRENCY']['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('enumeration');
                 $result['DISCOUNT_CURRENCY']['MANDATORY'] = 'Y';
                 $result['DISCOUNT_CURRENCY']['VALUES'] = [];
 

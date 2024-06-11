@@ -130,9 +130,10 @@ abstract class AbstractLayout
 
 	protected function prepareFieldControl($control, $fieldKey, $field)
 	{
-		$attributes = [
+		$attributes = array_filter([
 			'class' => $this->getFieldsetName('row__input'),
-		];
+			'data-default-value' => isset($field['SETTINGS']['DEFAULT_VALUE']) ? $field['SETTINGS']['DEFAULT_VALUE'] : null,
+		]);
 		$dataName = $this->isComplexFieldName($fieldKey)
 			? $this->makeChildFieldName($fieldKey)
 			: $fieldKey;

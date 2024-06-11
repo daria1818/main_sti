@@ -4,156 +4,40 @@ namespace Yandex\Market\Component\Promo;
 
 use Bitrix\Main;
 use Yandex\Market;
+use Yandex\Market\Component;
 
 Main\Localization\Loc::loadMessages(__FILE__);
 
 class EditForm extends Market\Component\Model\EditForm
 {
+	protected $exportLink;
+	protected $productFilter;
+
+	public function __construct(\CBitrixComponent $component)
+	{
+		parent::__construct($component);
+
+		$this->exportLink = new Component\Molecules\ExportLink();
+		$this->productFilter = new Component\Molecules\ProductFilter([
+			'PROMO_PRODUCT',
+			'PROMO_GIFT',
+		]);
+	}
+
 	public function modifyRequest($request, $fields)
 	{
 		$result = parent::modifyRequest($request, $fields);
-		$result = $this->modifyRequestSetup($result, $fields);
-		$result = $this->modifyRequestProductIblock($result, $fields);
-		$result = $this->modifyRequestProductFilter($result, $fields);
-		$result = $this->modifyRequestUnsetDiscount($result, $fields);
+		$result = $this->exportLink->sanitize($result);
+		$result = $this->productFilter->sanitizeIblock($result, $fields, $this->exportLink->usedIblockIds($result), [
+			'PROMO_GIFT' => 'PROMO_GIFT_IBLOCK_ID',
+		]);
+		$result = $this->productFilter->sanitizeFilter($result, $fields);
+		$result = $this->modifyRequestUnsetDiscount($result);
 
 		return $result;
 	}
 
-	protected function modifyRequestSetup($request, $fields)
-	{
-		$result = $request;
-		$hasSetupRequest = isset($request['SETUP']);
-		$hasSetupLinkRequest = isset($request['SETUP_LINK']);
-
-		if ($hasSetupRequest || $hasSetupLinkRequest)
-		{
-			$ids = $hasSetupRequest ? (array)$request['SETUP'] : [];
-			$idsMap = array_flip($ids);
-			$usedIds = [];
-			$result['SETUP_LINK'] = $hasSetupLinkRequest ? (array)$request['SETUP_LINK'] : [];
-
-			foreach ($result['SETUP_LINK'] as $setupLinkKey => $setupLink)
-			{
-				$setupId = (int)$setupLink['SETUP_ID'];
-
-				if ($setupId > 0 && isset($idsMap[$setupId]))
-				{
-					$usedIds[$setupId] = true;
-				}
-				else
-				{
-					unset($result['SETUP_LINK'][$setupLinkKey]);
-				}
-			}
-
-			foreach ($ids as $id)
-			{
-				if ($id > 0 && !isset($usedIds[$id]))
-				{
-					$result['SETUP_LINK'][] = [
-						'SETUP_ID' => $id
-					];
-				}
-			}
-		}
-
-		return $result;
-	}
-
-	protected function modifyRequestProductIblock($request, $fields)
-	{
-		$result = $request;
-		$productFieldKeys = [ 'PROMO_PRODUCT', 'PROMO_GIFT' ];
-		$setupIblockList = null;
-
-		foreach ($productFieldKeys as $productFieldKey)
-		{
-			if (isset($fields[$productFieldKey]))
-			{
-				$iblockIdList = [];
-
-				if ($setupIblockList === null) { $setupIblockList = $this->getUsedIblockList($request); }
-
-				if ($productFieldKey === 'PROMO_GIFT')
-				{
-					$giftIblockId = isset($result['PROMO_GIFT_IBLOCK_ID']) ? (int)$result['PROMO_GIFT_IBLOCK_ID'] : null;
-
-					if ($giftIblockId === null || $giftIblockId <= 0)
-					{
-						$giftIblockId = (int)reset($setupIblockList);
-					}
-
-					if ($giftIblockId > 0)
-					{
-						$iblockIdList = [ $giftIblockId ];
-					}
-				}
-				else
-				{
-					$iblockIdList = $setupIblockList;
-				}
-
-				$iblockIdMap = array_flip($iblockIdList);
-				$usedIblockMap = [];
-				$result[$productFieldKey] = isset($request[$productFieldKey]) ? (array)$request[$productFieldKey] : [];
-
-				foreach ($result[$productFieldKey] as $promoProductKey => $promoProduct)
-				{
-					$iblockId = isset($promoProduct['IBLOCK_ID']) ? (int)$promoProduct['IBLOCK_ID'] : null;
-
-					if ($iblockId > 0 && isset($iblockIdMap[$iblockId]))
-					{
-						$usedIblockMap[$iblockId] = true;
-					}
-					else
-					{
-						unset($result[$productFieldKey][$promoProductKey]);
-					}
-				}
-
-				foreach ($iblockIdList as $iblockId)
-				{
-					if ($iblockId > 0 && !isset($usedIblockMap[$iblockId]))
-					{
-						$result[$productFieldKey][] = [
-							'IBLOCK_ID' => $iblockId
-						];
-					}
-				}
-			}
-		}
-
-		return $result;
-	}
-
-	protected function modifyRequestProductFilter($request, $fields)
-	{
-		$result = $request;
-		$productFieldKeys = [ 'PROMO_PRODUCT', 'PROMO_GIFT' ];
-
-		foreach ($productFieldKeys as $productFieldKey)
-		{
-			if (
-				isset($fields[$productFieldKey], $result[$productFieldKey])
-				&& is_array($result[$productFieldKey])
-			)
-			{
-				foreach ($result[$productFieldKey] as &$productData)
-				{
-					if (!isset($productData['FILTER']))
-					{
-						$productData['FILTER'] = [];
-					}
-				}
-				unset($productData);
-			}
-		}
-
-		return $result;
-	}
-
-	protected function modifyRequestUnsetDiscount($request, $fields)
+	protected function modifyRequestUnsetDiscount($request)
 	{
 		$result = $request;
 
@@ -188,8 +72,8 @@ class EditForm extends Market\Component\Model\EditForm
 
 		$this->validateUrlRequired($result, $data, $fields);
 		$this->validateDiscountRequired($result, $data, $fields);
-		$this->validateSetupSelected($result, $data, $fields);
-		$this->validateProductFilter($result, $data, $fields);
+		$this->exportLink->validate($result, $data, $fields);
+		$this->productFilter->validate($result, $data, $fields);
 
 		return $result;
 	}
@@ -244,102 +128,6 @@ class EditForm extends Market\Component\Model\EditForm
         }
 	}
 
-	protected function validateSetupSelected(Main\Entity\Result $result, $data, $fields)
-	{
-		$hasEmptySetupLink = false;
-		$hasEmptySetupExportAll = false;
-
-		if (isset($fields['SETUP']))
-		{
-			if (empty($data['SETUP']))
-			{
-				$hasEmptySetupLink = true;
-			}
-			else
-			{
-				Main\Type\Collection::normalizeArrayValuesByInt($data['SETUP']);
-
-				$hasEmptySetupLink = (count($data['SETUP']) === 0);
-			}
-		}
-
-		if (isset($fields['SETUP_EXPORT_ALL']))
-		{
-			$hasEmptySetupExportAll = (
-				empty($data['SETUP_EXPORT_ALL'])
-				|| (string)$data['SETUP_EXPORT_ALL'] === Market\Export\Promo\Table::BOOLEAN_N
-			);
-		}
-
-		if ($hasEmptySetupLink && $hasEmptySetupExportAll)
-		{
-			$result->addError(new Main\Entity\EntityError(
-				Market\Config::getLang('COMPONENT_PROMO_EDIT_FORM_FIELD_SETUP_LINK_EMPTY'),
-				Main\Entity\FieldError::EMPTY_REQUIRED
-			));
-		}
-	}
-
-	protected function validateProductFilter(Main\Entity\Result $result, $data, $fields)
-	{
-		$productFieldKeys = [ 'PROMO_PRODUCT', 'PROMO_GIFT' ];
-
-		foreach ($productFieldKeys as $productFieldKey)
-		{
-			if (isset($fields[$productFieldKey]))
-			{
-				$field = $fields[$productFieldKey];
-				$hasProductFilter = false;
-
-				if (!empty($data[$productFieldKey]))
-				{
-					foreach ($data[$productFieldKey] as $iblockLinkIndex => $promoProduct)
-					{
-						if (!empty($promoProduct['FILTER']))
-						{
-							foreach ($promoProduct['FILTER'] as $filterIndex => $filter)
-							{
-								$hasValidCondition = false;
-								$hasProductFilter = true;
-
-								if (!empty($filter['FILTER_CONDITION']))
-								{
-									foreach ($filter['FILTER_CONDITION'] as $filterCondition)
-									{
-										if (Market\Export\FilterCondition\Table::isValidData($filterCondition))
-										{
-											$hasValidCondition = true;
-											break;
-										}
-									}
-								}
-
-								if (!$hasValidCondition)
-								{
-									$result->addError(new Market\Error\EntityError(
-										Market\Config::getLang('COMPONENT_PROMO_EDIT_FORM_ERROR_FILTER_CONDITION_EMPTY', [
-											'#FIELD_NAME#' => $field['LIST_COLUMN_LABEL']
-										])
-									));
-									break 2;
-								}
-							}
-						}
-					}
-				}
-
-				if (!$hasProductFilter)
-				{
-					$result->addError(new Market\Error\EntityError(
-						Market\Config::getLang('COMPONENT_PROMO_EDIT_FORM_ERROR_PRODUCT_EXPORT_EMPTY', [
-							'#FIELD_NAME#' => $field['LIST_COLUMN_LABEL']
-						])
-					));
-				}
-			}
-		}
-	}
-
 	public function add($fields)
 	{
 		if (array_key_exists('PROMO_GIFT_IBLOCK_ID', $fields))
@@ -380,6 +168,13 @@ class EditForm extends Market\Component\Model\EditForm
 
 			$result['PROMO_GIFT_IBLOCK_ID']['USER_TYPE']['CLASS_NAME'] = 'Yandex\Market\Ui\UserField\IblockType';
  		}
+
+		// deprecated promo types
+
+		if (isset($result['PROMO_TYPE']))
+		{
+			$result['PROMO_TYPE'] = $this->deprecatePromoTypes($result['PROMO_TYPE'], $promoType);
+		}
 
 		// settings
 
@@ -423,96 +218,45 @@ class EditForm extends Market\Component\Model\EditForm
 		return $result;
 	}
 
+	protected function deprecatePromoTypes(array $field, $selected)
+	{
+		$deprecated = array_flip([
+			'catalog_discount',
+			'catalog_price',
+			Market\Export\Promo\Table::PROMO_TYPE_FLASH_DISCOUNT,
+			Market\Export\Promo\Table::PROMO_TYPE_GIFT_WITH_PURCHASE,
+			Market\Export\Promo\Table::PROMO_TYPE_GIFT_N_PLUS_M,
+			Market\Export\Promo\Table::PROMO_TYPE_BONUS_CARD,
+		]);
+
+		foreach ($field['VALUES'] as $optionKey => $option)
+		{
+			if ($option['ID'] !== $selected && isset($deprecated[$option['ID']]))
+			{
+				unset($field['VALUES'][$optionKey]);
+			}
+		}
+
+		return $field;
+	}
+
 	public function extend($data, array $select = [])
 	{
-		$result = $data;
-		$productFieldKeys = [ 'PROMO_PRODUCT', 'PROMO_GIFT' ];
-
         if (!isset($data['PROMO_GIFT_IBLOCK_ID']) && !empty($data['PROMO_GIFT']))
         {
             foreach ($data['PROMO_GIFT'] as $promoGift)
             {
                 if (isset($promoGift['IBLOCK_ID']))
                 {
-                    $result['PROMO_GIFT_IBLOCK_ID'] = $promoGift['IBLOCK_ID'];
+	                $data['PROMO_GIFT_IBLOCK_ID'] = $promoGift['IBLOCK_ID'];
                     break;
                 }
             }
         }
 
-		foreach ($productFieldKeys as $productFieldKey)
-		{
-			if (!empty($result[$productFieldKey]))
-			{
-				foreach ($result[$productFieldKey] as &$promoProduct)
-				{
-					$promoProduct['CONTEXT'] = Market\Export\Entity\Iblock\Provider::getContext($promoProduct['IBLOCK_ID']);
-				}
-				unset($promoProduct);
-			}
-		}
+		$data = $this->productFilter->extend($data);
 
-		return $result;
-	}
-
-	protected function getUsedIblockList($data)
-	{
-		$iblockIdMap = [];
-
-		$querySetupIblockLinkList = Market\Export\IblockLink\Table::getList([
-			'filter' => $this->getSetupFilter($data, 'SETUP'),
-			'select' => [
-				'IBLOCK_ID'
-			]
-		]);
-
-		while ($setupIblockLink = $querySetupIblockLinkList->fetch())
-		{
-			$iblockId = (int)$setupIblockLink['IBLOCK_ID'];
-
-			if ($iblockId > 0 && !isset($iblockIdMap[$iblockId]))
-			{
-				$iblockIdMap[$iblockId] = true;
-			}
-		}
-
-		return array_keys($iblockIdMap);
-	}
-
-	protected function getSetupFilter($data, $reference = null)
-	{
-		$result = [];
-
-		if (isset($data['SETUP_EXPORT_ALL']) && $data['SETUP_EXPORT_ALL'] === Market\Export\Promo\Table::BOOLEAN_Y)
-		{
-			// nothing
-		}
-		else
-		{
-			$setupIds = [];
-
-			if (!empty($data['SETUP']))
-			{
-				foreach ($data['SETUP'] as $setupId)
-				{
-					$setupId = (int)$setupId;
-
-					if ($setupId > 0)
-					{
-						$setupIds[] = $setupId;
-					}
-				}
-			}
-
-			if (empty($setupIds))
-			{
-				$setupIds[] = -1;
-			}
-
-			$result['=' . ($reference !== null ? $reference . '.' : '') . 'ID'] = $setupIds;
-		}
-
-		return $result;
+		return $data;
 	}
 
 	protected function getAllDiscountRuleFields()
@@ -535,8 +279,6 @@ class EditForm extends Market\Component\Model\EditForm
 
 	protected function getTypeDiscountRuleFields($promoType)
 	{
-		$result = null;
-
 		switch ($promoType)
 		{
 			case Market\Export\Promo\Table::PROMO_TYPE_FLASH_DISCOUNT:

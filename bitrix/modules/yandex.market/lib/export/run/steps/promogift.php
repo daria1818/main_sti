@@ -109,7 +109,7 @@ class PromoGift extends Offer
             {
                 case 'change':
                 case 'refresh':
-                    $filter['>=TIMESTAMP_X'] = $this->getParameter('initTime');
+                    $filter['>=TIMESTAMP_X'] = $this->getParameter('initTimeUTC');
                 break;
             }
         }
@@ -200,7 +200,7 @@ class PromoGift extends Offer
             if ($isNeedCheckProduct)
             {
                 $result[] = [
-                    '>=EXPORT_OFFER.TIMESTAMP_X' => $this->getParameter('initTime')
+                    '>=EXPORT_OFFER.TIMESTAMP_X' => $this->getParameter('initTimeUTC')
                 ];
             }
         }
@@ -221,15 +221,11 @@ class PromoGift extends Offer
         return $result;
     }
 
-    protected function getQueryExcludeFilterPrimary($queryContext)
-    {
-        return (int)$queryContext['PROMO_ID'];
-    }
-
     protected function getIgnoredTypeChanges()
     {
         return [
 			Market\Export\Run\Manager::ENTITY_TYPE_CURRENCY => true,
+			Market\Export\Run\Manager::ENTITY_TYPE_COLLECTION => true,
 		];
     }
 

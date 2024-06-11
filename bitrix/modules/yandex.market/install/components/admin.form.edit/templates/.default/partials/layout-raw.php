@@ -25,7 +25,18 @@ if ($arResult['SUCCESS'])
 
 	?>
 	<script>
-		top.BX.onCustomEvent('yamarketFormSave', [<?= Market\Utils::jsonEncode($data, JSON_UNESCAPED_UNICODE); ?>]);
+		(function() {
+			let levelWindow = window;
+
+			while (levelWindow) {
+				if (levelWindow.BX) {
+					levelWindow.BX.onCustomEvent('yamarketFormSave', [<?= Market\Utils::jsonEncode($data, JSON_UNESCAPED_UNICODE); ?>]);
+					break;
+				}
+
+				levelWindow = levelWindow.parent;
+			}
+		})();
 	</script>
 	<?php
 
@@ -35,7 +46,7 @@ if ($arResult['SUCCESS'])
 $arResult['DISABLE_REQUIRED_HIGHLIGHT'] = true;
 
 ?>
-<form class="yamarket-form" method="POST" action="<?= $formActionUri; ?>" enctype="multipart/form-data">
+<form class="yamarket-form" method="POST" action="<?= $formActionUri; ?>" enctype="multipart/form-data" novalidate>
 	<?php
 	echo bitrix_sessid_post();
 	?>

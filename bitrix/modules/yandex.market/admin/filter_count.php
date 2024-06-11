@@ -88,8 +88,4 @@ catch (Main\SystemException $exception)
 	];
 }
 
-$APPLICATION->RestartBuffer();
-echo Market\Utils::jsonEncode($response, JSON_UNESCAPED_UNICODE);
-die();
-
-require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/epilog_admin_after.php';
+Market\Utils\HttpResponse::sendJson($response);

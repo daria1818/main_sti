@@ -1,9 +1,10 @@
 <?php
 /**
- * Сборщик запроса для API.
- * Объект RequestHandler собирает объект запроса используя компоновщик.
- * Согласно правилам первой итерации методы не документируются, т.к. требуется подтверждения гипотезы взаимодействия
- * реальных пользователей.
+ * ������� ������� ��� API.
+ * ������ RequestHandler �������� ������ ������� ��������� �����������.
+ * �������� �������� ������ �������� ������ �� ���������������, �.�. ��������� ������������� �������� ��������������
+ * �������� �������������.
+ * TODO ��������� �����������. ������������ �� ���������� �������� �������. �������� ������� ������������ � �������.
  * @author: Vadim Lazev
  * @company: BIA-Tech
  * @year: 2021
@@ -28,13 +29,13 @@ use Bitrix\Main\Localization\Loc;
 class RequestHandler
 {
     /**
-     * Параметры внутри запроса.
+     * ��������� ������ �������.
      */
 
     /**
-     * Сущность доставки.
-     * Отражает параметры запроса КУДА(берётся из конфига), ОТКУДА(берётся из заказа),
-     * ПАРАМЕТРЫ ЗАБОРА и ПАРАМЕТРЫ ВЫДАЧИ.
+     * �������� ��������.
+     * �������� ��������� ������� ������ (������ �� �������), ����(������ �� ������),
+     * ��������� ������ � ��������� ������.
      *
      * @var Container delivery
      */
@@ -42,8 +43,8 @@ class RequestHandler
     public $delivery;
 
     /**
-     * Сущность участников доставки.
-     * Отражает параметры участников доставки.
+     * �������� ���������� ��������.
+     * �������� ��������� ���������� ��������.
      * @var Container $members
      */
 
@@ -51,16 +52,16 @@ class RequestHandler
     public $members;
 
     /**
-     * Сущность грузовых параметров.
-     * Отражают параметры груза в зависимости от типа компоновки итемов.
-     * Учитывают параметры негабарита согласно бизнес-правил.
+     * �������� �������� ����������.
+     * �������� ��������� ����� � ����������� �� ���� ���������� ������.
+     * ��������� ��������� ���������� �������� ������-������.
      * @var Cargo
      */
 
     public Cargo $cargo;
 
     /**
-     * Сущность упаковок из дополнительных услуг.
+     * �������� �������� �� �������������� �����.
      * @var Packages
      */
 
@@ -68,8 +69,8 @@ class RequestHandler
     public Packages $packages;
 
     /**
-     * Сущность параметров оплаты.
-     * Отражает параметры оплаты исходя из метода оплаты и наличия или отсутствия наложного платежа.
+     * �������� ���������� ������.
+     * �������� ��������� ������ ������ �� ������ ������ � ������� ��� ���������� ��������� �������.
      * @var Container $payment
      */
 
@@ -77,8 +78,8 @@ class RequestHandler
     public $payment;
 
     /**
-     * Сущность необходимая для статистике.
-     * Обязательный параметр для аналитики использования инструментов.
+     * �������� ����������� ��� ����������.
+     * ������������ �������� ��� ��������� ������������� ������������.
      * @var Container $productInfo
      */
 
@@ -86,34 +87,34 @@ class RequestHandler
     public $productInfo;
 
     /**
-     * Параметры сущностей и флагов.
+     * ��������� ��������� � ������.
      */
 
     /**
-     * Сущность заказа
+     * �������� ������
      * @var Order
      */
 
    // private Order $order;
 
      /**
-     * Сущность параметров настройки
+     * �������� ���������� ���������
      * @var Config
      */
 
    // private Config $config;
 
     /**
-     * Флаг отвечающий за контекст сборки для метода создания заказа
-     * Не факт что буду использовать здесь.
+     * ���� ���������� �� �������� ������ ��� ������ �������� ������
+     * �� ���� ��� ���� ������������ �����.
      * @var bool
      */
 
     private $isRequest;
 
     /**
-     * Флаг отвечающий за контекст сборки для метода создания заявки
-     * Используется для мультизаявки и режима отладки.
+     * ���� ���������� �� �������� ������ ��� ������ �������� ������
+     * ������������ ��� ������������ � ������ �������.
      * @var bool
      */
 
@@ -121,8 +122,8 @@ class RequestHandler
     private $isOrder;
 
     /**
-     * Изменяемый параметр даты забора.
-     * Может изменяться в зависимости от сетевых методов описанных в NetworkService
+     * ���������� �������� ���� ������.
+     * ����� ���������� � ����������� �� ������� ������� ��������� � NetworkService
      * @var produceDate
      */
 
@@ -156,10 +157,10 @@ class RequestHandler
         $this->buildPackages();
 
         /**
-         * Желательная дата забора груза от адреса или сдачи на терминал.
-         * Определяется параметром "Отложенная доставка" и сегодняшней датой.
-         * Внимание! "Отложенная доставка" применяется от одного дня.
-         * При экспедировании "от адреса" и заборе груза "День в День" обращайтесь к менеджеру.
+         * ����������� ���� ������ ����� �� ������ ��� ����� �� ��������.
+         * ������������ ���������� "���������� ��������" � ����������� �����.
+         * ��������! "���������� ��������" ����������� �� ������ ���.
+         * ��� �������������� "�� ������" � ������ ����� "���� � ����" ����������� � ���������.
          */
 
         $deliveryDelay = $config->getSenderData()->deliveryDelay;
@@ -173,9 +174,9 @@ class RequestHandler
     }
 
     /**
-     * Метод собирает сущность delivery для запроса.
-     * Возвращает контейнер компоновщика.
-     * Подробнее о сущностях : https://dev.dellin.ru/api/calculation/calculator/
+     * ����� �������� �������� delivery ��� �������.
+     * ���������� ��������� ������������.
+     * ��������� � ��������� : https://dev.dellin.ru/api/calculation/calculator/
      * @return Container
      * @throws \Exception
      */
@@ -186,7 +187,7 @@ class RequestHandler
         $delivery = new Container();
 
 
-        $type = new Field(['type', $this->cargo->deliveryType]);//пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ.
+        $type = new Field(['type', $this->cargo->deliveryType]);//��� �������� ������������ ������.
         $deliveryType = new Field(['deliveryType', $type]);
         $arrival = new Field(['arrival', $this->setDeliveryArrival()]);
         $derival = new Field(['derival',$this->buildDerrival()]);
@@ -202,7 +203,7 @@ class RequestHandler
 
 
     /**
-     * TODO Перенести метод из сетевого на конечный выбор значения.
+     * TODO ��������� ����� �� �������� �� �������� ����� ��������.
      */
 
 
@@ -211,9 +212,9 @@ class RequestHandler
     }
 
     /**
-     * Метод собирает сущность derival.
-     * Возвращает контейнер компоновщика.
-     * Подробнее о сущностях : https://dev.dellin.ru/api/calculation/calculator/
+     * ����� �������� �������� derival.
+     * ���������� ��������� ������������.
+     * ��������� � ��������� : https://dev.dellin.ru/api/calculation/calculator/
      * @return Container
      * @throws \Exception
      */
@@ -239,9 +240,9 @@ class RequestHandler
 
 
     /**
-     * Метод определяющий время доступное для забора груза.
-     * Возвращает поле time с вложенным контейнером.
-     * Подробнее о сущностях : https://dev.dellin.ru/api/calculation/calculator/
+     * ����� ������������ ����� ��������� ��� ������ �����.
+     * ���������� ���� time � ��������� �����������.
+     * ��������� � ��������� : https://dev.dellin.ru/api/calculation/calculator/
      * @return Field
      * @throws \Exception
      */
@@ -268,9 +269,9 @@ class RequestHandler
 
 
     /**
-     * Метод определяющий желаемое время доставки груза до адресата.
-     * Возвращает поле time с вложенным контейнером.
-     * Подробнее о сущностях : https://dev.dellin.ru/api/calculation/calculator/
+     * ����� ������������ �������� ����� �������� ����� �� ��������.
+     * ���������� ���� time � ��������� �����������.
+     * ��������� � ��������� : https://dev.dellin.ru/api/calculation/calculator/
      * @return Field
      * @throws \Exception
      */
@@ -293,9 +294,9 @@ class RequestHandler
 
 
     /**
-     * Метод определяющий параметры груза.
-     * Возвращает массив с определёнными параметрами.
-     * Подробнее о сущностях : https://dev.dellin.ru/api/calculation/calculator/
+     * ����� ������������ ��������� �����.
+     * ���������� ������ � ������������ �����������.
+     * ��������� � ��������� : https://dev.dellin.ru/api/calculation/calculator/
      * @return array
      * @throws \Exception
      */
@@ -313,9 +314,9 @@ class RequestHandler
     }
 
     /**
-     * Метод определяющий место отгрузки.
-     * Возвращает поля address с вложенным контейнером или поле terminalID.
-     * Подробнее о сущностях : https://dev.dellin.ru/api/calculation/calculator/
+     * ����� ������������ ����� ��������.
+     * ���������� ���� address � ��������� ����������� ��� ���� terminalID.
+     * ��������� � ��������� : https://dev.dellin.ru/api/calculation/calculator/
      * @return Field
      * @throws \Exception
      */
@@ -336,7 +337,7 @@ class RequestHandler
     }
 
     /**
-     * Метод для получения параметра produceDate для забора груза.
+     * ����� ��� ��������� ��������� produceDate ��� ������ �����.
      * @return
      */
 
@@ -346,7 +347,7 @@ class RequestHandler
     }
 
     /**
-     * Параметр который устанавливает параметр produceDate для забора груза.
+     * �������� ������� ������������� �������� produceDate ��� ������ �����.
      * @param  $produceDate
      */
 
@@ -475,7 +476,7 @@ class RequestHandler
         $primaryPayer = ($this->order->orderData->isCashOnDelivery)? 'receiver' : 'sender';
 
 
-        //TODO пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
+        //TODO �������� ���������� �� �������, ��� ��������� ����������.
         $fieldPaymentCity = new Field(['paymentCity', $paymentCity]);
         $typeField = new Field(['type', ($this->isRequest && $this->order->orderData->isCashOnDelivery)?'cash':'noncash']);
         $primaryPayment = new Field(['primaryPayer', $primaryPayer]);
@@ -520,7 +521,7 @@ class RequestHandler
         $type = new Field(['type', 4]);
         $productType = new Field(['productType', 5 ]);
         $param = new Field(['param', 'module version']);
-        $value = new Field(['value', '1.0.5']);
+        $value = new Field(['value', '1.1.3']);
         $infoContainer = new Container();
         $infoContainer->add($param);
         $infoContainer->add($value);
@@ -607,11 +608,11 @@ class RequestHandler
 
         $containerCounteragent = new Container();
 
-      //TODO переработать под Юриков тоже
-      //модуль битрикс юриков не поддерживает.
+      //TODO ������������ ��� ������ ����
+      //������ ������� ������ �� ������������.
 
 
-        $fieldForm = new Field(['form', '0xab91feea04f6d4ad48df42161b6c2e7a'/*$this->config->getSenderForm()*/]);// TODO пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ...
+        $fieldForm = new Field(['form', '0xab91feea04f6d4ad48df42161b6c2e7a'/*$this->config->getSenderForm()*/]);// TODO ������� ��� ������ ����...
         $fieldName = new Field(['name', $this->order->person->getFullName()]);
         $fieldPhone = new Field(['phone', $this->order->person->getPhone()]);
         $fieldIsAnonim = new Field(['isAnonym', true]);
@@ -659,7 +660,7 @@ class RequestHandler
 
         foreach( $this->order->products as $product){
 
-            $taxValueForApi = $product->getTaxValue() *100;//TODO пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
+            $taxValueForApi = $product->getTaxValue() *100;//TODO ����� ��������� ��������.
 
             if($product->isTaxIncluded()){
 
@@ -746,7 +747,7 @@ class RequestHandler
         $errors = [];
 
    
-        //Валидируем поведение кейса на одноимённом городе.
+        //���������� ��������� ����� �� ���������� ������.
 
        if($this->isCitiesCase()){
 

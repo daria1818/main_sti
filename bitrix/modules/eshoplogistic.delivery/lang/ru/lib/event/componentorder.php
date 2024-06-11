@@ -10,4 +10,5 @@ $MESS["ESHOP_LOGISTIC_TERMINAL_DESC_3"] = "служб доставки.";
 $MESS["ESHOP_LOGISTIC_TERMINAL_DESC_5"] = "службы доставки.";
 $MESS["ESHOP_LOGISTIC_TERMINAL_DESC_4"] = "Выбран самый дешевый вариант";
 $MESS["ESHOP_LOGISTIC_ADDRESS_FULL"] = "Укажите полный адрес";
+$MESS["ESHOP_LOGISTIC_PER_DAY"] = "день";
 ?>

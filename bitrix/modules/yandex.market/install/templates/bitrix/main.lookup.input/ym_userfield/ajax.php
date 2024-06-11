@@ -8,7 +8,6 @@ if (empty($_REQUEST['site']) || !is_string($_REQUEST['site']) || !preg_match('/^
 define('ADMIN_SECTION', true);
 define('STOP_STATISTICS', true);
 define('BX_SECURITY_SHOW_MESSAGE', true);
-define('SITE_ID', $_REQUEST['site']);
 
 require_once $_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/include/prolog_before.php';
 
@@ -44,7 +43,5 @@ if (isset($_REQUEST['MODE']) && $_REQUEST['MODE'] == 'SEARCH')
 	$query = trim($_REQUEST['search']);
 	$result = $providerClassName::searchByName($query);
 
-	header('Content-Type: application/json');
-	echo Main\Web\Json::encode($result);
-	die();
+	Market\Utils\HttpResponse::sendJson($result);
 }

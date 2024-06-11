@@ -23,7 +23,51 @@ abstract class Status
 	abstract public function getTitle($status, $version = '');
 
 	/**
+	 * @param string $status
+	 *
+	 * @return string|null
+	 */
+	public function getHelp($status)
+	{
+		return null;
+	}
+
+	/**
 	 * @return string[]
 	 */
 	abstract public function getVariants();
+
+	public function isCanceled($status, $subStatus = null)
+	{
+		return false;
+	}
+
+	public function getStatusOrder($status)
+	{
+		$order = $this->getProcessOrder();
+
+		return isset($order[$status]) ? $order[$status] : null;
+	}
+
+	public function getProcessOrder()
+	{
+		return [];
+	}
+
+	public function hasSubstatus($status)
+	{
+		return false;
+	}
+
+	public function getSubStatusOrder($subStatus)
+	{
+		$order = $this->getSubStatusProcessOrder();
+
+		return isset($order[$subStatus]) ? $order[$subStatus] : null;
+	}
+
+	public function getSubStatusProcessOrder()
+	{
+		return [];
+	}
 }

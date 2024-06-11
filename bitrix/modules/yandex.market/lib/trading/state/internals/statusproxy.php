@@ -63,6 +63,7 @@ class StatusProxy
 		];
 		$fields = [
 			'VALUE' => $value,
+			'TIMESTAMP_X' => new Main\Type\DateTime(),
 		];
 
 		$writeResult = ($stored === null)

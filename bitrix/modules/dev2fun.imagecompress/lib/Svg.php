@@ -2,7 +2,7 @@
 /**
  * @author darkfriend <hi@darkfriend.ru>
  * @copyright dev2fun
- * @version 0.4.0
+ * @version 0.8.5
  */
 
 namespace Dev2fun\ImageCompress;
@@ -15,17 +15,24 @@ IncludeModuleLangFile(__FILE__);
 class Svg
 {
     private static $instance;
+    private static $isOptim = null;
     public $lastError;
     public $binaryName = 'svgo';
-
     private $MODULE_ID = 'dev2fun.imagecompress';
+    /** @var string путь до svgo */
     private $path = '';
-    private $enable = false;
+    /** @var string путь до nodejs */
+    public $pathNodejs;
+    private $active = false;
 
-    private function __construct()
+    /**
+     * @param string|null $siteId
+     */
+    public function __construct()
     {
         $this->path = Option::get($this->MODULE_ID, 'path_to_svg', '/usr/bin');
-        $this->enable = Option::get($this->MODULE_ID, 'enable_svg', false);
+        $this->pathNodejs = Option::get($this->MODULE_ID, 'path_to_node', '/usr/bin');
+        $this->active = Option::get($this->MODULE_ID, 'enable_svg', 'N') === 'Y';
     }
 
     /**
@@ -42,13 +49,33 @@ class Svg
     }
 
     /**
-     * Проверка возможности оптимизации pdf
+     * Return has active state
      * @return bool
      */
-    public function isOptim()
+    public function isActive(): bool
     {
-        exec($this->path . "/{$this->binaryName} -v", $s);
-        return ($s ? true : false);
+        return $this->active;
+    }
+
+    /**
+     * Check available optimization svg
+     * @param string|null $path
+     * @param string|null $pathNodejs
+     * @return bool
+     */
+    public function isOptim(?string $path = null, ?string $pathNodejs = null): bool
+    {
+        if (!$path) {
+            $path = $this->path;
+        }
+        if (!$pathNodejs) {
+            $pathNodejs = $this->pathNodejs;
+        }
+        if (self::$isOptim === null || $path !== $this->path || $pathNodejs !== $this->pathNodejs) {
+            exec("{$pathNodejs}/node {$path}/{$this->binaryName} -v", $s);
+            self::$isOptim = (bool)$s;
+        }
+        return self::$isOptim;
     }
 
     /**
@@ -60,7 +87,10 @@ class Svg
      */
     public function compress($strFilePath, $params = [])
     {
-        if(!$this->enable) return false;
+        if (!$this->active) {
+            $this->lastError = 'no_active';
+            return false;
+        }
         $strFilePath = strtr(
             $strFilePath,
             [
@@ -82,7 +112,7 @@ class Svg
         $strCommand = '';
 
         exec(
-            "{$this->path}/{$this->binaryName} $strCommand --input=$strFilePath --output=$strFilePath 2>&1",
+            "{$this->pathNodejs}/node {$this->path}/{$this->binaryName} $strCommand --input=$strFilePath --output=$strFilePath 2>&1",
             $res
         );
 

@@ -2,8 +2,8 @@
 
 namespace Yandex\Market\Trading\Service\MarketplaceDbs\Action\OrderStatus;
 
-use Yandex\Market;
 use Bitrix\Main;
+use Yandex\Market;
 use Yandex\Market\Trading\Entity as TradingEntity;
 use Yandex\Market\Trading\Service as TradingService;
 
@@ -28,16 +28,69 @@ class Action extends TradingService\Marketplace\Action\OrderStatus\Action
 		return new Request($request, $server);
 	}
 
+	public function finalize()
+	{
+		parent::finalize();
+		$this->finalizeDigital();
+	}
+
 	protected function fillOrder()
 	{
 		parent::fillOrder();
 		$this->fillUser();
+		$this->fillContact();
+	}
+
+	protected function statusConfiguredAction($status)
+	{
+		$result = parent::statusConfiguredAction($status);
+
+		if (empty($result) && $this->useAutoFinish())
+		{
+			$result = $this->provider->getOptions()->getStatusOutRaw($status);
+		}
+
+		return $result;
+	}
+
+	protected function useAutoFinish()
+	{
+		$order = $this->request->getOrder();
+
+		if (!$order->hasDelivery()) { return false; }
+
+		$delivery = $order->getDelivery();
+		$partnerType = $delivery->getPartnerType();
+
+		if (!$this->provider->getDelivery()->isShopDelivery($partnerType)) { return false; }
+
+		return $this->isDeliveryToMarketOutlet($delivery) || $this->isDeliveryAutoFinishAllowed($delivery);
+	}
+
+	protected function isDeliveryAutoFinishAllowed(TradingService\MarketplaceDbs\Model\Order\Delivery $delivery)
+	{
+		$deliveryId = $this->deliveryId();
+		$deliveryOption = $this->provider->getOptions()->getDeliveryOptions()->getItemByServiceId($deliveryId);
+
+		if ($deliveryOption === null) { return false; }
+
+		return $deliveryOption->useAutoFinish();
+	}
+
+	protected function isDeliveryToMarketOutlet(TradingService\MarketplaceDbs\Model\Order\Delivery $delivery)
+	{
+		return $this->provider->getDelivery()->isDispatchToMarketOutlet($delivery->getDispatchType());
 	}
 
 	protected function fillProperties()
 	{
 		$this->fillBuyerProperties();
-		$this->fillAddressProperties();
+
+		if (!$this->isDeliveryToExternalOutlet())
+		{
+			$this->fillAddressProperties();
+		}
+
 		$this->fillDeliveryDatesProperties();
 		$this->fillUtilProperties();
 		$this->fillCancelReasonProperty();
@@ -45,14 +98,103 @@ class Action extends TradingService\Marketplace\Action\OrderStatus\Action
 
 	protected function fillBuyerProperties()
 	{
-		$buyer = $this->request->getOrder()->getBuyer();
+		$order = $this->request->getOrder();
+		$buyer = $order->getBuyer();
 
-		if ($buyer !== null)
+		if ($buyer === null || $buyer->isPlaceholder()) { return null; }
+
+		$statusService = $this->provider->getStatus();
+		$status = $order->getStatus();
+		$isFinal = ($statusService->isOrderDelivered($status) || $statusService->isCanceled($status));
+		$values = $buyer->getMeaningfulValues() + $buyer->getCompatibleValues();
+
+		if ($isFinal)
 		{
-			$values = $buyer->getMeaningfulValues();
-
-			$this->setMeaningfulPropertyValues($values);
+			$values['PHONE'] = '';
+			$this->clearBuyerPhoneTask();
 		}
+		else if (!isset($values['PHONE']) && $this->hasBuyerPhoneProperty() && $this->isBuyerPhoneExpired())
+		{
+			$this->createBuyerPhoneTask();
+		}
+
+		$this->setMeaningfulPropertyValues($values);
+	}
+
+	protected function clearBuyerPhoneTask()
+	{
+		$setupId = $this->provider->getOptions()->getSetupId();
+		list($task) = $this->makeOrderTask();
+
+		$task->clear($setupId, 'fill/phone');
+	}
+
+	protected function createBuyerPhoneTask()
+	{
+		$setupId = $this->provider->getOptions()->getSetupId();
+		list($task, $payload) = $this->makeOrderTask();
+
+		$task->clear($setupId, 'fill/phone');
+		$task->schedule($setupId, 'fill/phone', $payload);
+	}
+
+	protected function hasBuyerPhoneProperty()
+	{
+		return (string)$this->provider->getOptions()->getProperty('PHONE') !== '';
+	}
+
+	protected function isBuyerPhoneExpired()
+	{
+		$uniqueKey = $this->provider->getUniqueKey();
+		$orderId = $this->request->getOrder()->getId();
+		$timestamp = Market\Trading\State\OrderData::getTimestamp($uniqueKey, $orderId, 'PHONE');
+
+		if ($timestamp === null) { return true; }
+
+		$limit = new Main\Type\DateTime();
+		$limit->add('-P7D');
+
+		return ($timestamp->getTimestamp() <= $limit->getTimestamp());
+	}
+
+	protected function makeOrderTask()
+	{
+		$orderNum = $this->order->getAccountNumber();
+		$task = new Market\Trading\Procedure\Task(TradingEntity\Registry::ENTITY_TYPE_ORDER, $orderNum);
+		$payload = [
+			'internalId' => $this->order->getId(),
+			'orderId' => $this->request->getOrder()->getId(),
+			'orderNum' => $orderNum,
+		];
+
+		return [$task, $payload];
+	}
+
+	protected function isDeliveryToExternalOutlet()
+	{
+		$delivery = $this->request->getOrder()->getDelivery();
+		$deliveryService = $this->provider->getDelivery();
+
+		if ($deliveryService->isDispatchToMarketOutlet($delivery->getDispatchType()))
+		{
+			$result = false;
+		}
+		else if ((int)$delivery->getServiceId() === TradingService\MarketplaceDbs\Delivery::SHOP_SERVICE_ID)
+		{
+			$result = false;
+		}
+		else
+		{
+			$result = (
+				$delivery->getType() === TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP
+				|| (
+					$delivery->getType() === TradingService\MarketplaceDbs\Delivery::TYPE_DELIVERY
+					&& $delivery->getDispatchType() === TradingService\MarketplaceDbs\Delivery::DISPATCH_TYPE_SHOP_OUTLET
+				)
+			);
+		}
+
+		return $result;
 	}
 
 	protected function fillCancelReasonProperty()
@@ -82,12 +224,16 @@ class Action extends TradingService\Marketplace\Action\OrderStatus\Action
 	{
 		$buyer = $this->request->getOrder()->getBuyer();
 
-		if ($buyer !== null && $this->needUserRegister() && $this->isOrderUserAnonymous())
+		if (
+			$buyer !== null && !$buyer->isPlaceholder()
+			&& $this->needUserRegister() && $this->isOrderUserAnonymous()
+		)
 		{
 			$buyerData = $buyer->getMeaningfulValues();
-			$filteredData = $this->filterUserData($buyerData);
 			$userRegistry = $this->environment->getUserRegistry();
-			$user = $userRegistry->getUser($filteredData);
+			$user = $userRegistry->getUser($buyerData);
+
+			$this->configureUserRule($user);
 
 			if (!$user->isInstalled())
 			{
@@ -117,6 +263,51 @@ class Action extends TradingService\Marketplace\Action\OrderStatus\Action
 		return $userRegistry->getAnonymousUser($this->provider->getServiceCode(), $this->getSiteId());
 	}
 
+	protected function fillContact()
+	{
+		try
+		{
+			$buyer = $this->request->getOrder()->getBuyer();
+
+			if ($buyer === null || $buyer->isPlaceholder()) { return; }
+
+			$command = new TradingService\Common\Command\OrderContact(
+				$this->provider,
+				$this->environment,
+				$this->order
+			);
+
+			if ($command->needExecute())
+			{
+				$command->execute();
+				$this->pushChange('CONTACTS', $this->order->getContacts());
+			}
+		}
+		catch (Main\SystemException $exception)
+		{
+			$this->provider->getLogger()->warning($exception);
+		}
+	}
+
+	protected function getCashboxCheckRule()
+	{
+		$paySystemId = $this->order->getPaySystemId();
+		$paySystemOptions = $this->provider->getOptions()->getPaySystemOptions()->getItemsByPaySystemId($paySystemId);
+
+		if (!empty($paySystemOptions))
+		{
+			$result = $paySystemOptions[0]->getCashboxCheck();
+		}
+		else
+		{
+			$result = $this->request->getOrder()->getPaymentType() === TradingService\Marketplace\PaySystem::TYPE_PREPAID
+				? TradingService\Marketplace\PaySystem::CASHBOX_CHECK_DISABLED
+				: TradingService\Marketplace\PaySystem::CASHBOX_CHECK_ENABLED;
+		}
+
+		return $result;
+	}
+
 	protected function updateOrder()
 	{
 		parent::updateOrder();
@@ -141,26 +332,20 @@ class Action extends TradingService\Marketplace\Action\OrderStatus\Action
 		$command->execute();
 	}
 
-	protected function getStatusInSearchVariants()
-	{
-		$externalStatus = $this->request->getOrder()->getStatus();
-		$paymentType = $this->request->getOrder()->getPaymentType();
-		$servicePaySystem = $this->provider->getPaySystem();
-		$result = [
-			$externalStatus,
-		];
-
-		if ($servicePaySystem->isPrepaid($paymentType))
-		{
-			array_unshift($result, $externalStatus . '_PREPAID');
-		}
-
-		return $result;
-	}
-
 	protected function makeData()
 	{
-		return $this->makeDeliveryData();
+		return
+			$this->makeStatusData()
+			+ $this->makePaymentData()
+			+ $this->makeDeliveryData()
+			+ $this->makeItemsData();
+	}
+
+	protected function makePaymentData()
+	{
+		return [
+			'PAYMENT_TYPE' => $this->request->getOrder()->getPaymentType(),
+		];
 	}
 
 	protected function makeDeliveryData()
@@ -170,15 +355,61 @@ class Action extends TradingService\Marketplace\Action\OrderStatus\Action
 		if (!$order->hasDelivery()) { return []; }
 
 		$delivery = $order->getDelivery();
-		$dates = $delivery->getDates();
-		$deliveryDate = $dates !== null ? $dates->getFrom() : null;
 
-		return [
-			'DELIVERY_ID' => $delivery->getShopDeliveryId(),
+		$result = [
 			'DELIVERY_SERVICE_ID' => $delivery->getServiceId(),
-			'DELIVERY_DATE' => $deliveryDate !== null
-				? $deliveryDate->format(Market\Data\Date::FORMAT_DEFAULT_SHORT)
-				: null,
 		];
+		$result += $this->makeDeliveryDatesData($order);
+
+		if ($delivery->hasShopDeliveryId()) // status sync support
+		{
+			$result['DELIVERY_ID'] = $delivery->getShopDeliveryId();
+		}
+
+		return $result;
+	}
+
+	protected function finalizeDigital()
+	{
+		if (
+			$this->previousState === null // nothing changed
+			|| $this->previousState[0] === TradingService\MarketplaceDbs\Status::STATUS_PROCESSING // processing already started
+			|| $this->request->getOrder()->getStatus() !== TradingService\MarketplaceDbs\Status::STATUS_PROCESSING
+			|| $this->request->getOrder()->getDelivery()->getType() !== TradingService\MarketplaceDbs\Delivery::TYPE_DIGITAL
+		)
+		{
+			return;
+		}
+
+		$deliveryId = $this->deliveryId();
+
+        if (empty($deliveryId)) { return; }
+
+		$deliveryOption = $this->provider->getOptions()->getDeliveryOptions()->getItemByServiceId($deliveryId);
+
+		if (
+			$deliveryOption === null
+			|| $deliveryOption->getType() !== TradingService\MarketplaceDbs\Delivery::TYPE_DIGITAL
+			|| $deliveryOption->getDigitalAdapter() === null
+		)
+		{
+			return;
+		}
+
+		$this->addTask('generate/digital', [
+			'shopDeliveryId' => $deliveryId,
+		]);
+	}
+
+	protected function deliveryId()
+	{
+		$delivery = $this->request->getOrder()->getDelivery();
+
+		if ($delivery->hasShopDeliveryId()) { return $delivery->getShopDeliveryId(); }
+
+		return (
+			Market\Trading\State\OrderData::getValue($this->provider->getUniqueKey(), $this->request->getOrder()->getId(), 'DELIVERY_ID')
+			?: $this->order->getDeliveryId()
+		);
 	}
 }

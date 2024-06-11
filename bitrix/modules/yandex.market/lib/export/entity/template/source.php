@@ -83,7 +83,7 @@ class Source extends Market\Export\Entity\Reference\Source
 
 					if ($templateNode)
 					{
-						$templateResult = $templateNode->process($entity);
+						$templateResult = $templateNode->processValue($entity);
 					}
 
 					$result[$elementId][$templateKey] = $templateResult;

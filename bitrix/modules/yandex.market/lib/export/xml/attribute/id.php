@@ -14,11 +14,6 @@ class Id extends Base
 		];
 	}
 
-	public function isDefined()
-	{
-		return !Market\Config::isExpertMode();
-	}
-
 	public function getSourceRecommendation(array $context = [])
 	{
 		$result = [];

@@ -13,6 +13,8 @@ class BooleanType extends AbstractType
 
 	public function format($value, array $context = [], Market\Export\Xml\Reference\Node $node = null, Market\Result\XmlNode $nodeResult = null)
 	{
+		if (is_array($value)) { $value = reset($value); }
+
 		$result = 'false';
 
 		if (!empty($value))
@@ -21,7 +23,7 @@ class BooleanType extends AbstractType
 			{
 				// nothing
 			}
-			else if ($value === 'Y' || $value === true)
+			else if ($value === 'Y' || $value === true || !is_scalar($value))
 			{
 				$result = 'true';
 			}

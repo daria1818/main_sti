@@ -403,7 +403,7 @@ class Source extends Market\Export\Entity\Reference\Source
 		return $result;
 	}
 
-	protected function convertSelectToInternalFields($select, Main\ORM\Entity $entity)
+	protected function convertSelectToInternalFields($select, Main\Entity\Base $entity)
 	{
 		$querySelect = [];
 		$referenceMap = [];

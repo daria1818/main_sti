@@ -19,6 +19,8 @@ class Action extends TradingService\Common\Action\HttpAction
 	/** @var TradingEntity\Reference\Order */
 	protected $order;
 	protected $basketMap = [];
+	protected $basketPackRatio = [];
+	protected $basketProducts = [];
 	protected $basketErrors = [];
 	protected $basketInvalidProducts = [];
 	protected $basketInvalidData = [];
@@ -200,7 +202,7 @@ class Action extends TradingService\Common\Action\HttpAction
 	{
 		if (!empty($this->relatedProperties))
 		{
-			$this->order->fillProperties($this->relatedProperties);
+			$this->order->fillProperties($this->relatedProperties, true);
 
 			$this->filledProperties += $this->relatedProperties;
 			$this->relatedProperties = [];
@@ -211,7 +213,8 @@ class Action extends TradingService\Common\Action\HttpAction
 	{
 		$items = $this->request->getCart()->getItems();
 		$offerMap = $this->getOfferMap($items);
-		$allProductData = $this->getBasketData($items, $offerMap);
+		$packRatio = $this->getPackRatio($items, $offerMap);
+		$allProductData = $this->getBasketData($items, $offerMap, $packRatio);
 
 		/** @var Market\Api\Model\Cart\Item $item */
 		foreach ($items as $itemIndex => $item)
@@ -226,7 +229,8 @@ class Action extends TradingService\Common\Action\HttpAction
 			else
 			{
 				$meaningfulValues = $item->getMeaningfulValues();
-				$quantity = $item->getCount();
+				$ratio = isset($packRatio[$productId]) ? $packRatio[$productId] : 1;
+				$quantity = $item->getCount() * $ratio;
 				$data = isset($allProductData[$productId]) ? $allProductData[$productId] : null;
 				$dataKeyWithQuantity = $productId . '|' . $quantity;
 
@@ -262,6 +266,9 @@ class Action extends TradingService\Common\Action\HttpAction
 
 				$addData = $addResult->getData();
 
+				$this->basketPackRatio[$itemIndex] = $ratio;
+				$this->basketProducts[$itemIndex] = $productId;
+
 				if (isset($addData['BASKET_CODE']))
 				{
 					$this->basketMap[$itemIndex] = $addData['BASKET_CODE'];
@@ -291,17 +298,51 @@ class Action extends TradingService\Common\Action\HttpAction
 		return $command->make($offerIds);
 	}
 
-	protected function getBasketData(Market\Api\Model\Cart\ItemCollection $items, $offerMap = null)
+	protected function getPackRatio(Market\Api\Model\Cart\ItemCollection $items, $offerMap = null)
+	{
+		$productIds = $offerMap !== null ? array_values($offerMap) : $items->getOfferIds();
+		$command = new TradingService\Common\Command\OfferPackRatio(
+			$this->provider,
+			$this->environment
+		);
+
+		return $command->make($productIds);
+	}
+
+	protected function getBasketData(Market\Api\Model\Cart\ItemCollection $items, $offerMap = null, $packRatio = null)
 	{
 		$context = $this->makeBasketContext();
 		$productIds = $offerMap !== null ? array_values($offerMap) : $items->getOfferIds();
 		$quantities = $items->getQuantities($offerMap);
+		$quantities = $this->applyQuantitiesRatio($quantities, $packRatio);
+
+		if (empty($productIds)) { return []; }
 
 		return $this->mergeBasketData([
 			$this->getProductData($productIds, $quantities, $context),
 			$this->getPriceData($productIds, $quantities, $context),
 			$this->getStoreData($productIds, $quantities, $context)
 		]);
+	}
+
+	protected function applyQuantitiesRatio($quantities, $packRatio)
+	{
+		foreach ($quantities as $productId => $productQuantities)
+		{
+			if (!isset($packRatio[$productId])) { continue; }
+
+			$productRatio = $packRatio[$productId];
+
+			foreach ($productQuantities as &$productQuantity)
+			{
+				$productQuantity *= $productRatio;
+			}
+			unset($productQuantity);
+
+			$quantities[$productId] = $productQuantities;
+		}
+
+		return $quantities;
 	}
 
 	protected function makeBasketContext()
@@ -377,12 +418,60 @@ class Action extends TradingService\Common\Action\HttpAction
 	protected function verify()
 	{
 		$validationResult = $this->validate();
-		$logger = $this->provider->getLogger();
 
-		foreach ($validationResult->getErrors() as $error)
-		{
-			$logger->warning($error->getMessage());
-		}
+		if ($validationResult->isSuccess()) { return; }
+
+		$this->provider->getLogger()->warning(
+			implode(PHP_EOL, $validationResult->getErrorMessages()),
+			$this->makeErrorsContext($validationResult)
+		);
+	}
+
+	protected function makeErrorsContext(Market\Result\Base $result)
+	{
+		$result = array_filter([
+			'items' => $this->makeItemsContext($result)
+		]);
+
+		if (empty($result)) { return $result; }
+
+		$now = new Main\Type\DateTime();
+
+		$result += array_filter([
+			'settings' => $this->makeSettingsContext(),
+			'now' => $now->toString(),
+			'timezone' => $now->format('P'),
+		]);
+
+		return $result;
+	}
+
+	protected function makeItemsContext(Market\Result\Base $result)
+	{
+		$command = new TradingService\Common\Command\DebugBasketItems(
+			$this->provider,
+			$this->environment,
+			$this->getPlatform(),
+			$this->order,
+			$this->request->getCart()->getItems(),
+			$this->basketMap,
+			$this->basketProducts,
+			$this->basketPackRatio
+		);
+
+		if (!$command->need($result)) { return null; }
+
+		return $command->execute();
+	}
+
+	protected function makeSettingsContext()
+	{
+		$command = new TradingService\Common\Command\DebugSettings(
+			$this->provider,
+			$this->environment
+		);
+
+		return $command->execute();
 	}
 
 	protected function validate()
@@ -398,7 +487,8 @@ class Action extends TradingService\Common\Action\HttpAction
 		/** @var Market\Api\Model\Cart\Item $item */
 		foreach ($items as $itemIndex => $item)
 		{
-			$offerCount = $item->getCount();
+			$ratio = isset($this->basketPackRatio[$itemIndex]) ? $this->basketPackRatio[$itemIndex] : 1;
+			$offerCount = $item->getCount() * $ratio;
 			$basketCount = null;
 
 			if (isset($this->basketMap[$itemIndex]))
@@ -426,7 +516,7 @@ class Action extends TradingService\Common\Action\HttpAction
 				]);
 				$result->addError(new Market\Error\Base($message, 'OFFER_NOT_EXISTS'));
 			}
-			else if (Market\Data\Quantity::round($offerCount) !== Market\Data\Quantity::round($basketCount))
+			else if (!Market\Data\Quantity::equal($offerCount, $basketCount))
 			{
 				$message = static::getLang('TRADING_ACTION_CART_BASKET_COUNT_NOT_MATCH', [
 					'#ITEM_NAME#' => $this->getItemName($item),
@@ -498,9 +588,11 @@ class Action extends TradingService\Common\Action\HttpAction
 				if ($basketQuantity > 0 && $basketResult->isSuccess())
 				{
 					$hasValidItems = true;
-					$responseItem['count'] = $basketQuantity;
+					$ratio = isset($this->basketPackRatio[$itemIndex]) ? $this->basketPackRatio[$itemIndex] : 1;
+
+					$responseItem['count'] = Market\Data\Quantity::round($basketQuantity / $ratio);
 					$responseItem['delivery'] = true;
-					$responseItem['price'] = (float)$basketData['PRICE'];
+					$responseItem['price'] = Market\Data\Price::round($basketData['PRICE'] * $ratio);
 					$responseItem['vat'] = Market\Data\Vat::convertForService($basketData['VAT_RATE']);
 				}
 			}

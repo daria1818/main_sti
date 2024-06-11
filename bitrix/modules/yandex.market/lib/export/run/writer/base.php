@@ -10,7 +10,6 @@ abstract class Base
     const POSITION_AFTER = 'after';
 
 	protected $parameters = [];
-	protected $offerParentName;
 
 	public function __construct($parameters = [])
 	{
@@ -18,7 +17,14 @@ abstract class Base
 	}
 
 	public function destroy()
-	{}
+	{
+		// nothing by default
+	}
+
+	public function commit()
+	{
+		// nothing by default
+	}
 
 	abstract public function getPath();
 
@@ -43,6 +49,8 @@ abstract class Base
 	abstract public function writeTagList($elementList, $parentName, $position = null);
 
 	abstract public function writeTag($element, $parentName, $position = null);
+
+	abstract public function writeParent($elementName, $parentName, $position = null);
 
 	abstract public function updateAttribute($tagName, $id, $attributeList, $idAttr = 'id');
 

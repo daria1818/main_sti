@@ -24,6 +24,7 @@ class Renderer
 			$value,
 			$userField['MULTIPLE'] !== 'N'
 		);
+		$controlValue = Field::unifyValue($controlValue);
 
 		return $USER_FIELD_MANAGER->getListView($userField, $controlValue);
 	}

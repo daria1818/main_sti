@@ -12,6 +12,7 @@ use Yandex\Market\Trading\Service as TradingService;
  * @property TradingEntity\Reference\Environment $environment
  * @property TradingService\Marketplace\Action\Cart\Request|TradingService\Marketplace\Action\OrderAccept\Request $request
  * @method array makeBasketContext()
+ * @method array applyQuantitiesRatio($quantities, $packRatio)
  * @method array getProductData($productIds, $quantities, $context)
  * @method array getPriceData($productIds, $quantities, $context)
  * @method array getStoreData($productIds, $quantities, $context)
@@ -19,11 +20,15 @@ use Yandex\Market\Trading\Service as TradingService;
  */
 trait HasBasketWarehouses
 {
-	protected function getBasketData(Market\Api\Model\Cart\ItemCollection $items, $offerMap = null)
+	protected function getBasketData(Market\Api\Model\Cart\ItemCollection $items, $offerMap = null, $packRatio = null)
 	{
 		$context = $this->makeBasketContext();
 		$productIds = $offerMap !== null ? array_values($offerMap) : $items->getOfferIds();
 		$quantities = $items->getQuantities($offerMap);
+		$quantities = $this->applyQuantitiesRatio($quantities, $packRatio);
+
+		if (empty($productIds)) { return []; }
+
 		$dataGroups = [
 			$this->getProductData($productIds, $quantities, $context),
 			$this->getPriceData($productIds, $quantities, $context),
@@ -32,6 +37,7 @@ trait HasBasketWarehouses
 		if ($this->provider->getOptions()->useWarehouses())
 		{
 			$warehouseQuantities = $this->makeBasketWarehouseQuantities($items, $offerMap);
+			$warehouseQuantities = $this->applyWarehouseQuantitiesRatio($warehouseQuantities, $packRatio);
 
 			$dataGroups[] = $this->getStoreDataByWarehouses($warehouseQuantities, $context);
 		}
@@ -69,6 +75,17 @@ trait HasBasketWarehouses
 		}
 
 		return $result;
+	}
+
+	protected function applyWarehouseQuantitiesRatio($warehouseQuantities, $packRatio)
+	{
+		foreach ($warehouseQuantities as &$oneQuantities)
+		{
+			$oneQuantities = $this->applyQuantitiesRatio($oneQuantities, $packRatio);
+		}
+		unset($oneQuantities);
+
+		return $warehouseQuantities;
 	}
 
 	protected function getStoreDataByWarehouses($warehouseQuantities, $context)

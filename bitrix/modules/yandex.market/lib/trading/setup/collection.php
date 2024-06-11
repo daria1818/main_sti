@@ -42,6 +42,7 @@ class Collection extends Market\Reference\Storage\Collection
 		return $this->getByField('TRADING_BEHAVIOR', $behavior, $filter);
 	}
 
+	/** @noinspection DuplicatedCode */
 	protected function getByField($field, $value, $filter = null)
 	{
 		$result = null;

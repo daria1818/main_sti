@@ -7,6 +7,7 @@ use Bitrix\Main;
 use Yandex\Market\Trading\Service as TradingService;
 
 class ReceptionTransferAct extends TradingService\Reference\Document\AbstractDocument
+	implements TradingService\Reference\Document\HasRenderFile
 {
 	use Market\Reference\Concerns\HasLang;
 
@@ -32,6 +33,19 @@ class ReceptionTransferAct extends TradingService\Reference\Document\AbstractDoc
 	public function getEntityType()
 	{
 		return Market\Trading\Entity\Registry::ENTITY_TYPE_NONE;
+	}
+
+	public function canRenderFile(array $items, array $settings = [])
+	{
+		return true;
+	}
+
+	public function renderFile(array $items, array $settings = [])
+	{
+		/** @var Market\Api\Reference\HasOauthConfiguration $options */
+		$options = $this->provider->getOptions();
+
+		return Market\Api\Partner\File\Facade::download($options, $this->getDocumentUrl());
 	}
 
 	public function render(array $items, array $settings = [])

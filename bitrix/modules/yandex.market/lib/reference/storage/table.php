@@ -478,7 +478,7 @@ abstract class Table extends Main\Entity\DataManager
 							$foundRowIds[$existRow[$referencePrimaryField]] = true;
 
 							$dataKey = $idToDataKeyMap[$existRow[$referencePrimaryField]];
-							$data = $dataList[$dataKey];
+							$data = $dataList[$dataKey] + $referenceConfig['LINK'];
 
 							unset($data[$referencePrimaryField]);
 
@@ -659,18 +659,18 @@ abstract class Table extends Main\Entity\DataManager
 
 				break;
 
-				case ($field instanceof Main\Entity\DateField): // date
+				case ($field instanceof Main\Entity\DatetimeField): // datetime
 
-					$userType = 'date';
+					$userType = 'datetime';
 					$userField['SETTINGS'] = [
 						'DEFAULT_VALUE' => $field->getDefaultValue()
 					];
 
 				break;
 
-				case ($field instanceof Main\Entity\DatetimeField): // datetime
+				case ($field instanceof Main\Entity\DateField): // date
 
-					$userType = 'datetime';
+					$userType = 'date';
 					$userField['SETTINGS'] = [
 						'DEFAULT_VALUE' => $field->getDefaultValue()
 					];

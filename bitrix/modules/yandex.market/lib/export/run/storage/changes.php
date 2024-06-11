@@ -1,11 +1,12 @@
 <?php
-
 namespace Yandex\Market\Export\Run\Storage;
 
 use Bitrix\Main;
 use Yandex\Market;
 
+/** @deprecated */
 class ChangesTable extends Market\Reference\Storage\Table
+	implements Market\Reference\Storage\TableDeprecated
 {
 	public static function getTableName()
 	{
@@ -38,7 +39,7 @@ class ChangesTable extends Market\Reference\Storage\Table
 				'size' => 20,
 				'validation' => [__CLASS__, 'validateEntityId'],
 			]), // may be currency id and bigInt
-			new Main\Entity\DatetimeField('TIMESTAMP_X', [
+			new Market\Reference\Storage\Field\CanonicalDateTime('TIMESTAMP_X', [
 				'required' => true
 			])
 		];

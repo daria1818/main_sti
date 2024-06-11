@@ -31,6 +31,23 @@ trait HasUserRegistration
 		return $result;
 	}
 
+	protected function configureUserRule(TradingEntity\Reference\User $user)
+	{
+		$options = $this->provider->getOptions();
+
+		if (!($options instanceof TradingService\Common\Concerns\Options\UserRegistrationInterface)) { return; }
+
+		$rule = $options->getUserRule();
+		$behaviorMap = $this->getUserRuleBehaviorMap();
+
+		if (!isset($behaviorMap[$rule])) { return; }
+
+		$field = $behaviorMap[$rule];
+
+		$user->searchOnly([$field]);
+	}
+
+	/** @deprecated */
 	protected function filterUserData($userData)
 	{
 		$options = $this->provider->getOptions();
@@ -57,24 +74,41 @@ trait HasUserRegistration
 
 	protected function getUserRuleDisabledFields($rule)
 	{
-		if ($rule === TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_EMAIL)
+		$behaviorMap = $this->getUserRuleBehaviorMap();
+
+		if (!isset($behaviorMap[$rule])) { return []; }
+
+		$fieldsMap = $this->getUserRuleFieldsMap();
+		$matchBehavior = $behaviorMap[$rule];
+		$result = [];
+
+		foreach ($fieldsMap as $behavior => $fields)
 		{
-			$result = [
-				'PHONE' => true,
-			];
-		}
-		else if ($rule === TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_PHONE)
-		{
-			$result = [
-				'EMAIL' => true,
-			];
-		}
-		else
-		{
-			$result = [];
+			if ($behavior === $matchBehavior) { continue; }
+
+			$result += array_fill_keys($fields, true);
 		}
 
 		return $result;
+	}
+
+	protected function getUserRuleFieldsMap()
+	{
+		return [
+			'NAME' => [ 'LAST_NAME', 'FIRST_NAME', 'MIDDLE_NAME' ],
+			'PHONE' => [ 'PHONE' ],
+			'EMAIL' => [ 'EMAIL' ],
+		];
+	}
+
+	protected function getUserRuleBehaviorMap()
+	{
+		return [
+			TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_NAME => 'NAME',
+			TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_EMAIL => 'EMAIL',
+			TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_PHONE => 'PHONE',
+			TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_ID => 'ID',
+		];
 	}
 
 	protected function registerUser(TradingEntity\Reference\User $user)

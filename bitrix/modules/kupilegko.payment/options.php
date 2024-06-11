@@ -27,6 +27,7 @@
 	    COption::SetOptionString($moduleID, "OPTION_PHONE", $_POST['OPTION_PHONE']);
 	    COption::SetOptionString($moduleID, "OPTION_FIO", $_POST['OPTION_FIO']);
 	    COption::SetOptionString($moduleID, "NOTIFY_URL", $_SERVER['HTTP_HOST']);
+	    COption::SetOptionString($moduleID, "CANCEL_ORDER_BY_TIMEOUT", $_POST['CANCEL_ORDER_BY_TIMEOUT'] === 'on' ? true : false);
 
 	    if($ALFABANK_CONFIG['CALLBACK_BROADCAST']) {
 	    	COption::SetOptionString($moduleID, "CALLBACK_REDIRECT_BROADCAST", $_POST['CALLBACK_REDIRECT_BROADCAST']);
@@ -46,6 +47,7 @@
 		'OPTION_EMAIL' => COption::GetOptionString($moduleID, 'OPTION_EMAIL'),
 		'OPTION_PHONE' => COption::GetOptionString($moduleID, 'OPTION_PHONE'),
 		'OPTION_FIO' => COption::GetOptionString($moduleID, 'OPTION_FIO'),
+		'CANCEL_ORDER_BY_TIMEOUT' => COption::GetOptionString($moduleID, 'CANCEL_ORDER_BY_TIMEOUT'),
 	);
 	if($ALFABANK_CONFIG['CALLBACK_BROADCAST']) {
     	$current_settings['CALLBACK_REDIRECT_BROADCAST'] = COption::GetOptionString($moduleID, 'CALLBACK_REDIRECT_BROADCAST', '');
@@ -161,6 +163,18 @@
 	        </td>
 	    </tr>
 
+
+		<!-- CANCEL ORDER BY TIMEOUT -->
+		<tr class="heading">
+	        <td colspan="2"><?= Loc::getMessage('ALFABANK_CANCEL_ORDER_BY_TIMEOUT_DESCRIPTION')?></td>
+	    </tr>
+		<tr>
+
+	        <td width="100%" colspan="2" style="text-align: center;">
+	            <input type="checkbox" size="50" name="CANCEL_ORDER_BY_TIMEOUT"<? if ($current_settings['CANCEL_ORDER_BY_TIMEOUT']) echo 'checked="checked"'; ?> >
+	            <span><?= Loc::getMessage('ALFABANK_CANCEL_ORDER_BY_TIMEOUT_LABEL')?></span>
+	        </td>
+	    </tr>
 
 	    <? if($ALFABANK_CONFIG['CALLBACK_BROADCAST']) { ?>
 		    

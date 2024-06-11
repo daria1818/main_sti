@@ -72,7 +72,8 @@ class askaron_agents extends CModule
 		if ( count( $askaron_agents_global_errors ) == 0 )
 		{
 			RegisterModule("askaron.agents");
-			RegisterModuleDependences("main", "OnPageStart", $this->MODULE_ID, "CAskaronAgents", "OnPageStartHandler", "500");
+			//RegisterModuleDependences("main", "OnPageStart", $this->MODULE_ID, "CAskaronAgents", "OnPageStartHandler", "500");
+			RegisterModuleDependences("main", "OnAfterEpilog", $this->MODULE_ID, "CAskaronAgents", "OnAfterEpilog", "500");
 
 			$this->InstallDB();
 			$this->InstallFiles();			
@@ -101,7 +102,8 @@ class askaron_agents extends CModule
 			$this->UnInstallFiles();
 			$this->UnInstallDB();
 
-			UnRegisterModuleDependences("main", "OnPageStart", $this->MODULE_ID, "CAskaronAgents", "OnPageStartHandler");
+			UnRegisterModuleDependences("main", "OnAfterEpilog", $this->MODULE_ID, "CAskaronAgents", "OnAfterEpilog");
+			//UnRegisterModuleDependences("main", "OnPageStart", $this->MODULE_ID, "CAskaronAgents", "OnPageStartHandler");
 			UnRegisterModule('askaron.agents');
 						
 			$APPLICATION->IncludeAdminFile( GetMessage("ASKARON_AGENTS_UNINSTALL_TITLE"), $_SERVER["DOCUMENT_ROOT"]."/".$this->MY_DIR."/modules/".$this->MODULE_ID."/install/unstep2.php");

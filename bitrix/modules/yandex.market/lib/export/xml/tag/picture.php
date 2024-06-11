@@ -13,8 +13,28 @@ class Picture extends Base
 		return [
 			'name' => 'picture',
 			'value_type' => Market\Type\Manager::TYPE_FILE,
-			'max_count' => 10
+			'max_count' => 20,
 		];
+	}
+
+	public function preselect(array $context)
+	{
+		$result = [];
+		$groups = [
+			$this->getSourceFieldRecommendation(Market\Export\Entity\Manager::TYPE_IBLOCK_ELEMENT_FIELD),
+			$this->getSourcePropertyRecommendation([
+				$context['IBLOCK_ID'] => Market\Export\Entity\Manager::TYPE_IBLOCK_ELEMENT_PROPERTY,
+			], 1),
+		];
+
+		foreach ($groups as $group)
+		{
+			if (empty($group)) { continue; }
+
+			$result[] = reset($group);
+		}
+
+		return $result;
 	}
 
 	public function getSourceRecommendation(array $context = [])
@@ -56,7 +76,7 @@ class Picture extends Base
 		];
 	}
 
-	protected function getSourcePropertyRecommendation($propertySources)
+	protected function getSourcePropertyRecommendation($propertySources, $limit = null)
 	{
 		$result = [];
 		$iblockIds = array_keys($propertySources);
@@ -74,7 +94,8 @@ class Picture extends Base
 						[ '%FILE_TYPE' => [ 'jpg', 'jpeg', 'png' ] ]
 					]
 				],
-				'select' => [ 'ID', 'IBLOCK_ID' ]
+				'select' => [ 'ID', 'IBLOCK_ID' ],
+				'limit' => $limit,
 			]);
 
 			while ($row = $query->fetch())

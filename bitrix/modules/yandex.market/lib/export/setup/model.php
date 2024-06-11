@@ -1,22 +1,27 @@
 <?php
-
+/** @noinspection PhpReturnDocTypeMismatchInspection */
+/** @noinspection PhpIncompatibleReturnTypeInspection */
 namespace Yandex\Market\Export\Setup;
 
 use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 use Yandex\Market;
+use Yandex\Market\Export\Glossary;
 
 Loc::loadMessages(__FILE__);
 
 class Model extends Market\Reference\Storage\Model
+	implements Market\Watcher\Agent\EntityRefreshable
 {
+	use Market\Watcher\Agent\EntityRefreshableTrait;
+
 	/** @var \Yandex\Market\Export\Xml\Format\Reference\Base */
 	protected $format;
 	protected $domainParsed;
 
 	public static function getDataClass()
 	{
-		return Table::getClassName();
+		return Table::class;
 	}
 
 	public static function normalizeFileName($fileName, $primary = null)
@@ -46,33 +51,34 @@ class Model extends Market\Reference\Storage\Model
 
 	public function onAfterSave()
 	{
-	    $isAutoUpdate = $this->isAutoUpdate();
-	    $hasFullRefresh = $this->hasFullRefresh();
+	    $this->updateListener();
+	}
 
-        $this->handleChanges($isAutoUpdate);
-        $this->handleRefresh($hasFullRefresh);
-        $this->updatePromoListener();
+	public function updateListener()
+	{
+		$isAutoUpdate = $this->isAutoUpdate();
+		$hasFullRefresh = $this->hasFullRefresh();
+
+		$this->handleChanges($isAutoUpdate);
+		$this->handleRefresh($hasFullRefresh);
+		$this->updatePromoListener();
+		$this->updateCollectionListener();
 	}
 
 	public function handleChanges($direction)
 	{
-		if (!$direction || $this->isFileReady())
-		{
-		    $entityType = Market\Export\Track\Table::ENTITY_TYPE_SETUP;
-		    $entityId = $this->getId();
+		if ($direction && !$this->isFileReady()) { return; }
 
-            if ($direction)
-            {
-                $trackSourceList = $this->getTrackSourceList();
+		$installer = new Market\Watcher\Track\Installer(Glossary::SERVICE_SELF, Glossary::ENTITY_SETUP, $this->getId());
 
-                Market\Export\Track\Registry::addEntitySources($entityType, $entityId, $trackSourceList);
-            }
-            else
-            {
-                Market\Export\Track\Registry::removeEntitySources($entityType, $entityId);
-                Market\Export\Run\Changes::releaseAll($entityId);
-            }
-		}
+        if ($direction)
+        {
+	        $installer->install($this->getTrackSourceList(), $this->getBindEntities());
+        }
+        else
+        {
+	        $installer->uninstall();
+        }
 	}
 
 	public function updatePromoListener()
@@ -84,17 +90,40 @@ class Model extends Market\Reference\Storage\Model
         }
     }
 
+	public function updateCollectionListener()
+    {
+        /** @var Market\Export\Collection\Model $promo */
+        foreach ($this->getCollectionCollection() as $collection)
+        {
+	        $collection->updateListener();
+        }
+    }
+
 	public function getTrackSourceList()
     {
-        $result = [];
+        $partials = [];
 
+	    /** @var Market\Export\IblockLink\Model $iblockLink */
         foreach ($this->getIblockLinkCollection() as $iblockLink)
         {
-            $result = array_merge($result, $iblockLink->getTrackSourceList());
+	        $partials[] = $iblockLink->getTrackSourceList();
         }
 
-        return $result;
+        return !empty($partials) ? array_merge(...$partials) : [];
     }
+
+	public function getBindEntities()
+	{
+		$partials = [];
+
+		/** @var Market\Export\IblockLink\Model $iblockLink */
+		foreach ($this->getIblockLinkCollection() as $iblockLink)
+		{
+			$partials[] = $iblockLink->getSetupBindEntities();
+		}
+
+		return !empty($partials) ? array_merge(...$partials) : [];
+	}
 
 	public function handleRefresh($direction)
 	{
@@ -105,25 +134,25 @@ class Model extends Market\Reference\Storage\Model
 
 		if ($direction)
 		{
-			if ($this->isFileReady())
-			{
-				$nextExecDate = $this->getRefreshNextExec();
+			if (!$this->isFileReady()) { return; }
 
-				$agentParams['interval'] = $this->getRefreshPeriod();
-				$agentParams['next_exec'] = ConvertTimeStamp($nextExecDate->getTimestamp(), 'FULL');
+			$nextExecDate = $this->getRefreshNextExec();
 
-				Market\Export\Run\Agent::register($agentParams);
-			}
+			$agentParams['interval'] = $this->getRefreshPeriod();
+			$agentParams['next_exec'] = ConvertTimeStamp($nextExecDate->getTimestamp(), 'FULL');
+
+			Market\Export\Run\Agent::register($agentParams);
 		}
 		else
 		{
 			Market\Export\Run\Agent::unregister($agentParams);
 			Market\Export\Run\Agent::unregister([
 				'method' => 'refresh',
-				'arguments' => [ (int)$this->getId() ]
+				'arguments' => [ (int)$this->getId() ],
+				'search' => Market\Reference\Agent\Controller::SEARCH_RULE_SOFT,
 			]);
 
-			Market\Export\Run\Agent::releaseState('refresh', (int)$this->getId());
+			Market\Watcher\Agent\StateFacade::drop('refresh', Glossary::SERVICE_SELF, $this->getId());
 		}
 	}
 
@@ -144,7 +173,7 @@ class Model extends Market\Reference\Storage\Model
 			'HTTPS' => $this->isHttps(),
 			'DOMAIN_URL' => $this->getDomainUrl(),
 			'ORIGINAL_URL' => $this->getDomainUrl($this->getField('DOMAIN')),
-			'USER_GROUPS' => [2], // support only public
+			'USER_GROUPS' => Market\Data\UserGroup::getDefaults(),
 			'HAS_CATALOG' => Main\ModuleManager::isModuleInstalled('catalog'),
 			'HAS_SALE' => Main\ModuleManager::isModuleInstalled('sale'),
 			'SHOP_DATA' => $this->getShopData()
@@ -210,12 +239,32 @@ class Model extends Market\Reference\Storage\Model
 
 	public function getFileName()
 	{
-		return static::normalizeFileName($this->getField('FILE_NAME'), $this->getId());
+		$nameValue = (string)$this->getField('FILE_NAME');
+		$fileName = static::normalizeFileName($nameValue, $this->getId());
+		$dirName = $nameValue !== '' ? dirname($nameValue) : '';
+
+		if ($dirName !== '' && $dirName !== '.')
+		{
+			$fileName = rtrim($dirName, '/') . '/' . $fileName;
+		}
+
+		return $fileName;
 	}
 
 	public function getFileRelativePath()
 	{
-		return BX_ROOT . '/catalog_export/' . $this->getFileName();
+		$fileName = $this->getFileName();
+
+		if (Market\Data\TextString::getPosition($fileName, '/') === 0)
+		{
+			$result = $fileName;
+		}
+		else
+		{
+			$result = BX_ROOT . '/catalog_export/' . $this->getFileName();
+		}
+
+		return $result;
 	}
 
 	public function getFileAbsolutePath()
@@ -327,11 +376,6 @@ class Model extends Market\Reference\Storage\Model
 		return ($this->getField('AUTOUPDATE') === '1');
 	}
 
-	public function hasFullRefresh()
-	{
-		return $this->getRefreshPeriod() !== null;
-	}
-
 	public function getRefreshPeriod()
 	{
 		$period = (int)$this->getField('REFRESH_PERIOD');
@@ -343,11 +387,6 @@ class Model extends Market\Reference\Storage\Model
 		}
 
 		return $result;
-	}
-
-	public function hasRefreshTime()
-	{
-		return $this->getRefreshTime() !== null;
 	}
 
 	public function getRefreshTime()
@@ -367,55 +406,25 @@ class Model extends Market\Reference\Storage\Model
 		return $result;
 	}
 
-	public function getRefreshNextExec()
-	{
-		$interval = $this->getRefreshPeriod();
-		$time = $this->getRefreshTime();
-		$now = new Main\Type\DateTime();
-		$nowTimestamp = $now->getTimestamp();
-		$date = new Main\Type\DateTime();
-
-		if ($time !== null && $interval > 0)
-		{
-			$date->setTime(...$time);
-
-			if ($date->getTimestamp() > $nowTimestamp)
-			{
-				$date->add('-P1D');
-			}
-
-			while ($date->getTimestamp() <= $nowTimestamp)
-			{
-				$date->add('PT' . $interval . 'S');
-			}
-		}
-		else
-		{
-			$date->add('PT' . $interval . 'S');
-		}
-
-		return $date;
-	}
-
-	/**
-	 * @return \Yandex\Market\Export\IblockLink\Collection
-	 */
+	/** @return \Yandex\Market\Export\IblockLink\Collection */
 	public function getIblockLinkCollection()
 	{
 		return $this->getChildCollection('IBLOCK_LINK');
 	}
 
-	/**
-	 * @return \Yandex\Market\Export\Delivery\Collection
-	 */
+	/** @return \Yandex\Market\Export\Delivery\Collection */
 	public function getDeliveryCollection()
 	{
 		return $this->getChildCollection('DELIVERY');
 	}
 
-    /**
-     * @return \Yandex\Market\Export\Promo\Collection
-     */
+    /** @return \Yandex\Market\Export\Collection\Collection */
+    public function getCollectionCollection()
+    {
+        return $this->getChildCollection('COLLECTION');
+    }
+
+    /** @return \Yandex\Market\Export\Promo\Collection */
     public function getPromoCollection()
     {
         return $this->getChildCollection('PROMO');
@@ -428,15 +437,19 @@ class Model extends Market\Reference\Storage\Model
 		switch ($fieldKey)
 		{
 			case 'IBLOCK_LINK':
-				$result = Market\Export\IblockLink\Collection::getClassName();
+				$result = Market\Export\IblockLink\Collection::class;
 			break;
 
 			case 'DELIVERY':
-				$result = Market\Export\Delivery\Collection::getClassName();
+				$result = Market\Export\Delivery\Collection::class;
 			break;
 
             case 'PROMO':
-                $result = Market\Export\Promo\Collection::getClassName();
+                $result = Market\Export\Promo\Collection::class;
+            break;
+
+            case 'COLLECTION':
+                $result = Market\Export\Collection\Collection::class;
             break;
 		}
 
@@ -450,6 +463,7 @@ class Model extends Market\Reference\Storage\Model
         switch ($fieldKey)
         {
             case 'PROMO':
+	        case 'COLLECTION':
 				$result['distinct'] = true;
                 $result['filter'] = [
                     'LOGIC' => 'OR',

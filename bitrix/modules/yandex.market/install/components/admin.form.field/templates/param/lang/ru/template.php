@@ -1,4 +1,4 @@
-<?
+<?php
 
 $MESS['YANDEX_MARKET_ADMIN_FIELD_PARAM_TEMPLATE_IBLOCK'] = 'Инфоблок';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_WARNING'] = 'Для каждого элемента <nobr>прайс-листа</nobr> в&nbsp;формате YML укажите источник данных и&nbsp;поле в&nbsp;<nobr>1С-Битрикс</nobr>, откуда нужно брать значение элемента.';
@@ -6,6 +6,7 @@ $MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_HEADER_TAG'] = 'Элемент YML-фа
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_HEADER_SOURCE'] = 'Источник';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_HEADER_FIELD'] = 'Поле в 1C-Битрикс';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_ADD_TAG'] = 'Добавить элемент';
+$MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_ADD_CHILD'] = 'Добавить тег элемента #TAG_NAME#';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_ADD_ATTRIBUTE'] = 'Добавить атрибут элемента #TAG_NAME#';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_SELECT_PLACEHOLDER'] = 'Выберите...';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_PARAM_DOCUMENTATION_TITLE'] = 'Описание элементов YML';

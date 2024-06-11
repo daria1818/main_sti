@@ -131,21 +131,7 @@ class EventLog extends Checker\Reference\AbstractTest
 
 	protected function getUiServiceCode(TradingSetup\Model $setup)
 	{
-		$serviceCode = $setup->getServiceCode();
-		$result = null;
-
-		foreach (UiService\Manager::getTypes() as $uiType)
-		{
-			$uiService = UiService\Manager::getInstance($uiType);
-
-			if (in_array($serviceCode, $uiService->getTradingServices(), true))
-			{
-				$result = $uiType;
-				break;
-			}
-		}
-
-		return $result;
+		return UiService\Facade::codeByTradingService($setup->getServiceCode());
 	}
 
 	protected function getLangPrefix()

@@ -6,14 +6,21 @@ use Yandex\Market;
 use Bitrix\Main;
 use Yandex\Market\Trading\Service as TradingService;
 
-/** @method Order\Delivery getDelivery() */
+/**
+ * @method Order\Delivery getDelivery()
+ */
 class Order extends TradingService\Marketplace\Model\Order
 {
 	public static function getMeaningfulFields()
 	{
 		return array_diff(
 			parent::getMeaningfulFields(),
-			[ 'DATE_SHIPMENT' ]
+			[
+				'DATE_EXPIRY',
+				'DATE_SHIPMENT',
+				'EAC_CODE',
+				'VEHICLE_NUMBER',
+			]
 		);
 	}
 

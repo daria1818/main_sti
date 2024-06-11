@@ -8,7 +8,5 @@ $MESS["DELLINDEV_CONTACT_PERSON_IS_UNDEFINED"] = "Отсутствуют дан�
 $MESS["DELLINDEV_RECEIVER_IS_UNDEFINED"] = "Отсутствуют параметры для получателя.";
 $MESS["DELLINDEV_METHOD_IS_NOT_DELLIN"] = "Метод не принадлежит методу доставок \"Деловые линии\"";
 $MESS["DELLINDEV_IS_YURI"] = "Юридическое лицо";
-
-
-
-
+$MESS["DELLINDEV_SHIPMENT_MM"] = "MM";
+?>

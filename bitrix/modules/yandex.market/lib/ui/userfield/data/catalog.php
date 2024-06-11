@@ -25,6 +25,46 @@ class Catalog
 		return static::getLang('USER_FIELD_DATA_CATALOG_TYPE_' . $type . $suffix, null, $type);
 	}
 
+	public static function getCatalogTypeTitle($iblockId)
+	{
+		if (!Main\Loader::includeModule('catalog')) { return null; }
+
+		$info = \CCatalogSku::GetInfoByIBlock($iblockId);
+
+		if (!isset($info['CATALOG_TYPE'])) { return null; }
+
+		$type = $info['CATALOG_TYPE'];
+		$titles = \CCatalogSku::GetCatalogTypes(true);
+		$title = isset($titles[$type]) ? $titles[$type] : $type;
+
+		if (
+			$info['PRODUCT_IBLOCK_ID'] > 0
+			&& (int)$iblockId !== (int)$info['PRODUCT_IBLOCK_ID']
+			&& Main\Loader::includeModule('iblock')
+		)
+		{
+			$title .= sprintf(
+				' ([%s] %s)',
+				$info['PRODUCT_IBLOCK_ID'],
+				\CIBlock::GetArrayByID($info['PRODUCT_IBLOCK_ID'], 'NAME')
+			);
+		}
+		else if (
+			$info['IBLOCK_ID'] > 0
+			&& (int)$iblockId !== (int)$info['IBLOCK_ID']
+			&& Main\Loader::includeModule('iblock')
+		)
+		{
+			$title .= sprintf(
+				' ([%s] %s)',
+				$info['IBLOCK_ID'],
+				\CIBlock::GetArrayByID($info['IBLOCK_ID'], 'NAME')
+			);
+		}
+
+		return $title;
+	}
+
 	public static function getIblockTypes($iblockIds = null)
 	{
 		$result = [];

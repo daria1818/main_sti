@@ -6,9 +6,17 @@ use Yandex\Market;
 
 class OldPrice extends Price
 {
+	use Concerns\HasPackUnitDependency;
+
 	public function getDefaultParameters()
 	{
 		return [ 'name' => 'oldprice' ] + parent::getDefaultParameters();
+	}
+
+	public function extendTagDescriptionList(&$tagDescriptionList, array $context)
+	{
+		parent::extendTagDescriptionList($tagDescriptionList, $context);
+		$this->copyPricePackUnitSetting($tagDescriptionList, $context);
 	}
 
 	public function validate($value, array $context, $siblingsValues = null, Market\Result\XmlNode $nodeResult = null, $settings = null)
@@ -39,5 +47,10 @@ class OldPrice extends Price
 		unset($recommendation);
 
 		return $result;
+	}
+
+	public function getSettingsDescription(array $context = [])
+	{
+		return [];
 	}
 }

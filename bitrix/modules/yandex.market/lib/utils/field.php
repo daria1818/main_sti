@@ -10,6 +10,15 @@ class Field
 	const GLUE_DOT = 'dot';
 	const GLUE_BRACKET = 'bracket';
 
+	public static function hasChainValue($values, $key, $glue = Field::GLUE_DOT)
+	{
+		$keyParts = static::splitKey($key, $glue);
+		$lastKey = array_pop($keyParts);
+		$lastLevel = static::getChainValue($values, $keyParts, $glue);
+
+		return is_array($lastLevel) && array_key_exists($lastKey, $lastLevel);
+	}
+
 	public static function getChainValue($values, $key, $glue = Field::GLUE_DOT)
 	{
 		$keyParts = static::splitKey($key, $glue);
@@ -146,8 +155,6 @@ class Field
 
 		do
 		{
-			$keyPart = null;
-
 			if ($keyOffset === 0)
 			{
 				$arrayEnd = Market\Data\TextString::getPosition($key, '[');
@@ -156,6 +163,11 @@ class Field
 				{
 					$keyPart = $key;
 					$keyOffset = $keyLength;
+				}
+				else if ($arrayEnd === 0)
+				{
+					$keyOffset = 1;
+					continue;
 				}
 				else
 				{

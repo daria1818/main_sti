@@ -51,6 +51,13 @@ class Options extends TradingService\Common\Options
 		return true;
 	}
 
+	protected function getUserRuleDisabled()
+	{
+		return [
+			TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_ID,
+		];
+	}
+
 	public function getTitle($version = '')
 	{
 		return static::getLang('TRADING_SERVICE_TURBO_TITLE');
@@ -90,9 +97,10 @@ class Options extends TradingService\Common\Options
 
 	protected function getOrderUserRuleFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
-		$result = TradingService\Common\Concerns\Options\UserRegistration::getFields($environment, $siteId);
+		$fields = TradingService\Common\Concerns\Options\UserRegistration::getFields($environment, $siteId);
+		$fields = $this->extendOrderUserRuleFields($fields);
 
-		return $this->applyFieldsOverrides($result, [
+		return $this->applyFieldsOverrides($fields, [
 			'GROUP' => static::getLang('TRADING_SERVICE_TURBO_GROUP_PROPERTY'),
 			'SORT' => 3400,
 		]);

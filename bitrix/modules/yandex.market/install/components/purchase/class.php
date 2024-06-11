@@ -111,7 +111,10 @@ class Purchase extends \CBitrixComponent
 		$status = $this->getExceptionStatus($exception);
 		$response = $this->getExceptionResponse($exception);
 
-		$this->logException($exception, $logger, $routePath);
+		if ($this->needLogException($exception, $logger))
+		{
+			$this->logException($exception, $logger, $routePath);
+		}
 
 		return [$status, $response];
 	}
@@ -128,6 +131,8 @@ class Purchase extends \CBitrixComponent
 		}
 		else if (
 			$exception instanceof Market\Exceptions\Trading\NotImplementedAction
+			|| $exception instanceof Market\Exceptions\Trading\SetupNotFound
+			|| $exception instanceof Market\Exceptions\Trading\SetupInactive
 			|| $exception instanceof Market\Exceptions\Component\ParameterNull
 		)
 		{
@@ -145,6 +150,73 @@ class Purchase extends \CBitrixComponent
 		return $result;
 	}
 
+	protected function needLogException($exception, Market\Psr\Log\LoggerInterface $logger = null)
+	{
+		if (!($logger instanceof Market\Logger\Trading\Logger)) { return true; }
+
+		$parentId = $logger->getEntityParent();
+
+		if (empty($parentId)) { return true; }
+
+		if ($exception instanceof Market\Exceptions\Trading\PingDenied)
+		{
+			$result = $this->tickPingException($parentId);
+		}
+		else
+		{
+			$result = true;
+		}
+
+		return $result;
+	}
+
+	protected function tickPingException($setupId)
+	{
+		$baseName = 'trading_ping_' . $setupId;
+		$dateName = $baseName . '_at';
+		$counterName = $baseName . '_count';
+		$dateFormatted = (string)Market\State::get($dateName);
+		$now = new \DateTime();
+		$result = false;
+
+		if ($dateFormatted !== '')
+		{
+			$date = \DateTime::createFromFormat(\DateTime::ATOM, $dateFormatted);
+			$interval = $now->diff($date);
+
+			$expired = (
+				(int)$interval->format('%a') > 0
+				|| (int)$interval->format('%h') > 1
+			);
+		}
+		else
+		{
+			$expired = true;
+		}
+
+		if ($expired)
+		{
+			Market\State::set($dateName, $now->format(\DateTime::ATOM));
+			Market\State::set($counterName, 1);
+		}
+		else
+		{
+			$counter = (int)Market\State::get($counterName);
+			$limit = 2;
+
+			if ($counter < $limit)
+			{
+				Market\State::set($counterName, $counter + 1);
+			}
+			else
+			{
+				$result = true;
+			}
+		}
+
+		return $result;
+	}
+
 	/**
 	 * @param \Throwable|\Exception $exception
 	 * @param Market\Psr\Log\LoggerInterface|null $logger
@@ -154,6 +226,7 @@ class Purchase extends \CBitrixComponent
 	{
 		if ($logger === null) { return; }
 
+		$level = Market\Logger\Level::ERROR;
 		$context = [
 			'AUDIT' => Market\Logger\Trading\Audit::INCOMING_RESPONSE,
 		];
@@ -163,7 +236,19 @@ class Purchase extends \CBitrixComponent
 			$context = array_diff_key($context, $logger->getFullContext());
 		}
 
-		$logger->error($exception, $context);
+		if ($exception instanceof Market\Exceptions\Trading\NotRecoverable)
+		{
+			$level = $exception->getLogLevel();
+		}
+		else if (
+			$exception instanceof Market\Exceptions\Trading\NotImplementedAction
+			|| $exception instanceof Market\Exceptions\Component\ParameterNull
+		)
+		{
+			$level = Market\Logger\Level::DEBUG;
+		}
+
+		$logger->log($level, $exception, $context);
 	}
 
 	/**
@@ -180,22 +265,23 @@ class Purchase extends \CBitrixComponent
 
 	protected function sendResponse($response, $status)
 	{
-		global $APPLICATION;
+		list($markerName, $markerValue) = Market\Api\Marker::getHeader();
+		$options = [
+			'headers' => [
+				$markerName => $markerValue,
+			],
+		];
 
-		$APPLICATION->RestartBuffer();
 		\CHTTP::SetStatus($status);
 
-		if ($response !== null)
+		if (is_array($response))
 		{
-			$marker = Market\Api\Marker::getHeader();
-			$responseEncoded = is_array($response) ? Main\Web\Json::encode($response) : $response;
-
-			header('Content-Type: application/json');
-			header(implode(': ', $marker));
-			echo $responseEncoded;
+			Market\Utils\HttpResponse::sendJson($response, $options);
 		}
-
-		die();
+		else
+		{
+			Market\Utils\HttpResponse::sendRaw((string)$response, $options);
+		}
 	}
 
 	protected function getRequestPath()
@@ -240,7 +326,7 @@ class Purchase extends \CBitrixComponent
 
 		if (!$result->isActive())
 		{
-			throw new Main\SystemException($this->getLang('TRADING_SETUP_INACTIVE'));
+			throw new Market\Exceptions\Trading\SetupInactive($this->getLang('TRADING_SETUP_INACTIVE'));
 		}
 
 		return $result;
@@ -332,6 +418,11 @@ class Purchase extends \CBitrixComponent
 	{
 		if ($logger instanceof Market\Logger\Reference\Logger)
 		{
+			if ($context['AUDIT'] === Market\Logger\Trading\Audit::INTERNAL)
+			{
+				$logger->setLevel(Market\Logger\Level::ERROR);
+			}
+
 			$logger->resetContext($context);
 		}
 	}

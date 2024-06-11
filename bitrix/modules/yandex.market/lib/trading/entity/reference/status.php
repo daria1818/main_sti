@@ -53,6 +53,16 @@ abstract class Status
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getVariants');
 	}
 
+	public function isStandalone($status)
+	{
+		return true;
+	}
+
+	public function getGroup($status)
+	{
+		return $status;
+	}
+
 	final public function getMeaningful($status)
 	{
 		$map = $this->getMeaningfulMap();

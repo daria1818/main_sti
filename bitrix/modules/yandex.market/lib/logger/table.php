@@ -16,6 +16,7 @@ class Table extends Market\Reference\Storage\Table
 	const ENTITY_TYPE_EXPORT_RUN_PROMO_PRODUCT = 'export_promo_product';
 	const ENTITY_TYPE_EXPORT_RUN_PROMO_GIFT = 'export_promo_gift';
 	const ENTITY_TYPE_EXPORT_RUN_PROMO = 'export_promo';
+	const ENTITY_TYPE_EXPORT_RUN_COLLECTION = 'export_collection';
 	const ENTITY_TYPE_EXPORT_RUN_GIFT = 'export_gift';
 	const ENTITY_TYPE_EXPORT_AGENT = 'export_agent';
 
@@ -76,7 +77,7 @@ class Table extends Market\Reference\Storage\Table
 
 			// OFFER_ID
 
-			new Main\Entity\ReferenceField('RUN_OFFER', Market\Export\Run\Storage\OfferTable::getClassName(), [
+			new Main\Entity\ReferenceField('RUN_OFFER', Market\Export\Run\Storage\OfferTable::class, [
 				'=this.ENTITY_PARENT' => 'ref.SETUP_ID',
 				[
 				    'LOGIC' => 'OR',
@@ -95,7 +96,7 @@ class Table extends Market\Reference\Storage\Table
 
             // GIFT_ID
 
-            new Main\Entity\ReferenceField('RUN_GIFT', Market\Export\Run\Storage\PromoGiftTable::getClassName(), [
+            new Main\Entity\ReferenceField('RUN_GIFT', Market\Export\Run\Storage\PromoGiftTable::class, [
                 '=this.ENTITY_PARENT' => 'ref.SETUP_ID',
                 [
                     'LOGIC' => 'OR',
@@ -114,7 +115,7 @@ class Table extends Market\Reference\Storage\Table
 
             // PROMO_ID
 
-            new Main\Entity\ReferenceField('RUN_PROMO', Market\Export\Run\Storage\PromoTable::getClassName(), [
+            new Main\Entity\ReferenceField('RUN_PROMO', Market\Export\Run\Storage\PromoTable::class, [
                 '=this.ENTITY_PARENT' => 'ref.SETUP_ID',
                 [
                     'LOGIC' => 'OR',
@@ -135,9 +136,20 @@ class Table extends Market\Reference\Storage\Table
 
             new Main\Entity\ExpressionField('PROMO_ID', '%s', 'RUN_PROMO.ELEMENT_ID'),
 
+            // COLLECTION_ID
+
+            new Main\Entity\ReferenceField('RUN_COLLECTION', Market\Export\Run\Storage\CollectionTable::class, [
+                '=this.ENTITY_PARENT' => 'ref.SETUP_ID',
+	            '=this.ENTITY_TYPE' => [ '?', static::ENTITY_TYPE_EXPORT_RUN_COLLECTION ],
+	            '=this.ENTITY_ID' => 'ref.ELEMENT_ID',
+            ]),
+
+            new Main\Entity\ExpressionField('COLLECTION_ID', '%s', 'RUN_COLLECTION.COLLECTION_ID'),
+            new Main\Entity\ExpressionField('COLLECTION_SIGN', '%s', 'RUN_COLLECTION.ELEMENT_ID'),
+
             // SETUP
 
-			new Main\Entity\ReferenceField('SETUP', Market\Export\Setup\Table::getClassName(), [
+			new Main\Entity\ReferenceField('SETUP', Market\Export\Setup\Table::class, [
 				'=this.ENTITY_PARENT' => 'ref.ID'
 			]),
 		];
@@ -200,6 +212,7 @@ class Table extends Market\Reference\Storage\Table
 		$result['ENTITY_TYPE'] = static::extendEntityTypeDescription($result['ENTITY_TYPE']);
 		$result['SETUP'] = static::extendSetupDescription($result['SETUP']);
 		$result['PROMO_ID'] = static::extendPromoIdDescription($result['PROMO_ID']);
+		$result['COLLECTION_ID'] = static::extendCollectionIdDescription($result['COLLECTION_ID']);
 		$result['OFFER_ID'] = static::extendOfferIdDescription($result['OFFER_ID']);
 		$result['GIFT_ID'] = static::extendGiftIdDescription($result['GIFT_ID']);
 
@@ -211,6 +224,7 @@ class Table extends Market\Reference\Storage\Table
 		$field['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('log');
 		$allowedTypes = [
 			Level::CRITICAL => true,
+			Level::ERROR => true,
 			Level::WARNING => true
 		];
 
@@ -239,6 +253,7 @@ class Table extends Market\Reference\Storage\Table
 			static::ENTITY_TYPE_EXPORT_RUN_OFFER,
 			static::ENTITY_TYPE_EXPORT_RUN_CATEGORY,
 			static::ENTITY_TYPE_EXPORT_RUN_CURRENCY,
+			static::ENTITY_TYPE_EXPORT_RUN_COLLECTION,
 			static::ENTITY_TYPE_EXPORT_RUN_PROMO_PRODUCT,
 			static::ENTITY_TYPE_EXPORT_RUN_PROMO_GIFT,
 			static::ENTITY_TYPE_EXPORT_RUN_PROMO,
@@ -272,6 +287,16 @@ class Table extends Market\Reference\Storage\Table
 		$field['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('promo');
 		$field['SETTINGS'] = [
 			'DATA_CLASS' => Market\Export\Promo\Table::class,
+		];
+
+		return $field;
+	}
+
+	protected static function extendCollectionIdDescription($field)
+	{
+		$field['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('reference');
+		$field['SETTINGS'] = [
+			'DATA_CLASS' => Market\Export\Collection\Table::class,
 		];
 
 		return $field;

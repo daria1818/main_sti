@@ -19,8 +19,6 @@ class Response
 		]);
 
 		\CHTTP::SetStatus('200 OK');
-		header('Content-Type: application/json');
-		echo Main\Web\Json::encode($response);
-		die();
+		Market\Utils\HttpResponse::sendJson($response);
 	}
 }

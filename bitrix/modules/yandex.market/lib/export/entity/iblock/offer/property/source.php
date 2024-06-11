@@ -52,16 +52,9 @@ class Source extends Market\Export\Entity\Iblock\Element\Property\Source
 		return $result;
 	}
 
-	public function getFields(array $context = [])
+	protected function getContextIblockId(array $context)
 	{
-		$result = [];
-
-		if (isset($context['OFFER_IBLOCK_ID']))
-		{
-			$result = $this->getPropertyFields($context['OFFER_IBLOCK_ID']);
-		}
-
-		return $result;
+		return isset($context['OFFER_IBLOCK_ID']) ? $context['OFFER_IBLOCK_ID'] : null;
 	}
 
 	protected function getLangPrefix()

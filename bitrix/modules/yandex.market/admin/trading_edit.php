@@ -34,7 +34,6 @@ try
 		$controller->checkSession();
 		$controller->checkWriteAccess();
 		$controller->processRequest();
-		$controller->refreshPage();
 	}
 }
 catch (Main\SystemException $exception)

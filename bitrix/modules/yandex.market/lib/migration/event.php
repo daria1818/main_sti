@@ -35,45 +35,57 @@ class Event
 		static::restoreExportEvents();
 		static::restoreTradingEvents();
 		static::restoreApiTokenRefresh();
+		static::restoreSalesBoostEvents();
 		static::restoreConfirmationEvents();
 	}
 
 	protected static function truncateExportTrackTable()
 	{
 		$connection = Main\Application::getConnection();
-		$trackTableName = Market\Export\Track\Table::getTableName();
+		$tables = [
+			Market\Watcher\Track\BindTable::getTableName(),
+			Market\Watcher\Track\SourceTable::getTableName(),
+			Market\Watcher\Track\StampTable::getTableName(),
+			Market\Watcher\Track\ChangesTable::getTableName(),
+		];
 
-		$connection->truncateTable($trackTableName);
+		foreach ($tables as $table)
+		{
+			$connection->truncateTable($table);
+		}
 	}
 
 	protected static function restoreExportEvents()
 	{
 		$setupList = Market\Export\Setup\Model::loadList();
 
-		/** @var Market\Export\Setup\Model $setup */
 		foreach ($setupList as $setup)
 		{
-			if ($setup->isAutoUpdate())
-			{
-				$setup->handleChanges(true);
-			}
-
-			if ($setup->getRefreshPeriod() > 0)
-			{
-				$setup->handleRefresh(true);
-			}
+			$setup->updateListener();
 		}
 	}
 
 	protected static function restoreTradingEvents()
 	{
 		$setupList = Market\Trading\Setup\Model::loadList([
-			'filter' => [ '=ACTIVE' => Market\Trading\Setup\Table::BOOLEAN_Y, ]
+			'filter' => [ '=ACTIVE' => Market\Trading\Setup\Table::BOOLEAN_Y ],
 		]);
 
 		foreach ($setupList as $setup)
 		{
 			static::installTradingService($setup);
+		}
+	}
+
+	protected static function restoreSalesBoostEvents()
+	{
+		$boosts = Market\SalesBoost\Setup\Model::loadList([
+			'filter' => [ '=ACTIVE' => Market\Trading\Setup\Table::BOOLEAN_Y ],
+		]);
+
+		foreach ($boosts as $boost)
+		{
+			$boost->updateListener();
 		}
 	}
 
@@ -84,8 +96,13 @@ class Event
 			$service = $setup->wakeupService();
 			$environment = $setup->getEnvironment();
 			$installer = $service->getInstaller();
+			$context = [
+				'SETUP_ID' => $setup->getId(),
+			];
 
 			$installer->install($environment, $setup->getSiteId());
+			$installer->postInstall($environment, $setup->getSiteId(), $context);
+			$installer->tweak($environment, $setup->getSiteId(), $context);
 		}
 		catch (Main\SystemException $exception)
 		{

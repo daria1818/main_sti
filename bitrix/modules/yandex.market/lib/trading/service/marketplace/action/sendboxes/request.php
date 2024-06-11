@@ -2,8 +2,6 @@
 
 namespace Yandex\Market\Trading\Service\Marketplace\Action\SendBoxes;
 
-use Yandex\Market;
-use Bitrix\Main;
 use Yandex\Market\Trading\Service as TradingService;
 
 class Request extends TradingService\Reference\Action\DataRequest
@@ -20,7 +18,7 @@ class Request extends TradingService\Reference\Action\DataRequest
 
 	public function getShipmentId()
 	{
-		return (int)$this->getRequiredField('shipmentId');
+		return $this->getField('shipmentId');
 	}
 
 	public function getBoxes()

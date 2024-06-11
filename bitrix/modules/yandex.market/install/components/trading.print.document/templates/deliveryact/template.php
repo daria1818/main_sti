@@ -28,7 +28,7 @@ foreach ($arResult['PAGES'] as $page)
 		{
 			?>
 			<p><?= Loc::getMessage('YANDEX_MARKET_T_TRADING_PRINT_DELIVERY_ACT_DATE', [ '#YEAR#' => date('Y') ]); ?></p>
-			<p><?= Loc::getMessage('YANDEX_MARKET_T_TRADING_PRINT_DELIVERY_ACT_CLIENT'); ?>: <?= $arParams['CLIENT_NAME']; ?></p>
+			<p><?= Loc::getMessage('YANDEX_MARKET_T_TRADING_PRINT_DELIVERY_ACT_CLIENT'); ?>: <?= (string)$arParams['CLIENT_NAME'] !== '' ? $arParams['CLIENT_NAME'] : '________________________________'; ?></p>
 			<p><?= Loc::getMessage('YANDEX_MARKET_T_TRADING_PRINT_DELIVERY_ACT_EXECUTOR'); ?>: ________________________________</p>
 			<p class="yamarket-act__intro"><?= Loc::getMessage('YANDEX_MARKET_T_TRADING_PRINT_DELIVERY_ACT_INTRO'); ?></p>
 			<?php

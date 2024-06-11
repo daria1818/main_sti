@@ -36,16 +36,11 @@ class Options extends TradingService\Marketplace\Options
 		return static::getLang('TRADING_SERVICE_MARKETPLACE_TITLE' . $suffix);
 	}
 
-	public function isAllowProductSkuPrefix()
-	{
-		return Market\Config::isExpertMode();
-	}
-
 	/**
 	 * @deprecated
 	 * @throws Main\NotSupportedException
 	 */
-	public function getPaySystemId()
+	public function getPaySystemId($paymentType)
 	{
 		throw new Main\NotSupportedException();
 	}
@@ -103,6 +98,11 @@ class Options extends TradingService\Marketplace\Options
 		return (string)$this->getValue('USE_ADDRESS_DETAILS') === Market\Reference\Storage\Table::BOOLEAN_Y;
 	}
 
+	public function includeLiftPrice()
+	{
+		return (string)$this->getValue('INCLUDE_LIFT_PRICE') !== Market\Reference\Storage\Table::BOOLEAN_N;
+	}
+
 	public function getStatusOut($bitrixStatus)
 	{
 		$result = parent::getStatusOut($bitrixStatus);
@@ -121,11 +121,15 @@ class Options extends TradingService\Marketplace\Options
 		return $this->getFieldsetCollection('STATUS_OUT_CANCELLED_OPTION');
 	}
 
-	public function getEnvironmentFieldActions()
+	public function getEnvironmentFieldActions(TradingEntity\Reference\Environment $environment)
 	{
 		return array_filter([
 			$this->getEnvironmentCancellationAcceptActions(),
 			$this->getEnvironmentDeliveryDateActions(),
+			$this->getEnvironmentOutletStorageLimitActions(),
+			$this->getEnvironmentItemsActions(),
+			$this->getEnvironmentCisActions($environment),
+			$this->getEnvironmentCashboxActions(),
 		]);
 	}
 
@@ -177,9 +181,53 @@ class Options extends TradingService\Marketplace\Options
 		];
 	}
 
+	protected function getEnvironmentOutletStorageLimitActions()
+	{
+		$propertyId = (string)$this->getProperty('OUTLET_STORAGE_LIMIT_DATE');
+
+		if ($propertyId === '') { return null; }
+
+		return [
+			'FIELD' => sprintf('PROPERTY_%s.VALUE', $propertyId),
+			'PATH' => 'send/delivery/storageLimit',
+			'PAYLOAD' => static function(array $action) {
+				$value = is_array($action['VALUE']) ? reset($action['VALUE']) : $action['VALUE'];
+
+				if (Market\Utils\Value::isEmpty($value)) { return null; }
+
+				return [
+					'newDate' => $value,
+				];
+			},
+		];
+	}
+
+	protected function getEnvironmentCashboxActions()
+	{
+		return [
+			'FIELD' => 'CASHBOX.CHECK',
+			'PATH' => 'system/cashbox/reset',
+			'PAYLOAD' => [],
+			'DELAY' => false,
+		];
+	}
+
 	protected function applyValues()
 	{
+		parent::applyValues();
+		$this->applyOrderUserRuleValues();
 		$this->applyCancelOptionValues();
+	}
+
+	protected function applyOrderUserRuleValues()
+	{
+		$rule = $this->getUserRule();
+		$disabled = $this->getUserRuleDisabled();
+
+		if (in_array($rule, $disabled, true))
+		{
+			$this->values['ORDER_USER_RULE'] = $this->getUserRuleDefault();
+		}
 	}
 
 	protected function applyCancelOptionValues()
@@ -196,6 +244,28 @@ class Options extends TradingService\Marketplace\Options
 		}
 
 		unset($this->values[$oldCancelStatusOutKey]);
+	}
+
+	public function takeChanges(TradingService\Reference\Options\Skeleton $previous)
+	{
+		/** @var Options $previous */
+		Market\Reference\Assert::typeOf($previous, static::class, 'previous');
+
+		parent::takeChanges($previous);
+		$this->takeYandexModeChanges($previous);
+	}
+
+	protected function takeYandexModeChanges(Options $previous)
+	{
+		if (Market\Config::isExpertMode() || $previous->getYandexMode() === $this->getYandexMode()) { return; }
+
+		if (
+			$this->getYandexMode() === TradingService\Marketplace\Options::YANDEX_MODE_PULL
+			&& $this->getDeliveryOptions()->hasType(Delivery::TYPE_DIGITAL)
+		)
+		{
+			$this->values['YANDEX_MODE'] = TradingService\Marketplace\Options::YANDEX_MODE_PUSH;
+		}
 	}
 
 	public function getTabs()
@@ -225,34 +295,44 @@ class Options extends TradingService\Marketplace\Options
 			+ $this->getOauthRequestFields($environment, $siteId)
 			+ $this->getProductSkuMapFields($environment, $siteId)
 			+ $this->getProductStoreFields($environment, $siteId)
+			+ $this->getPushStocksFields($environment, $siteId)
+			+ $this->getPushPricesFields($environment, $siteId)
 			+ $this->getProductPriceFields($environment, $siteId)
+			+ $this->getProductFeedFields($environment, $siteId)
 			+ $this->getProductSelfTestFields($environment, $siteId)
 			+ $this->getOrderUserRuleFields($environment, $siteId)
 			+ $this->getOrderPersonFields($environment, $siteId)
 			+ $this->getBuyerProfileRuleFields($environment, $siteId)
 			+ $this->getOrderPropertyFields($environment, $siteId)
+			+ $this->getOrderAcceptFields($environment, $siteId)
 			+ $this->getDeliveryFields($environment, $siteId)
 			+ $this->getOutletFields($environment, $siteId)
 			+ $this->getPaySystemFields($environment, $siteId)
 			+ $this->getOrderBasketSubsidyFields($environment, $siteId)
 			+ $this->getAddressCommonFields($environment, $siteId)
 			+ $this->getAddressDetailsFields($environment, $siteId)
+			+ $this->getDeliveryLiftFields($environment, $siteId)
 			+ $this->getAddressCoordinatesFields($environment, $siteId)
+			+ $this->getDeliveryDispatchTypeFields($environment, $siteId)
 			+ $this->getDeliveryDatesFields($environment, $siteId)
 			+ $this->getStatusInFields($environment, $siteId)
 			+ $this->getCancellationAcceptFields($environment, $siteId)
 			+ $this->getStatusOutFields($environment, $siteId)
 			+ $this->getCancelledStatusOutFields($environment, $siteId)
-			+ $this->getCancelReasonFields($environment, $siteId);
+			+ $this->getCancelReasonFields($environment, $siteId)
+			+ $this->getStatusOutSyncFields($environment, $siteId);
 	}
 
 	protected function getCommonFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
 		$result = parent::getCommonFields($environment, $siteId);
 
-		return $this->applyFieldsOverrides($result, [
-			'GROUP' => static::getLang('TRADING_SERVICE_COMMON_GROUP_SERVICE_REQUEST'),
-		]);
+		if (isset($result['YANDEX_MODE']) && !Market\Config::isExpertMode() && $this->getDeliveryOptions()->hasType(Delivery::TYPE_DIGITAL))
+		{
+			$result['YANDEX_MODE']['HIDDEN'] = 'Y';
+ 		}
+
+		return $result;
 	}
 
 	protected function getCompanyFields(TradingEntity\Reference\Environment $environment, $siteId)
@@ -268,6 +348,19 @@ class Options extends TradingService\Marketplace\Options
 	protected function getPersonTypeDefaultValue(TradingEntity\Reference\PersonType $personType, $siteId)
 	{
 		return $personType->getIndividualId($siteId);
+	}
+
+	protected function getUserRuleDefault()
+	{
+		return TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_ANONYMOUS;
+	}
+
+	protected function getUserRuleDisabled()
+	{
+		return [
+			TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_EMAIL,
+			TradingService\Common\Concerns\Options\UserRegistrationInterface::USER_RULE_MATCH_PHONE,
+		];
 	}
 
 	protected function getOrderPersonFields(TradingEntity\Reference\Environment $environment, $siteId)
@@ -293,14 +386,16 @@ class Options extends TradingService\Marketplace\Options
 			'TAB' => 'ORDER',
 			'GROUP' => null,
 			'SORT' => 3110,
+			'HIDDEN' => Market\Config::isExpertMode() ? 'N' : 'Y',
 		]);
 	}
 
 	protected function getOrderUserRuleFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
-		$result = TradingService\Common\Concerns\Options\UserRegistration::getFields($environment, $siteId);
+		$fields = TradingService\Common\Concerns\Options\UserRegistration::getFields($environment, $siteId);
+		$fields = $this->extendOrderUserRuleFields($fields);
 
-		return $this->applyFieldsOverrides($result, [
+		return $this->applyFieldsOverrides($fields, [
 			'TAB' => 'ORDER',
 			'GROUP' => null,
 			'SORT' => 3000,
@@ -316,19 +411,13 @@ class Options extends TradingService\Marketplace\Options
 
 	protected function getOrderPropertyBuyerFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
-		$fields = Model\Order\Buyer::getMeaningfulFields();
-		$options = [];
+		$result = parent::getOrderPropertyBuyerFields($environment, $siteId);
 
-		foreach ($fields as $fieldName)
-		{
-			$options[$fieldName] = [
-				'TAB' => 'ORDER',
-				'NAME' => Model\Order\Buyer::getMeaningfulFieldTitle($fieldName),
-				'GROUP' => static::getLang('TRADING_SERVICE_MARKETPLACE_GROUP_PROPERTY_BUYER'),
-			];
-		}
-
-		return $this->createPropertyFields($environment, $siteId, $options, 3200);
+		return $this->applyFieldsOverrides($result, [
+			'TAB' => 'ORDER',
+			'GROUP' => static::getLang('TRADING_SERVICE_MARKETPLACE_GROUP_PROPERTY_BUYER'),
+			'SORT' => 3200,
+		]);
 	}
 
 	protected function getOrderPropertyUtilFields(TradingEntity\Reference\Environment $environment, $siteId)
@@ -372,6 +461,12 @@ class Options extends TradingService\Marketplace\Options
 					'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_SHIPMENT_SCHEDULE'),
 					'HELP_MESSAGE' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_SHIPMENT_SCHEDULE_HELP'),
 					'SORT' => 3020,
+					'DEPEND' => [
+						'YANDEX_MODE' => [
+							'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+							'VALUE' => [ static::YANDEX_MODE_PULL ],
+						],
+					],
 				],
 			];
 		}
@@ -517,7 +612,84 @@ class Options extends TradingService\Marketplace\Options
 				];
 			}
 
+			$propertyFields['LIFT_TYPE'] = [
+				'TAB' => 'DELIVERY_AND_PAYMENT',
+				'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_LIFT_TYPE'),
+				'GROUP' => static::getLang('TRADING_SERVICE_MARKETPLACE_GROUP_ADDRESS'),
+				'DEPEND' => [
+					'USE_ADDRESS_DETAILS' => [
+						'RULE' => 'EMPTY',
+						'VALUE' => false,
+					],
+				],
+				'SETTINGS' => [
+					'SERVICE_CODE' => $this->provider->getCode(),
+					'ADD_URL' => Market\Ui\Admin\Path::getToolsUrl('OrderProperty/LiftTypeCreate'),
+				],
+			];
+
 			$result += $this->createPropertyFields($environment, $siteId, $propertyFields, 3251);
+		}
+		catch (Market\Exceptions\NotImplemented $exception)
+		{
+			$result = [];
+		}
+
+		return $result;
+	}
+
+	protected function getDeliveryLiftFields(TradingEntity\Reference\Environment $environment, $siteId)
+	{
+		try
+		{
+			$propertyFields = [
+				'LIFT_TYPE' => [
+					'TAB' => 'DELIVERY_AND_PAYMENT',
+					'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_LIFT_TYPE'),
+					'GROUP' => static::getLang('TRADING_SERVICE_MARKETPLACE_GROUP_ADDRESS'),
+					'DEPEND' => [
+						'USE_ADDRESS_DETAILS' => [
+							'RULE' => 'EMPTY',
+							'VALUE' => false,
+						],
+					],
+					'SETTINGS' => [
+						'SERVICE_CODE' => $this->provider->getCode(),
+						'ADD_URL' => Market\Ui\Admin\Path::getToolsUrl('OrderProperty/LiftTypeCreate'),
+					],
+				],
+				'LIFT_PRICE' => [
+					'TAB' => 'DELIVERY_AND_PAYMENT',
+					'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_LIFT_PRICE'),
+					'GROUP' => static::getLang('TRADING_SERVICE_MARKETPLACE_GROUP_ADDRESS'),
+					'DEPEND' => [
+						'USE_ADDRESS_DETAILS' => [
+							'RULE' => 'EMPTY',
+							'VALUE' => false,
+						],
+					],
+				],
+			];
+
+			$result = $this->createPropertyFields($environment, $siteId, $propertyFields, 3265);
+			$result += [
+				'INCLUDE_LIFT_PRICE' => [
+					'TAB' => 'DELIVERY_AND_PAYMENT',
+					'TYPE' => 'boolean',
+					'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_INCLUDE_LIFT_PRICE'),
+					'GROUP' => static::getLang('TRADING_SERVICE_MARKETPLACE_GROUP_ADDRESS'),
+					'SORT' => max(...array_column($result, 'SORT')) + 1,
+					'DEPEND' => [
+						'USE_ADDRESS_DETAILS' => [
+							'RULE' => 'EMPTY',
+							'VALUE' => false,
+						],
+					],
+					'SETTINGS' => [
+						'DEFAULT_VALUE' => Market\Ui\UserField\BooleanType::VALUE_Y,
+					],
+				],
+			];
 		}
 		catch (Market\Exceptions\NotImplemented $exception)
 		{
@@ -552,6 +724,28 @@ class Options extends TradingService\Marketplace\Options
 		return $result;
 	}
 
+	protected function getDeliveryDispatchTypeFields(TradingEntity\Reference\Environment $environment, $siteId)
+	{
+		try
+		{
+			$propertyFields = [
+				'DISPATCH_TYPE' => [
+					'TAB' => 'DELIVERY_AND_PAYMENT',
+					'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_DISPATCH_TYPE'),
+					'GROUP' => static::getLang('TRADING_SERVICE_MARKETPLACE_GROUP_ADDRESS'),
+				],
+			];
+
+			$result = $this->createPropertyFields($environment, $siteId, $propertyFields, 3281);
+		}
+		catch (Market\Exceptions\NotImplemented $exception)
+		{
+			$result = [];
+		}
+
+		return $result;
+	}
+
 	protected function getDeliveryDatesFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
 		try
@@ -561,6 +755,8 @@ class Options extends TradingService\Marketplace\Options
 				'DELIVERY_DATE_TO',
 				'DELIVERY_INTERVAL_FROM',
 				'DELIVERY_INTERVAL_TO',
+				'DELIVERY_REAL_DATE',
+				'OUTLET_STORAGE_LIMIT_DATE',
 			];
 
 			foreach ($keys as $key)
@@ -590,6 +786,9 @@ class Options extends TradingService\Marketplace\Options
 				'CANCELLATION_ACCEPT' => [
 					'TAB' => 'STATUS',
 					'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_CANCELLATION_ACCEPT'),
+					'DESCRIPTION' => static::getLang('TRADING_SERVICE_MARKETPLACE_OPTION_CANCELLATION_ACCEPT_DESCRIPTION', [
+						'#NOTIFICATION_TEMPLATE#' => $this->compileNotificationMakeDescription('order/cancellation/notify', $siteId),
+					]),
 					'SETTINGS' => [
 						'SERVICE_CODE' => $this->provider->getCode(),
 						'ADD_URL' => Market\Ui\Admin\Path::getToolsUrl('OrderProperty/CancellationAcceptCreate'),
@@ -605,6 +804,43 @@ class Options extends TradingService\Marketplace\Options
 		}
 
 		return $result;
+	}
+
+	protected function compileNotificationMakeDescription($path, $siteId)
+	{
+		$behaviors = array_filter([
+			'EMAIL' => true,
+			'SMS' => (new Market\Ui\Trading\Notification\SmsRepository())->isSupported(),
+		]);
+		$parts = [];
+		$queryData = [
+			'lang' => LANGUAGE_ID,
+			'service' => $this->provider->getCode(),
+			'path' => $path,
+			'site' => $siteId,
+			'sessid' => bitrix_sessid(),
+		];
+
+		foreach ($behaviors as $behavior => $supported)
+		{
+			$replaces = [
+				'#URL#' => Market\Ui\Admin\Path::getModuleUrl(
+					'trading_notification_template',
+					$queryData + [ 'type' => $behavior ]
+				),
+			];
+
+			$parts[] = static::getLang(
+				'TRADING_SERVICE_MARKETPLACE_NOTIFICATION_BEHAVIOR_' . $behavior,
+				$replaces,
+				sprintf('<a href="%s" target="_blank">%s</a>', $replaces['#URL#'], $behavior)
+			);
+		}
+
+		return implode(
+			static::getLang('TRADING_SERVICE_MARKETPLACE_NOTIFICATION_BEHAVIOR_GLUE'),
+			$parts
+		);
 	}
 
 	protected function getStatusOutFields(TradingEntity\Reference\Environment $environment, $siteId)
@@ -643,6 +879,7 @@ class Options extends TradingService\Marketplace\Options
 					'SETTINGS' => [
 						'LAYOUT' => 'table',
 						'DEFAULT_VALUE' => $defaultValues,
+						'VALIGN_PUSH' => true,
 					],
 					'SORT' => 2100,
 				],

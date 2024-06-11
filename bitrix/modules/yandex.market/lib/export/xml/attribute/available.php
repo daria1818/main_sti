@@ -10,7 +10,10 @@ class Available extends Base
 	{
 		return [
 			'name' => 'available',
-			'value_type' => Market\Type\Manager::TYPE_BOOLEAN
+			'value_type' => Market\Type\Manager::TYPE_BOOLEAN,
+			'overrides' => [
+				'unknown' => 'unknown',
+			],
 		];
 	}
 

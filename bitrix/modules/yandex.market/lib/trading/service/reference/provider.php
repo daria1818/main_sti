@@ -17,6 +17,7 @@ abstract class Provider
 	protected $modelFactory;
 	protected $dictionary;
 	protected $feature;
+	protected $container;
 
 	public function __construct($code)
 	{
@@ -210,5 +211,20 @@ abstract class Provider
 	protected function createFeature()
 	{
 		return new Feature($this);
+	}
+
+	public function getContainer()
+	{
+		if ($this->container === null)
+		{
+			$this->container = $this->createContainer();
+		}
+
+		return $this->container;
+	}
+
+	protected function createContainer()
+	{
+		return new Container($this);
 	}
 }

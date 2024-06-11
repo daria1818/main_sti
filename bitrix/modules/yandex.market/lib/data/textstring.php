@@ -63,6 +63,13 @@ class TextString
 		return $result;
 	}
 
+	/**
+	 * @param string $string
+	 * @param int $from
+	 * @param int|null $length
+	 *
+	 * @return string
+	 */
 	public static function getSubstring($string, $from, $length = null)
 	{
 		if (\function_exists('mb_substr'))

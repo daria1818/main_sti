@@ -13,16 +13,28 @@ class DependField
 
 	public static function test($rules, $values)
 	{
-		$result = true;
+		$logicMatchAny = (isset($rules['LOGIC']) && $rules['LOGIC'] === 'OR');
+		$result = !$logicMatchAny;
 
 		foreach ($rules as $fieldName => $rule)
 		{
-			$value = isset($values[$fieldName]) ? $values[$fieldName] : null;
+			if ($fieldName === 'LOGIC') { continue; }
+
+			if (mb_strpos($fieldName, '@') === 0)
+			{
+				$parent = isset($values['PARENT_ROW']) ? $values['PARENT_ROW'] : [];
+
+				$value = Market\Utils\Field::getChainValue($parent, mb_substr($fieldName, 1), Market\Utils\Field::GLUE_BRACKET);
+			}
+			else
+			{
+				$value = Market\Utils\Field::getChainValue($values, $fieldName, Market\Utils\Field::GLUE_BRACKET);
+			}
 
 			switch ($rule['RULE'])
 			{
 				case static::RULE_EMPTY:
-					$isDependValueEmpty = Market\Utils\Value::isEmpty($value) || (is_scalar($value) && (string)$value === '0');
+					$isDependValueEmpty = static::testIsEmpty($value);
 					$isMatch = ($isDependValueEmpty === $rule['VALUE']);
 				break;
 
@@ -39,11 +51,34 @@ class DependField
 				break;
 			}
 
-			if (!$isMatch)
+			if ($logicMatchAny === $isMatch)
 			{
-				$result = false;
+				$result = $isMatch;
 				break;
 			}
+		}
+
+		return $result;
+	}
+
+	protected static function testIsEmpty($value)
+	{
+		$result = true;
+
+		if (is_array($value))
+		{
+			foreach ($value as $one)
+			{
+				if (!static::testIsEmpty($one))
+				{
+					$result = false;
+					break;
+				}
+			}
+		}
+		else
+		{
+			$result = Market\Utils\Value::isEmpty($value) || (is_scalar($value) && (string)$value === '0');
 		}
 
 		return $result;

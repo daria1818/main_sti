@@ -7,45 +7,18 @@ use Bitrix\Main;
 
 class FieldsetType
 {
+	/** @noinspection PhpUnused */
 	public static function sanitizeFields($userField, $value)
 	{
 		if (!is_array($value)) { return null; }
 
-		$result = [];
+		return static::mapValues($userField, $value, static function($field, $name, $value) {
+			$sanitizedValue = static::sanitizeUserFieldValue($field, $value);
 
-		foreach (static::getFields($userField) as $name => $field)
-		{
-			if (isset($field['DEPEND']) && !Market\Utils\UserField\DependField::test($field['DEPEND'], $value)) { continue; }
+			if (Market\Utils\Value::isEmpty($sanitizedValue)) { return null; }
 
-			$fieldValue = Market\Utils\Field::getChainValue($value, $name, Market\Utils\Field::GLUE_BRACKET);
-
-			if ($field['MULTIPLE'] === 'Y')
-			{
-				$sanitizedValues = [];
-				$fieldValue = is_array($fieldValue) ? $fieldValue : [];
-
-				foreach ($fieldValue as $fieldValueItem)
-				{
-					$sanitizedValue = static::sanitizeUserFieldValue($field, $fieldValueItem);
-
-					if (!Market\Utils\Value::isEmpty($sanitizedValue))
-					{
-						$sanitizedValues[] = $fieldValueItem;
-					}
-				}
-
-				if (!empty($sanitizedValues))
-				{
-					Market\Utils\Field::setChainValue($result, $name, $sanitizedValues, Market\Utils\Field::GLUE_BRACKET);
-				}
-			}
-			else
-			{
-				Market\Utils\Field::setChainValue($result, $name, $fieldValue, Market\Utils\Field::GLUE_BRACKET);
-			}
-		}
-
-		return $result;
+			return $sanitizedValue;
+		});
 	}
 
 	protected static function sanitizeUserFieldValue($field, $value)
@@ -131,6 +104,100 @@ class FieldsetType
 		else
 		{
 			$result = new Fieldset\TableLayout($userField, $htmlControl['NAME'], $fields);
+		}
+
+		return $result;
+	}
+
+	/** @noinspection PhpUnused */
+	public static function ymExportValue(array $userField, $value, array $row = null)
+	{
+		if (!is_array($value)) { return null; }
+
+		$result = [];
+		$mapped = static::mapValues($userField, $value, static function($field, $name, $value, array $row) {
+			$field = Helper\Field::extend($field, $name);
+			$exportValue = static::exportUserFieldValue($field, $value, $row);
+
+			if (Market\Utils\Value::isEmpty($exportValue)) { return null; }
+
+			return $exportValue;
+		});
+
+		foreach (static::getFields($userField) as $name => $field)
+		{
+			$value = Market\Utils\Field::getChainValue($mapped, $name, Market\Utils\Field::GLUE_BRACKET);
+
+			if ($value === null) { continue; }
+
+			$result[] = [
+				'code' => $name,
+				'name' => html_entity_decode(strip_tags($field['NAME'])),
+				'value' => $value,
+			];
+		}
+
+		return $result;
+	}
+
+	protected static function exportUserFieldValue($field, $value, array $row)
+	{
+		if (
+			!empty($field['USER_TYPE']['CLASS_NAME'])
+			&& is_callable([$field['USER_TYPE']['CLASS_NAME'], 'ymExportValue'])
+		)
+		{
+			$result = call_user_func(
+				[$field['USER_TYPE']['CLASS_NAME'], 'ymExportValue'],
+				$field,
+				$value,
+				$row
+			);
+		}
+		else
+		{
+			$result = $value;
+		}
+
+		return $result;
+	}
+
+	protected static function mapValues($userField, array $values, callable $function)
+	{
+		$result = [];
+
+		foreach (static::getFields($userField) as $name => $field)
+		{
+			if (isset($field['DEPEND']) && !Market\Utils\UserField\DependField::test($field['DEPEND'], $values)) { continue; }
+
+			$fieldValue = Market\Utils\Field::getChainValue($values, $name, Market\Utils\Field::GLUE_BRACKET);
+
+			if ($field['MULTIPLE'] === 'Y')
+			{
+				$mappedValues = [];
+				$fieldValue = is_array($fieldValue) ? $fieldValue : [];
+
+				foreach ($fieldValue as $fieldValueItem)
+				{
+					$mappedValue = $function($field, $name, $fieldValueItem, $values);
+
+					if ($mappedValue === null) { continue; }
+
+					$mappedValues[] = $mappedValue;
+				}
+
+				if (empty($mappedValues)) { continue; }
+
+				Market\Utils\Field::setChainValue($result, $name, $mappedValues, Market\Utils\Field::GLUE_BRACKET);
+			}
+			else
+			{
+				$mappedValue = $function($field, $name, $fieldValue, $values);
+
+				if ($mappedValue === null) { continue; }
+
+				Market\Utils\Field::setChainValue($result, $name, $mappedValue, Market\Utils\Field::GLUE_BRACKET);
+			}
 		}
 
 		return $result;

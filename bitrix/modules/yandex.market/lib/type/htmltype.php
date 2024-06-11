@@ -6,8 +6,21 @@ use Yandex\Market;
 
 class HtmlType extends StringType
 {
+	const DEFAULT_TAGS = '<br><p><ol><ul><li><div><h1><h2><h3><h4><h5><h6>';
+
+	protected $allowedTags = self::DEFAULT_TAGS;
+
+	public function validate($value, array $context = [], Market\Export\Xml\Reference\Node $node = null, Market\Result\XmlNode $nodeResult = null)
+	{
+		$this->resolveAllowedTags($node);
+
+		return parent::validate($value, $context, $node, $nodeResult);
+	}
+
 	public function format($value, array $context = [], Market\Export\Xml\Reference\Node $node = null, Market\Result\XmlNode $nodeResult = null)
 	{
+		$this->resolveAllowedTags($node);
+
 		$result = $this->getSanitizedValue($value);
 		$maxLength = $node ? $node->getMaxLength() : null;
 
@@ -47,9 +60,18 @@ class HtmlType extends StringType
 		return $result;
 	}
 
+	protected function resolveAllowedTags(Market\Export\Xml\Reference\Node $node = null)
+	{
+		$parameter = $node !== null ? $node->getParameter('value_tags') : null;
+
+		$this->allowedTags = $parameter !== null ? $parameter : self::DEFAULT_TAGS;
+	}
+
 	protected function sanitizeValue($value)
 	{
-		return trim(strip_tags($value, '<h3><br><ul><ol><li><p>'));
+		if (!is_scalar($value)) { return ''; }
+
+		return trim(strip_tags((string)$value, $this->allowedTags));
 	}
 
 	protected function makeCData($contents)

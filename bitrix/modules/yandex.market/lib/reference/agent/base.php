@@ -11,6 +11,18 @@ abstract class Base
 		return '\\' . get_called_class();
 	}
 
+	public static function isRegistered($agentParams = null)
+	{
+		$className = static::getClassName();
+
+		$agentParams = !isset($agentParams) ? static::getDefaultParams() : array_merge(
+			static::getDefaultParams(),
+			$agentParams
+		);
+
+		return Controller::isRegistered($className, $agentParams);
+	}
+
 	/**
 	 * Добавляем агент
 	 *

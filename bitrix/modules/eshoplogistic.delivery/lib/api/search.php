@@ -37,10 +37,10 @@ class Search
      * @return array
      */
 
-    public static function getCity($name, $region = '')
+    public static function getCity($name, $region = '', $locationCode = '')
     {
         $httpMethod = 'POST';
-        $requestData = array('target' => $name, 'region' => $region);
+        $requestData = array('target' => $name, 'region' => $region, 'bitrix_code' => $locationCode);
         $httpClient = self::getHttpClient();
         $deliveryRequest = $httpClient->request($httpMethod, $requestData);
         return $deliveryRequest;

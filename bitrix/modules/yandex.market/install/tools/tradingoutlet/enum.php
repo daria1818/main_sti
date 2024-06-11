@@ -32,16 +32,16 @@ try
 	$formData = $httpRequest->getPostList()->toArray();
 	$response = Market\Ui\UserField\TradingOutletType::getVariants($serviceCode, $formData, true);
 
-	echo Main\Web\Json::encode($response + [
+	$response += [
 		'status' => 'ok',
-	]);
+	];
 }
 catch (Main\SystemException $exception)
 {
-	echo Main\Web\Json::encode([
+	$response = [
 		'status' => 'error',
 		'message' => $exception->getMessage()
-	]);
+	];
 }
 
-require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/epilog_admin_after.php';
+Market\Utils\HttpResponse::sendJson($response);

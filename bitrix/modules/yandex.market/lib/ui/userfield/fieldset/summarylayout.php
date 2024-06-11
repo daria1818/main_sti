@@ -168,6 +168,7 @@ class SummaryLayout extends AbstractLayout
 		$activeGroup = null;
 		$groupHtml = '';
 		$hasGroupFields = false;
+		$visibleCount = 0;
 
 		$result = sprintf('<table %s>', UserField\Helper\Attributes::stringify(array_filter([
 			'class' => 'edit-table ' . $this->getFieldsetName('summary__field'),
@@ -178,6 +179,8 @@ class SummaryLayout extends AbstractLayout
 
 		foreach ($fields as $fieldKey => $field)
 		{
+			if (!empty($field['HIDDEN']) && $field['HIDDEN'] !== 'N') { continue; }
+
 			$value = Market\Utils\Field::getChainValue($values, $fieldKey, Market\Utils\Field::GLUE_BRACKET);
 
 			$row = UserField\Helper\Renderer::getEditRow($field, $value, $values);
@@ -237,11 +240,36 @@ class SummaryLayout extends AbstractLayout
 
 			// title cell
 
-			$titleAttributes = [];
+			$titleAttributes = [
+				'class' => 'adm-detail-content-cell-l',
+				'valign' => $row['VALIGN'] ?: 'middle',
+				'width' => '40%',
+			];
 
-			if ($row['VALIGN'] !== '')
+			if (!empty($field['SETTINGS']['VALIGN']))
 			{
-				$titleAttributes['valign'] = $row['VALIGN'];
+				$titleAttributes['valign'] = $field['SETTINGS']['VALIGN'];
+			}
+
+			if ($titleAttributes['valign'] === 'top')
+			{
+				if (!empty($field['SETTINGS']['VALIGN_PUSH']))
+				{
+					$pushTitle = $field['SETTINGS']['VALIGN_PUSH'] === true ? 'top' : $field['SETTINGS']['VALIGN_PUSH'];
+				}
+				else
+				{
+					$controlCount = (
+						mb_substr_count($row['CONTROL'], ' type="text"')
+						+ mb_substr_count($row['CONTROL'], ' type="number"')
+						+ mb_substr_count($row['CONTROL'], '<select')
+						+ mb_substr_count($row['CONTROL'], '<textarea')
+					);
+
+					$pushTitle = ($controlCount === 1) ? 'top' : null;
+				}
+
+				$titleAttributes['class'] .= $pushTitle ? ' push--' . $pushTitle : '';
 			}
 
 			// control
@@ -253,19 +281,32 @@ class SummaryLayout extends AbstractLayout
 
 			if (!empty($field['HELP_MESSAGE']))
 			{
+				if (isset($field['HELP_POSITION']))
+				{
+					$helpPosition = 'b-tag-tooltip--content_' . $field['HELP_POSITION'];
+				}
+				else
+				{
+					$helpPosition = $visibleCount > 5 ? 'b-tag-tooltip--content_bottom' : '';
+				}
+
 				$titleHelp = sprintf(
 					'<span class="b-icon icon--question indent--right b-tag-tooltip--holder">'
-					. '<span class="b-tag-tooltip--content b-tag-tooltip--content_right">%s</span>'
+					. '<span class="b-tag-tooltip--content b-tag-tooltip--content_right %s">%s</span>'
 					. '</span>',
+					$helpPosition,
 					$field['HELP_MESSAGE']
 				);
 
 				$titleCell = $titleHelp . $titleCell;
 			}
 
+			$groupHtml .= $this->renderFieldPrologRow($field);
+
+			/** @noinspection HtmlUnknownAttribute */
 			$groupHtml .= sprintf(
 				'<tr %s>'
-				. '<td class="adm-detail-content-cell-l" width="40%%" %s>%s</td>'
+				. '<td %s>%s</td>'
 				. '<td class="adm-detail-content-cell-r" width="60%%">%s</td>'
 				. '</tr>',
 				UserField\Helper\Attributes::stringify($rowAttributes),
@@ -273,6 +314,13 @@ class SummaryLayout extends AbstractLayout
 				$titleCell,
 				$control
 			);
+
+			$groupHtml .= $this->renderFieldEpilogRow($field);
+
+			if (!isset($rowAttributes['class']) || Market\Data\TextString::getPosition($rowAttributes['class'], 'is--hidden') === false)
+			{
+				++$visibleCount;
+			}
 		}
 
 		if ($activeGroup !== null)
@@ -288,5 +336,47 @@ class SummaryLayout extends AbstractLayout
 		$result .= '</table>';
 
 		return $result;
+	}
+
+	protected function renderFieldPrologRow($field)
+	{
+		if (!isset($field['INTRO'])) { return ''; }
+
+		return sprintf(
+			'<tr>'
+			. '<td class="adm-detail-content-cell-l" width="40%%">&nbsp;</td>'
+			. '<td class="adm-detail-content-cell-r" width="60%%"><small>%s</small></td>'
+			. '</tr>',
+			$field['INTRO']
+		);
+	}
+
+	protected function renderFieldEpilogRow($field)
+	{
+		$contents = '';
+
+		if (isset($field['DESCRIPTION']))
+		{
+			$contents .= sprintf('<small>%s</small>', $field['DESCRIPTION']);
+		}
+
+		if (isset($field['NOTE']))
+		{
+			$contents .= '<div class="b-admin-message-list compensate--spacing">';
+			$contents .= BeginNote();
+			$contents .= $field['NOTE'];
+			$contents .= EndNote();
+			$contents .= '</div>';
+		}
+
+		if ($contents === '') { return ''; }
+
+		return sprintf(
+			'<tr>'
+			. '<td class="adm-detail-content-cell-l pos-inner--top" width="40%%">&nbsp;</td>'
+			. '<td class="adm-detail-content-cell-r pos-inner--top" width="60%%">%s</td>'
+			. '</tr>',
+			$contents
+		);
 	}
 }

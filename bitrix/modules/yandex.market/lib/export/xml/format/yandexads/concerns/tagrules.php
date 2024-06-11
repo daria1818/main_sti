@@ -49,7 +49,7 @@ trait TagRules
 	{
 		$this->overrideTags($offer->getChildren(), [
 			'picture' => [ 'required' => false ],
-			'description' => [ 'required' => true ],
+			'description' => [ 'required' => true, 'value_tags' => '<h3><br><ul><ol><li><p>' ],
 		]);
 
 		$this->removeChildTags($offer, [

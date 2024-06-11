@@ -2,7 +2,6 @@
 
 namespace Yandex\Market\Ui\Service;
 
-use Yandex\Market;
 use Bitrix\Main;
 
 class Manager
@@ -42,6 +41,11 @@ class Manager
 	 */
 	public static function getInstance($type)
 	{
+		if (!static::isKnownType($type))
+		{
+			throw new Main\SystemException('Unknown ui service "' . $type . '"');
+		}
+
 		$className = __NAMESPACE__ . '\\' . ucfirst($type);
 
 		if (!class_exists($className))
@@ -55,5 +59,13 @@ class Manager
 		}
 
 		return new $className($type);
+	}
+
+	protected static function isKnownType($type)
+	{
+		$commonType = static::TYPE_COMMON;
+		$specialTypes = static::getTypes();
+
+		return ($type === $commonType || in_array($type, $specialTypes, true));
 	}
 }

@@ -17,4 +17,16 @@ class Param extends Base
 	{
 		return Market\Export\Entity\Manager::TYPE_IBLOCK_ELEMENT_PROPERTY;
 	}
+
+	public function preselect(array $context)
+	{
+		return [
+			'TYPE' => Market\Export\Entity\Manager::TYPE_IBLOCK_PROPERTY_FEATURE,
+			'FIELD' => implode('.', [
+				'iblock',
+				'DETAIL_PAGE_SHOW',
+				'DISPLAY_VALUE',
+			]),
+		];
+	}
 }

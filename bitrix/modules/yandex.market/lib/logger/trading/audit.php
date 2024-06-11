@@ -18,11 +18,19 @@ class Audit
 	const ORDER_STATUS = 'order_status';
 	const SEND_STATUS = 'send_status';
 	const SEND_BOXES = 'send_boxes';
+	/** @deprecated */
+	const SEND_ITEMS = 'send_items';
+	/** @deprecated */
 	const SEND_CIS = 'send_cis';
 	const SEND_TRACK = 'send_track';
 	const SEND_CANCELLATION_ACCEPT = 'send_cancellation_accept';
 	const SEND_DELIVERY_DATE = 'send_delivery_date';
+	const SEND_DELIVERY_STORAGE_LIMIT = 'send_delivery_storage_limit';
+	const SEND_SHIPMENT_CONFIRM = 'send_shipment_confirm';
+	const SEND_SHIPMENT_EXCLUDE_ORDERS = 'send_shipment_exclude';
+	const SALES_BOOST = 'boost';
 	const PROCEDURE = 'procedure';
+	const INTERNAL = 'internal';
 
 	protected static function includeMessages()
 	{
@@ -37,15 +45,18 @@ class Audit
 			static::ORDER_STATUS,
 			static::SEND_STATUS,
 			static::SEND_BOXES,
-			static::SEND_CIS,
 			static::SEND_TRACK,
 			static::SEND_CANCELLATION_ACCEPT,
 			static::SEND_DELIVERY_DATE,
+			static::SEND_DELIVERY_STORAGE_LIMIT,
+			static::SEND_SHIPMENT_CONFIRM,
+			static::SEND_SHIPMENT_EXCLUDE_ORDERS,
 			static::INCOMING_REQUEST,
 			static::INCOMING_RESPONSE,
 			static::OUTGOING_REQUEST,
 			static::OUTGOING_RESPONSE,
-			//static::PROCEDURE,
+			static::SALES_BOOST,
+			static::PROCEDURE,
 		];
 	}
 

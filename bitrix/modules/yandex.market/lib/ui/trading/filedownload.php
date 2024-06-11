@@ -75,6 +75,7 @@ class FileDownload extends Market\Ui\Reference\Page
 		global $APPLICATION;
 
 		$APPLICATION->RestartBuffer();
+		while (ob_get_level()) { ob_end_clean(); }
 		header('Content-type: ' . $type);
 		echo $contents;
 		die();

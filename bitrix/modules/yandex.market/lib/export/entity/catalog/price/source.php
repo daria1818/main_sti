@@ -414,84 +414,111 @@ class Source extends Market\Export\Entity\Reference\Source
 
 	public function getFields(array $context = [])
 	{
+		if (!$context['HAS_CATALOG']) { return []; }
+
 		$result = [];
+		$priceTypes = $this->getFieldsPriceTypes();
+		$priceColumns = $this->getFieldsPriceColumns();
 
-		if ($context['HAS_CATALOG'] && Main\Loader::includeModule('catalog'))
+		foreach ($priceTypes as $priceType => $priceTypeData)
 		{
-			$langPrefix = $this->getLangPrefix();
-
-			// price types
-
-			$priceTypes = [
-				'MINIMAL' => [
-					'VALUE' => Market\Config::getLang($langPrefix . 'TYPE_MINIMAL'),
-					'FILTERABLE' => false,
-					'SELECTABLE' => true
-				],
-				'BASE' => [
-					'VALUE' => Market\Config::getLang($langPrefix . 'TYPE_BASE'),
-					'FILTERABLE' => true,
-					'SELECTABLE' => true
-				],
-				'OPTIMAL' => [
-					'VALUE' => Market\Config::getLang($langPrefix . 'TYPE_OPTIMAL'),
-					'FILTERABLE' => false,
-					'SELECTABLE' => true
-				]
-			];
-
-			$catalogPrices = \CCatalogGroup::GetListArray();
-
-			foreach ($catalogPrices as $catalogPrice)
+			foreach ($priceColumns as $priceField => $priceFieldData)
 			{
-				$priceTypes[$catalogPrice['ID']] = [
-					'VALUE' => $catalogPrice['NAME_LANG'] ?: $catalogPrice['NAME'],
-					'FILTERABLE' => true,
-					'SELECTABLE' => true
+				$result[] = [
+					'ID' => $priceType . '.' . $priceField,
+					'VALUE' => $priceTypeData['VALUE'] . ': ' . $priceFieldData['VALUE'],
+					'TYPE' => $priceFieldData['TYPE'],
+					'FILTERABLE' => $priceTypeData['FILTERABLE'] && $priceFieldData['FILTERABLE'],
+					'SELECTABLE' => $priceTypeData['SELECTABLE'] && $priceFieldData['SELECTABLE']
 				];
-			}
-
-			// price fields
-
-			$priceFields = [
-				'DISCOUNT_VALUE' => [
-					'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_DISCOUNT_VALUE'),
-					'TYPE' => Market\Export\Entity\Data::TYPE_NUMBER,
-					'FILTERABLE' => false,
-					'SELECTABLE' => true
-				],
-				'VALUE' => [
-					'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_VALUE'),
-					'TYPE' => Market\Export\Entity\Data::TYPE_NUMBER,
-					'FILTERABLE' => true,
-					'SELECTABLE' => true
-				],
-				'CURRENCY' => [
-					'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_CURRENCY'),
-					'TYPE' => Market\Export\Entity\Data::TYPE_CURRENCY,
-					'FILTERABLE' => true,
-					'SELECTABLE' => true
-				]
-			];
-
-			// build result
-
-			foreach ($priceTypes as $priceType => $priceTypeData)
-			{
-				foreach ($priceFields as $priceField => $priceFieldData)
-				{
-					$result[] = [
-						'ID' => $priceType . '.' . $priceField,
-						'VALUE' => $priceTypeData['VALUE'] . ': ' . $priceFieldData['VALUE'],
-						'TYPE' => $priceFieldData['TYPE'],
-						'FILTERABLE' => $priceTypeData['FILTERABLE'] && $priceFieldData['FILTERABLE'],
-						'SELECTABLE' => $priceTypeData['SELECTABLE'] && $priceFieldData['SELECTABLE']
-					];
-				}
 			}
 		}
 
 		return $result;
+	}
+
+	protected function getFieldsPriceTypes()
+	{
+		if (!Main\Loader::includeModule('catalog')) { return []; }
+
+		$langPrefix = $this->getLangPrefix();
+
+		$priceTypes = [
+			'MINIMAL' => [
+				'VALUE' => Market\Config::getLang($langPrefix . 'TYPE_MINIMAL'),
+				'FILTERABLE' => false,
+				'SELECTABLE' => true
+			],
+			'BASE' => [
+				'VALUE' => Market\Config::getLang($langPrefix . 'TYPE_BASE'),
+				'FILTERABLE' => true,
+				'SELECTABLE' => true
+			],
+			'OPTIMAL' => [
+				'VALUE' => Market\Config::getLang($langPrefix . 'TYPE_OPTIMAL'),
+				'FILTERABLE' => false,
+				'SELECTABLE' => true
+			]
+		];
+
+		foreach (\CCatalogGroup::GetListArray() as $catalogPrice)
+		{
+			$priceTypes[$catalogPrice['ID']] = [
+				'VALUE' => $catalogPrice['NAME_LANG'] ?: $catalogPrice['NAME'],
+				'FILTERABLE' => true,
+				'SELECTABLE' => true
+			];
+		}
+
+		return $priceTypes;
+	}
+
+	protected function getFieldsPriceColumns()
+	{
+		$langPrefix = $this->getLangPrefix();
+
+		return [
+			'DISCOUNT_VALUE' => [
+				'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_DISCOUNT_VALUE'),
+				'TYPE' => Market\Export\Entity\Data::TYPE_NUMBER,
+				'FILTERABLE' => false,
+				'SELECTABLE' => true
+			],
+			'VALUE' => [
+				'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_VALUE'),
+				'TYPE' => Market\Export\Entity\Data::TYPE_NUMBER,
+				'FILTERABLE' => true,
+				'SELECTABLE' => true
+			],
+			'CURRENCY' => [
+				'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_CURRENCY'),
+				'TYPE' => Market\Export\Entity\Data::TYPE_CURRENCY,
+				'FILTERABLE' => true,
+				'SELECTABLE' => true
+			],
+		];
+	}
+
+	public function getPriceFilter($type, $context = [])
+ 	{
+	    $typeIds = $this->getTypePriceIds($type, $context);
+
+		if (empty($typeIds) || !$this->hasOtherCatalogPriceTypes($typeIds)) { return []; }
+
+		return [
+			'=CATALOG_GROUP_ID' => $typeIds,
+		];
+	}
+
+	protected function hasOtherCatalogPriceTypes($typeIds)
+	{
+		$query = Catalog\GroupTable::getList([
+			'filter' => [ '!=ID' => $typeIds ],
+			'select' => [ 'ID' ],
+			'limit' => 1,
+		]);
+
+		return (bool)$query->fetch();
 	}
 
 	public function hasCurrencyConversion($fieldName, $settings = null)
@@ -545,13 +572,7 @@ class Source extends Market\Export\Entity\Reference\Source
 				$select[] = 'QUANTITY_TO';
 			}
 
-			$query = \CPrice::GetList(
-				[],
-				$filter,
-				false,
-				false,
-				$select
-			);
+			$query = $this->makeElementPricesQuery($filter, $select);
 
 			while ($price = $query->Fetch())
 			{
@@ -581,6 +602,65 @@ class Source extends Market\Export\Entity\Reference\Source
 		}
 
 		return $result;
+	}
+
+	protected function makeElementPricesQuery(array $filter, array $select)
+	{
+		if (class_exists(Catalog\PriceTable::class))
+		{
+			$newFilter = [];
+
+			foreach ($filter as $filterKey => $filterValue)
+			{
+				if (Market\Data\TextString::getPosition($filterKey, '@') === 0)
+				{
+					$filterKey = '=' . Market\Data\TextString::getSubstring($filterKey, 1);
+
+					$newFilter[$filterKey] = $filterValue;
+				}
+				else if (Market\Data\TextString::getPosition($filterKey, '+<=') === 0)
+				{
+					$filterKey = Market\Data\TextString::getSubstring($filterKey, 3);
+
+					$newFilter[] = [
+						'LOGIC' => 'OR',
+						[ $filterKey => false ],
+						[ '<=' . $filterKey => $filterValue ],
+					];
+				}
+				else if (Market\Data\TextString::getPosition($filterKey, '+>=') === 0)
+				{
+					$filterKey = Market\Data\TextString::getSubstring($filterKey, 3);
+
+					$newFilter[] = [
+						'LOGIC' => 'OR',
+						[ $filterKey => false ],
+						[ '>=' . $filterKey => $filterValue ],
+					];
+				}
+				else
+				{
+					$newFilter[$filterKey] = $filterValue;
+				}
+			}
+
+			$query = Catalog\PriceTable::getList([
+				'filter' => $newFilter,
+				'select' => $select,
+			]);
+		}
+		else
+		{
+			$query = \CPrice::GetList(
+				[],
+				$filter,
+				false,
+				false,
+				$select
+			);
+		}
+
+		return $query;
 	}
 
 	public function getPriceIds($select, array $context = [])
@@ -1029,6 +1109,11 @@ class Source extends Market\Export\Entity\Reference\Source
 				$readyDiscountList[$discount['ID']] = true;
 				$discountConditions = isset($discount['CONDITIONS']) ? unserialize($discount['CONDITIONS']) : null;
 
+				if (isset($discountConditions['CLASS_ID']))
+				{
+					$discountConditions = [ 'CHILDREN' => [ $discountConditions ] ];
+				}
+
 				$this->parseSaleDiscountActionProperties($result, $discountConditions);
 			}
 		}
@@ -1365,7 +1450,9 @@ class Source extends Market\Export\Entity\Reference\Source
 						'VAT_INCLUDED' => 'Y',
 						'DISCOUNT_VALUE' => $discountPrice,
 						'VALUE' => $price,
-						'CURRENCY' => $currency
+						'CURRENCY' => $currency,
+						'QUANTITY_FROM' => !empty($priceRow['QUANTITY_FROM']) ? (float)$priceRow['QUANTITY_FROM'] : 1,
+						'QUANTITY_TO' => !empty($priceRow['QUANTITY_TO']) ? (float)$priceRow['QUANTITY_TO'] : null,
 					];
 
 					if ($priceType !== 'MINIMAL')

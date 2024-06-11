@@ -4,6 +4,7 @@ namespace Sprint\Migration\Helpers\Traits\Iblock;
 
 use CIBlockElement;
 use Sprint\Migration\Exceptions\HelperException;
+use Sprint\Migration\Locale;
 
 trait IblockElementTrait
 {
@@ -219,7 +220,7 @@ trait IblockElementTrait
      */
     public function saveElement($iblockId, $fields = [], $props = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE']);
+        $this->checkRequiredKeys($fields, ['CODE']);
 
         $item = $this->getElement($iblockId, $fields['CODE']);
         if (!empty($item['ID'])) {
@@ -239,7 +240,7 @@ trait IblockElementTrait
      */
     public function saveElementByXmlId($iblockId, $fields = [], $props = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['XML_ID']);
+        $this->checkRequiredKeys($fields, ['XML_ID']);
 
         $item = $this->getElement($iblockId, ['=XML_ID' => $fields['XML_ID']]);
         if (!empty($item['ID'])) {
@@ -252,8 +253,8 @@ trait IblockElementTrait
     /**
      * Добавляет элемент инфоблока если он не существует
      *
-     * @param       $iblockId
-     * @param       $fields , обязательные параметры - код элемента
+     * @param int   $iblockId
+     * @param array $fields
      * @param array $props
      *
      * @throws HelperException
@@ -261,7 +262,7 @@ trait IblockElementTrait
      */
     public function addElementIfNotExists($iblockId, $fields, $props = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE']);
+        $this->checkRequiredKeys($fields, ['CODE']);
 
         $item = $this->getElement($iblockId, $fields['CODE']);
         if ($item) {
@@ -305,14 +306,14 @@ trait IblockElementTrait
             return $id;
         }
 
-        $this->throwException(__METHOD__, $ib->LAST_ERROR);
+        throw new HelperException($ib->LAST_ERROR);
     }
 
     /**
      * Обновляет элемент инфоблока если он существует
      *
-     * @param       $iblockId
-     * @param array $fields , обязательные параметры - код элемента
+     * @param int   $iblockId
+     * @param array $fields
      * @param array $props
      *
      * @throws HelperException
@@ -320,7 +321,7 @@ trait IblockElementTrait
      */
     public function updateElementIfExists($iblockId, $fields = [], $props = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE']);
+        $this->checkRequiredKeys($fields, ['CODE']);
 
         $item = $this->getElement($iblockId, $fields['CODE']);
         if (!$item) {
@@ -351,7 +352,7 @@ trait IblockElementTrait
         if (!empty($fields)) {
             $ib = new CIBlockElement;
             if (!$ib->Update($elementId, $fields)) {
-                $this->throwException(__METHOD__, $ib->LAST_ERROR);
+                throw new HelperException($ib->LAST_ERROR);
             }
         }
 
@@ -360,6 +361,34 @@ trait IblockElementTrait
         }
 
         return $elementId;
+    }
+
+    /**
+     * @throws HelperException
+     */
+    public function deleteElementByCode($iblockId, $code)
+    {
+        if (!empty($code)) {
+            $item = $this->getElement($iblockId, ['=CODE' => $code]);
+            if ($item) {
+                return $this->deleteElement($item['ID']);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @throws HelperException
+     */
+    public function deleteElementByXmlId($iblockId, $xmlId)
+    {
+        if (!empty($xmlId)) {
+            $item = $this->getElement($iblockId, ['=XML_ID' => $xmlId]);
+            if ($item) {
+                return $this->deleteElement($item['ID']);
+            }
+        }
+        return false;
     }
 
     /**
@@ -373,13 +402,7 @@ trait IblockElementTrait
      */
     public function deleteElementIfExists($iblockId, $code)
     {
-        $item = $this->getElement($iblockId, $code);
-
-        if (!$item) {
-            return false;
-        }
-
-        return $this->deleteElement($item['ID']);
+        return $this->deleteElementByCode($iblockId, $code);
     }
 
     /**
@@ -397,7 +420,83 @@ trait IblockElementTrait
             return true;
         }
 
-        $this->throwException(__METHOD__, $ib->LAST_ERROR);
+        throw new HelperException($ib->LAST_ERROR);
+    }
+
+    /**
+     * @param $iblockId
+     * @param $elementId
+     *
+     * @throws HelperException
+     * @return array
+     */
+    public function getElementUniqFilterById($iblockId, $elementId)
+    {
+        if (empty($elementId)) {
+            throw new HelperException(
+                Locale::getMessage(
+                    'ERR_IB_ELEMENT_ID_EMPTY',
+                    [
+                        '#IBLOCK_ID#' => $iblockId,
+                    ]
+                )
+            );
+        }
+
+        $element = $this->getElement($iblockId, ['ID' => $elementId]);
+
+        if (empty($element['ID'])) {
+            throw new HelperException(
+                Locale::getMessage(
+                    'ERR_IB_ELEMENT_ID_NOT_FOUND',
+                    [
+                        '#IBLOCK_ID#'  => $iblockId,
+                        '#ELEMENT_ID#' => $elementId,
+                    ]
+                )
+            );
+        }
+
+        return [
+            'NAME'   => $element['NAME'],
+            'XML_ID' => $element['XML_ID'],
+            'CODE'   => $element['CODE'],
+        ];
+    }
+
+    /**
+     * @throws HelperException
+     */
+    public function getElementIdByUniqFilter($iblockId, $uniqFilter)
+    {
+        if (empty($uniqFilter)) {
+            throw new HelperException(
+                Locale::getMessage(
+                    'ERR_IB_ELEMENT_ID_EMPTY',
+                    [
+                        '#IBLOCK_ID#' => $iblockId,
+                    ]
+                )
+            );
+        }
+
+        $uniqFilter['IBLOCK_ID'] = $iblockId;
+
+        $element = $this->getElement($iblockId, $uniqFilter);
+
+        if (empty($element['ID'])) {
+            throw new HelperException(
+                Locale::getMessage(
+                    'ERR_IB_ELEMENT_BY_FILTER_NOT_FOUND',
+                    [
+                        '#IBLOCK_ID#' => $iblockId,
+                        '#NAME#'      => $uniqFilter['NAME'],
+                    ]
+                )
+            );
+        }
+
+        return $element['ID'];
     }
 
     /**

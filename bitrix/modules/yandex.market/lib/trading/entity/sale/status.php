@@ -12,6 +12,7 @@ class Status extends Market\Trading\Entity\Reference\Status
 
 	const STATUS_CANCELED = 'CANCELED';
 	const STATUS_ALLOW_DELIVERY = 'ALLOW_DELIVERY';
+	const STATUS_SUBSIDY = 'SUBSIDY';
 	const STATUS_PAYED = 'PAYED';
 	const STATUS_DEDUCTED = 'DEDUCTED';
 	
@@ -65,18 +66,35 @@ class Status extends Market\Trading\Entity\Reference\Status
 
 	public function getVariants()
 	{
-		return array_merge(
+		$result = array_merge(
 			$this->getSpecialVariants(),
 			$this->getOrderVariants()
 		);
+		$result = array_diff($result, [
+			static::STATUS_SUBSIDY,
+		]);
+
+		return $result;
+	}
+
+	public function isStandalone($status)
+	{
+		return in_array($status, $this->getSpecialVariants(), true);
+	}
+
+	public function getGroup($status)
+	{
+		return in_array($status, $this->getSpecialVariants(), true) ? $status : 'STATUS';
 	}
 
 	public function getMeaningfulMap()
 	{
 		$result = [
 			Market\Data\Trading\MeaningfulStatus::CREATED => 'N',
+			Market\Data\Trading\MeaningfulStatus::PROCESSING => 'P',
 			Market\Data\Trading\MeaningfulStatus::ALLOW_DELIVERY => static::STATUS_ALLOW_DELIVERY,
 			Market\Data\Trading\MeaningfulStatus::DEDUCTED => static::STATUS_DEDUCTED,
+			Market\Data\Trading\MeaningfulStatus::SUBSIDY => static::STATUS_SUBSIDY,
 			Market\Data\Trading\MeaningfulStatus::PAYED => static::STATUS_PAYED,
 			Market\Data\Trading\MeaningfulStatus::CANCELED => static::STATUS_CANCELED,
 			Market\Data\Trading\MeaningfulStatus::FINISHED => 'F',
@@ -172,6 +190,7 @@ class Status extends Market\Trading\Entity\Reference\Status
 		return [
 			static::STATUS_ALLOW_DELIVERY,
 			static::STATUS_DEDUCTED,
+			static::STATUS_SUBSIDY,
 			static::STATUS_PAYED,
 			static::STATUS_CANCELED,
 		];

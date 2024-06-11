@@ -236,7 +236,7 @@ class TradeBindingPreserve extends Market\Reference\Event\Regular
 		$requestPage = Main\Context::getCurrent()->getRequest()->getRequestedPage();
 
 		return (
-			preg_match('#/crm\.order\..+?/#', $requestPage) // is components namespace crm.order
+			preg_match('#/crm\.(order|deal)\..+?/#', $requestPage) // is components namespace crm.order or crm.deal
 			&& preg_match('#ajax\.php$#', $requestPage) // ajax page
 		);
 	}

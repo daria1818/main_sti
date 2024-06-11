@@ -98,7 +98,7 @@ class ComponentOrder
 
 						$isDeliveryHasPvz = self::isDeliveryHasPvz($profile['CODE']);
 
-						if ($isDeliveryHasPvz && $profile['CODE'] !== 'eslogistic:postrf_term') {
+						if ($isDeliveryHasPvz && $profile['CODE']) {
 							$arResult['DELIVERY'][$profile['ID']]['DESCRIPTION'] =
 								'<div class="eslog-deliverey-desc">'.$arResult['DELIVERY'][$profile['ID']]['DESCRIPTION'].'</div>' .
 								'<div class="eslog-deliverey-desc-lk">' . $arResult['DELIVERY'][$profile['ID']]['CALCULATE_DESCRIPTION'] . '</div>' .
@@ -493,6 +493,17 @@ class ComponentOrder
 
 		$deliveryResult['CALCULATE_DESCRIPTION'] = '';
 		unset($deliveryResult['CALCULATE_ERRORS']);
+
+        if(isset($requestDataEsl['time'])){
+            $unitTime = GetMessage("ESHOP_LOGISTIC_PER_DAY");
+            if(isset($requestDataEsl['unit']))
+                $unitTime = $requestDataEsl['unit'];
+
+            $deliveryResult['PERIOD_TEXT'] = $requestDataEsl['time'].' '.$unitTime;
+        }else{
+            $deliveryResult['PERIOD_TEXT'] = '';
+        }
+
 
 		$arResult['DELIVERY'][$deliveryResult['ID']] = $deliveryResult;
 

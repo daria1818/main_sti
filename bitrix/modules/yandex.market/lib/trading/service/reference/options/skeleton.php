@@ -13,13 +13,34 @@ abstract class Skeleton
 	protected $values;
 	protected $fieldset = [];
 	protected $fieldsetCollection = [];
+	protected $suppressRequired = false;
 
 	public function __construct(TradingService\Reference\Provider $provider)
 	{
 		$this->provider = $provider;
 	}
 
+	public function __clone()
+	{
+		foreach ($this->fieldset as $key => $fieldset)
+		{
+			$this->fieldset[$key] = clone $fieldset;
+		}
+
+		foreach ($this->fieldsetCollection as $key => $fieldsetCollection)
+		{
+			$this->fieldsetCollection[$key] = clone $fieldsetCollection;
+		}
+	}
+
 	abstract public function getFields(TradingEntity\Reference\Environment $environment, $siteId);
+
+	public function extendValues(array $values)
+	{
+		$values = array_merge((array)$this->values, $values);
+
+		$this->setValues($values);
+	}
 
 	public function setValues(array $values)
 	{
@@ -85,6 +106,11 @@ abstract class Skeleton
 		// nothing by default
 	}
 
+	public function takeChanges(Skeleton $previous)
+	{
+		// nothing by default
+	}
+
 	public function getValue($key, $default = null)
 	{
 		return isset($this->values[$key]) ? $this->values[$key] : $default;
@@ -94,12 +120,36 @@ abstract class Skeleton
 	{
 		$result = $this->getValue($key, $default);
 
-		if (Market\Utils\Value::isEmpty($result))
+		if (!$this->suppressRequired && Market\Utils\Value::isEmpty($result))
 		{
 			throw new Main\SystemException('Required option ' . $key . ' not set');
 		}
 
 		return $result;
+	}
+
+	public function suppressRequired($enable = true)
+	{
+		$this->suppressFieldsetRequired($enable);
+		$this->suppressFieldsetCollectionRequired($enable);
+
+		$this->suppressRequired = $enable;
+	}
+
+	protected function suppressFieldsetRequired($enable)
+	{
+		foreach ($this->fieldset as $fieldset)
+		{
+			$fieldset->suppressRequired($enable);
+		}
+	}
+
+	protected function suppressFieldsetCollectionRequired($enable)
+	{
+		foreach ($this->fieldsetCollection as $fieldsetCollection)
+		{
+			$fieldsetCollection->suppressRequired($enable);
+		}
 	}
 
 	public function getValues()

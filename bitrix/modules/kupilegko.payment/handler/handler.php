@@ -19,7 +19,8 @@ use Bitrix\Main\Config\Option;
 IncludeModuleLangFile(__FILE__);
 require dirname(dirname(__FILE__)) . '/config.php';
 Loader::includeModule( 'kupilegko.payment' );
-
+define('RBS_PROD_URL_ALT', $ALFABANK_CONFIG['RBS_PROD_URL_ALT']);
+define('RBS_PROD_URL_ALT_PREFIX', $ALFABANK_CONFIG['RBS_PROD_URL_ALT_PREFIX']);
 /**
  * Class AlfabankEcomHandler
  * @package Sale\Handlers\PaySystem
@@ -36,17 +37,40 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 		$moduleId = 'kupilegko.payment';
 
 		$RBS_Gateway = new \Alfabank\Payments\Gateway;
-		
+
+		$api_login = $this->getBusinessValue($payment, 'ALFABANK_GATE_LOGIN');
+		$prod_gate_url = $this->getGateProdUrl($api_login,RBS_PROD_URL_ALT_PREFIX, Option::get($moduleId, 'RBS_PROD_URL_AB'), RBS_PROD_URL_ALT);
+		$test_mode = $this->getBusinessValue($payment, 'ALFABANK_GATE_TEST_MODE') == 'Y' ? 1 : 0;
+
 		// module settings
 		$RBS_Gateway->setOptions(array(
 			'module_id' => Option::get($moduleId, 'MODULE_ID'),
-			'gate_url_prod' => Option::get($moduleId, 'RBS_PROD_URL_AB'),
+			'gate_url_prod' => $prod_gate_url,
 			'gate_url_test' => Option::get($moduleId, 'RBS_TEST_URL_AB'),
 			'module_version' => Option::get($moduleId, 'MODULE_VERSION'),
 			'iso' => unserialize(Option::get($moduleId, 'ISO')),
 			'cms_version' => 'Bitrix ' . SM_VERSION,
 			'language' => 'ru',
 			'default_cartItem_tax' => Option::get($moduleId, 'TAX_DEFAULT'),
+			'ignore_product_tax' => Option::get($moduleId, 'IGNORE_PRODUCT_TAX'),
+			'callback_mode' => $prod_gate_url === RBS_PROD_URL_ALT && $test_mode == 0 ? true : Option::get($moduleId, 'RBS_ENABLE_CALLBACK'),
+			// 'additionalOfdParams' => array(
+				// 'agent_info.type' => 6,
+				// 'agent_info.paying.operation' => '',
+				// 'agent_info.paying.phones' => '',
+				// 'agent_info.paymentsOperator.phones' => '',
+				// 'agent_info.MTOperator.address' => '',
+				// 'agent_info.MTOperator.inn' => '',
+				// 'agent_info.MTOperator.name' => '',
+				// 'agent_info.MTOperator.phones' => '',
+				// 'supplier_info.inn' => '',
+				// 'supplier_info.name' => '',
+				// 'supplier_info.phones' => '',
+				// 'cashier' => '',
+				// 'additional_check_props' => '',
+				// 'additional_user_props.name' => '',
+				// 'additional_user_props.value' => '',
+			// ),
 		));
 
 		// handler settings
@@ -58,9 +82,9 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 			'ffd_payment_object_delivery' => $this->getBusinessValue($payment, 'ALFABANK_FFD_PAYMENT_OBJECT_DELIVERY'),
 			'ffd_payment_method' => $this->getBusinessValue($payment, 'ALFABANK_FFD_PAYMENT_METHOD'),
 			'ffd_payment_method_delivery' => $this->getBusinessValue($payment, 'ALFABANK_FFD_PAYMENT_METHOD_DELIVERY'),
-			'test_mode' => $this->getBusinessValue($payment, 'ALFABANK_GATE_TEST_MODE') == 'Y' ? 1 : 0,
-			'handler_logging' => $this->getBusinessValue($payment, 'ALFABANK_HANDLER_LOGGING') == 'Y' ? 1 : 0,
+			'test_mode' => $test_mode,
 			'handler_two_stage' => $this->getBusinessValue($payment, 'ALFABANK_HANDLER_TWO_STAGE') == 'Y' ? 1 : 0,
+			'handler_logging' => $this->getBusinessValue($payment, 'ALFABANK_HANDLER_LOGGING') == 'Y' ? 1 : 0,
 		));
 
 		$RBS_Gateway->buildData(array(
@@ -80,10 +104,11 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 		if(strlen($domain_name) < 3) {
 			$domain_name = Option::get($moduleId, 'NOTIFY_URL', '');
 		}
+		
 		if(strlen($domain_name) > 3) {
 			$RBS_Gateway->setOptions(
 				array(
-					'domain_finded' => true,
+					'domain_found' => true,
 					'callback_url' => html_entity_decode($protocol . $domain_name . '/bitrix/tools/sale_ps_result.php?PAYMENT=ALFABANK&OPERATION_CALLBACK=ALFABANK')
 				)
 			);
@@ -115,14 +140,13 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 			'customer_email' => $this->getPropertyValueByCode($propertyCollection, $email_key),
 			'customer_phone' => $phone,
 		));
-
+		
 		if ($RBS_Gateway->ofdEnable()) {
 
 
 			$Basket = $Order->getBasket();
 			$basketItems = $Basket->getBasketItems();
-
-
+			$positions = [];
 			$lastIndex = 0;
 			foreach ($basketItems as $key => $BasketItem) {
 				$lastIndex = $key + 1;
@@ -142,13 +166,12 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 		        );
 
 				// If need support suplier_info
-				// $position['supplier_info'] = array(
-				// 	'name' => 'value_sup_name',
-				// 	'inn' => '9998887771',
+				// $position['agent_info'] = array(
+				// 	'agent_info.type' => '6',
+				// 	'agent_info.MTOperator.phones' => '+79169998877',
 				// );
 
-
-		        $RBS_Gateway->setPosition($position);
+		        $positions[] = $position;
 			}
 
 			if($Order->getField('PRICE_DELIVERY') > 0) {
@@ -160,7 +183,7 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 				$RBS_Gateway->setOptions(array(
 				    'delivery' => true,
 				));
-				$RBS_Gateway->setPosition(array(
+				$positions[] = array(
 		            'positionId' => $lastIndex + 1,
 		            'itemCode' => 'DELIVERY_' . $Order->getField('DELIVERY_ID'),
 		            'name' => Loc::getMessage('ALFABANK_PAYMENT_FIRLD_DELIVERY'),
@@ -173,7 +196,24 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 		            'tax' => array(
 		                'taxType' => $RBS_Gateway->getTaxCodeDelivery($deliveryVatItem['RATE']),
 		            ),
-		        ));	
+		        );	
+			}
+
+			if(Option::get($moduleId, 'DISCOUNT_HELPER')) {
+		     // DISCOUNT CALCULATE
+			    $RBS_Discount = new \Alfabank\Payments\Discount;
+				$result_order_sum = $Order->getPrice() - $Order->getSumPaid();
+	            $discount = $RBS_Discount->discoverDiscount($result_order_sum,$positions);
+	            if($discount > 0) { 
+	                $RBS_Discount->setOrderDiscount($discount);
+	                $recalculatedPositions = $RBS_Discount->normalizeItems($positions);
+	                $recalculatedAmount = $RBS_Discount->getResultAmount();
+	                $positions = $recalculatedPositions;
+	            }
+            }
+
+            foreach ($positions as $key => $position) {
+				$RBS_Gateway->setPosition($position);
 			}
 		}
 
@@ -196,16 +236,21 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 
 	public function processRequest(Payment $payment, Request $request)
 	{
+
 		global $APPLICATION;
 		$moduleId = 'kupilegko.payment';
 		$result = new PaySystem\ServiceResult();
-		
+		$test_mode = $this->getBusinessValue($payment, 'ALFABANK_GATE_TEST_MODE') == 'Y' ? 1 : 0;
 		$RBS_Gateway = new \Alfabank\Payments\Gateway;
+
+		$api_login = $this->getBusinessValue($payment, 'ALFABANK_GATE_LOGIN');
+		$prod_gate_url = $this->getGateProdUrl($api_login,RBS_PROD_URL_ALT_PREFIX, Option::get($moduleId, 'RBS_PROD_URL_AB'), RBS_PROD_URL_ALT);
+
 		$RBS_Gateway->setOptions(array(
 			// module settings
-			'gate_url_prod' => Option::get($moduleId, 'RBS_PROD_URL_AB'),
+			'gate_url_prod' => $prod_gate_url,
 			'gate_url_test' => Option::get($moduleId, 'RBS_TEST_URL_AB'),
-			'test_mode' => $this->getBusinessValue($payment, 'ALFABANK_GATE_TEST_MODE') == 'Y' ? 1 : 0,
+			'test_mode' => $test_mode,
 			'callback_redirect' => $request->get('CALLBACK_REDIRECT') == 1 ? 1 : 0,
 		));
 
@@ -231,10 +276,37 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
         if( $gateResponse['errorCode'] != 0 || ($gateResponse['orderStatus'] != 1 && $gateResponse['orderStatus'] != 2) ) {
         	$successPayment = false;
         }
-        if($request->get('CALLBACK_REDIRECT') == 1) {
+
+
+        $api_login = $this->getBusinessValue($payment, 'ALFABANK_GATE_LOGIN');
+		$prod_gate_url = $this->getGateProdUrl($api_login,RBS_PROD_URL_ALT_PREFIX, Option::get($moduleId, 'RBS_PROD_URL_AB'), RBS_PROD_URL_ALT);
+
+
+        $change_status_enable = false;
+        if(($prod_gate_url === RBS_PROD_URL_ALT || Option::get($moduleId, 'RBS_ENABLE_CALLBACK')) && $request->get('CALLBACK_REDIRECT') == 1) {
+        	$change_status_enable = true;
+        } 
+        if(($prod_gate_url !== RBS_PROD_URL_ALT && !Option::get($moduleId, 'RBS_ENABLE_CALLBACK')) && $request->get('CALLBACK_REDIRECT') != 1) {
+        	$change_status_enable = true;
+        }
+        if($test_mode == 1 && Option::get($moduleId, 'RBS_ENABLE_CALLBACK') && $request->get('CALLBACK_REDIRECT') == 1) {
+        	$change_status_enable = true;
+        }
+        if($test_mode == 1 && !Option::get($moduleId, 'RBS_ENABLE_CALLBACK') && $request->get('CALLBACK_REDIRECT') != 1) {
+        	$change_status_enable = true;
+        }
+
+
+        if($request->get('operation') === 'declinedByTimeout' 
+        	&& Option::get($moduleId, 'CANCEL_ORDER_BY_TIMEOUT')
+        	&& $request->get('CALLBACK_REDIRECT') == 1 
+        	&& !$payment->isPaid()
+        ) {
+        	$this->cancelOrder($payment->getOrderId());
         	return $result;
         }
-        if($successPayment && !$payment->isPaid()) {
+
+        if($change_status_enable && $successPayment && !$payment->isPaid()) {
 			$inputJson = self::encode($request->toArray());
 			
 			$fields = array(
@@ -416,6 +488,7 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 
 		);
 	}
+
 	/**
 	 * @return array
 	 */
@@ -425,6 +498,7 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 
 		return $data;
 	}
+
 	/**
 	 * @param Payment $payment
 	 * @param Request $request
@@ -434,6 +508,7 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 	{
 		return true;
 	}
+
 	/**
 	 * @param array $orderData
 	 */
@@ -445,10 +520,12 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 	 * @param array $orderData
 	 * @return bool|string
 	 */
+
 	public function BasketButtonAction($orderData = array())
 	{
 		return true;
 	}
+
 	/**
 	 * @param array $orderData
 	 */
@@ -485,10 +562,12 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 
 		return $description;
 	}
+
 	private static function encode(array $data)
 	{
 		return Main\Web\Json::encode($data, JSON_UNESCAPED_UNICODE);
 	}
+	
 	protected function printResultText($payment,$successPayment)
 	{
 		global $APPLICATION;
@@ -506,10 +585,27 @@ class kupilegko_paymentHandler extends PaySystem\ServiceHandler implements PaySy
 	        echo "</span></div>";
 		echo "</div></div>";
 	}
+
+	private function cancelOrder($paymentId) 
+	{
+		$order = Order::load($paymentId);
+        $order->setField("CANCELED", "Y");
+        $order->setField("REASON_CANCELED", Loc::getMessage('ALFABANK_CANCEL_ORDER_MESSAGE'));
+        $order->save();
+	}
+
+	private function getGateProdUrl($login,$prefix,$old_prod_url,$new_prod_url) {
+		if(strlen($new_prod_url) > 0 && substr($login, 0, strlen($prefix)) == $prefix) {
+			return $new_prod_url;
+		}
+		return $old_prod_url;
+	}
+
 	public function isRefundableExtended(){}
 	public function confirm(Payment $payment){}
 	public function cancel(Payment $payment){}
 	public function refund(Payment $payment, $refundableSum){}
 	public function sendResponse(PaySystem\ServiceResult $result, Request $request){}
-
+	
+	
 }

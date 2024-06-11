@@ -30,6 +30,16 @@ class CommandActivity extends AbstractActivity
 		return $this->title;
 	}
 
+	public function useGroup()
+	{
+		return isset($this->parameters['USE_GROUP']) ? $this->parameters['USE_GROUP'] : false;
+	}
+
+	public function getFilter()
+	{
+		return isset($this->parameters['FILTER']) ? $this->parameters['FILTER'] : null;
+	}
+
 	public function getPayload()
 	{
 		return $this->payload;

@@ -12,6 +12,8 @@ abstract class Options extends TradingService\Reference\Options
 {
 	use Market\Reference\Concerns\HasLang;
 
+	const EXTERNAL_ID_FIELD_ACCOUNT_NUMBER = 'f:ACCOUNT_NUMBER';
+
 	/** @var Provider */
 	protected $provider;
 	/** @var Market\Api\OAuth2\Token\Model */
@@ -166,7 +168,47 @@ abstract class Options extends TradingService\Reference\Options
 
 	public function getProperty($fieldName)
 	{
-		return $this->getValue('PROPERTY_' . $fieldName);
+		$value = $this->getValue('PROPERTY_' . $fieldName);
+
+		if (Market\Data\TextString::getPosition($value, 'f:') === 0)
+		{
+			$value = null;
+		}
+
+		return $value;
+	}
+
+	public function useAccountNumberTemplate()
+	{
+		return $this->getValue('PROPERTY_EXTERNAL_ID') === static::EXTERNAL_ID_FIELD_ACCOUNT_NUMBER;
+	}
+
+	public function getAccountNumberTemplate()
+	{
+		$value = trim($this->getValue('ACCOUNT_NUMBER_TEMPLATE'));
+
+		if ($value === '')
+		{
+			$value = $this->getAccountNumberDefault();
+		}
+		else if (Market\Data\TextString::getPosition($value, '{id}') === false)
+		{
+			$value .= '{id}';
+		}
+
+		return $value;
+	}
+
+	protected function getAccountNumberDefault()
+	{
+		$serviceCode = $this->provider->getServiceCode();
+
+		if ($serviceCode === TradingService\Manager::SERVICE_MARKETPLACE)
+		{
+			$serviceCode = 'yamarket';
+		}
+
+		return sprintf('%s_{id}', $serviceCode);
 	}
 
 	public function getProductSkuMap()
@@ -176,9 +218,9 @@ abstract class Options extends TradingService\Reference\Options
 
 	public function getProductSkuPrefix()
 	{
-		$usePrefix = ((string)$this->getValue('PRODUCT_SKU_ADV_PREFIX') === Market\Reference\Storage\Table::BOOLEAN_Y);
-
-		return $usePrefix ? Market\Export\Xml\Tag\Offer::ADV_PREFIX : '';
+		return (string)$this->getValue('PRODUCT_USE_SKU_PREFIX') === Market\Ui\UserField\BooleanType::VALUE_Y
+			? trim($this->getValue('PRODUCT_SKU_PREFIX'))
+			: '';
 	}
 
 	public function isAllowProductSkuPrefix()
@@ -196,6 +238,29 @@ abstract class Options extends TradingService\Reference\Options
 		return (string)$this->getValue('PRODUCT_STORE_TRACE') === Market\Reference\Storage\Table::BOOLEAN_Y;
 	}
 
+	public function getPackRatioSources()
+	{
+		$value = $this->getValue('PRODUCT_RATIO_SOURCE');
+
+		if (!is_array($value)) { return []; }
+
+		$result = [];
+
+		foreach ($value as $one)
+		{
+			list($source, $field) = explode(':', (string)$one);
+
+			if ($source === '' || $field === '') { continue; }
+
+			$result[] = [
+				$source,
+				$field,
+			];
+		}
+
+		return $result;
+	}
+
 	public function getPriceSource()
 	{
 		return $this->getValue('PRODUCT_PRICE_SOURCE');
@@ -208,14 +273,17 @@ abstract class Options extends TradingService\Reference\Options
 
 	public function usePriceDiscount()
 	{
-		return ((string)$this->getValue('PRODUCT_PRICE_DISCOUNT') === '1');
+		return ((string)$this->getValue('PRODUCT_PRICE_DISCOUNT') === Market\Reference\Storage\Table::BOOLEAN_Y);
 	}
 
 	public function getStatusIn($externalStatus)
 	{
 		$optionKey = 'STATUS_IN_' . $externalStatus;
+		$value = $this->getValue($optionKey);
 
-		return $this->getValue($optionKey);
+		if (is_array($value)) { return $value; }
+
+		return (string)$value === '' ? [] : [ $value ];
 	}
 
 	public function getStatusOut($bitrixStatus)
@@ -224,10 +292,7 @@ abstract class Options extends TradingService\Reference\Options
 
 		foreach ($this->provider->getStatus()->getOutgoingVariants() as $status)
 		{
-			$value = $this->getValue('STATUS_OUT_' . Market\Data\TextString::toUpper($status));
-			$isMatched = is_array($value) ? in_array($bitrixStatus, $value, true) : $value === $bitrixStatus;
-
-			if ($isMatched)
+			if (in_array($bitrixStatus, $this->getStatusOutRaw($status), true))
 			{
 				$result = $status;
 				break;
@@ -235,6 +300,55 @@ abstract class Options extends TradingService\Reference\Options
 		}
 
 		return $result;
+	}
+
+	public function getStatusOutRaw($externalStatus)
+	{
+		$value = $this->getValue('STATUS_OUT_' . Market\Data\TextString::toUpper($externalStatus));
+
+		if (is_array($value)) { return $value; }
+
+		return (string)$value === '' ? [] : [ $value ];
+	}
+
+	public function useSyncStatusOut()
+	{
+		return ((string)$this->getValue('SYNC_STATUS_OUT') === Market\Reference\Storage\Table::BOOLEAN_Y);
+	}
+
+	protected function applyValues()
+	{
+		$this->applyAdvPrefixBoolean();
+		$this->applyProductStoresReserve();
+	}
+
+	protected function applyAdvPrefixBoolean()
+	{
+		$useAdv = ((string)$this->getValue('PRODUCT_SKU_ADV_PREFIX') === Market\Reference\Storage\Table::BOOLEAN_Y);
+
+		if ($useAdv)
+		{
+			if ($this->getProductSkuPrefix() === '')
+			{
+				$this->values['PRODUCT_USE_SKU_PREFIX'] = Market\Ui\UserField\BooleanType::VALUE_Y;
+				$this->values['PRODUCT_SKU_PREFIX'] = Market\Export\Xml\Tag\Offer::ADV_PREFIX;
+			}
+
+			unset($this->values['PRODUCT_SKU_ADV_PREFIX']);
+		}
+	}
+
+	protected function applyProductStoresReserve()
+	{
+		$stored = (array)$this->getValue('PRODUCT_STORE');
+		$required = array_diff($stored, [
+			TradingEntity\Common\Store::PRODUCT_FIELD_QUANTITY_RESERVED,
+		]);
+
+		if (count($stored) !== count($required))
+		{
+			$this->values['PRODUCT_STORE'] = array_values($required);
+		}
 	}
 
 	protected function getCommonFields(TradingEntity\Reference\Environment $environment, $siteId)
@@ -276,6 +390,9 @@ abstract class Options extends TradingService\Reference\Options
 					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_YANDEX_TOKEN'),
 					'DESCRIPTION' => static::getLang('TRADING_SERVICE_COMMON_OPTION_YANDEX_TOKEN_DESCRIPTION'),
 					'SORT' => 2000,
+					'SETTINGS' => [
+						'VALIGN_PUSH' => true,
+					],
 				],
 				'YANDEX_INCOMING_URL' => [
 					'TYPE' => 'incomingUrl',
@@ -334,16 +451,19 @@ abstract class Options extends TradingService\Reference\Options
 	protected function getOauthRequestFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
 		$oauthRedirectPath = Market\Ui\UserField\TokenType::getCallbackPath();
+		$defaults = $this->oauthDefaults();
 
 		return [
 			'OAUTH_CLIENT_ID' => [
 				'TYPE' => 'string',
 				'MANDATORY' => 'Y',
 				'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_ID'),
+				'HELP_MESSAGE' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_ID_HELP'),
 				'INTRO' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_ID_INTRO', [
 					'#CALLBACK_URI#' => Market\Utils\Url::absolutizePath($oauthRedirectPath),
 				]),
 				'SETTINGS' => [
+					'DEFAULT_VALUE' => isset($defaults['OAUTH_CLIENT_ID']) ? $defaults['OAUTH_CLIENT_ID'] : null,
 					'PLACEHOLDER' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_ID_PLACEHOLDER'),
 				],
 				'SORT' => 2200,
@@ -352,7 +472,9 @@ abstract class Options extends TradingService\Reference\Options
 				'TYPE' => 'string',
 				'MANDATORY' => 'Y',
 				'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_PASSWORD'),
+				'HELP_MESSAGE' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_PASSWORD_HELP'),
 				'SETTINGS' => [
+					'DEFAULT_VALUE' => isset($defaults['OAUTH_CLIENT_PASSWORD']) ? $defaults['OAUTH_CLIENT_PASSWORD'] : null,
 					'PLACEHOLDER' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_PASSWORD_PLACEHOLDER'),
 				],
 				'SORT' => 2300,
@@ -361,7 +483,9 @@ abstract class Options extends TradingService\Reference\Options
 				'TYPE' => 'token',
 				'MANDATORY' => 'Y',
 				'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_TOKEN'),
+				'HELP_MESSAGE' => static::getLang('TRADING_SERVICE_COMMON_OPTION_OAUTH_TOKEN_HELP'),
 				'SETTINGS' => [
+					'DEFAULT_VALUE' => isset($defaults['OAUTH_TOKEN']) ? $defaults['OAUTH_TOKEN'] : null,
 					'CLIENT_ID_FIELD' => 'OAUTH_CLIENT_ID',
 					'CLIENT_PASSWORD_FIELD' => 'OAUTH_CLIENT_PASSWORD',
 					'SCOPE' => ['market:partner-api'],
@@ -372,9 +496,38 @@ abstract class Options extends TradingService\Reference\Options
 		];
 	}
 
+	protected function oauthDefaults()
+	{
+		$result = [];
+
+		$setups = Market\Trading\Setup\Model::loadList([
+			'filter' => [ '=TRADING_SERVICE' => $this->provider->getServiceCode() ],
+			'order' => [ 'ACTIVE' => 'desc' ],
+		]);
+
+		foreach ($setups as $setup)
+		{
+			$options = $setup->wakeupService()->getOptions();
+
+			if (!($options instanceof Market\Api\Reference\HasOauthConfiguration)) { continue; }
+
+			$settings = [
+				'OAUTH_CLIENT_ID' => $options->getValue('OAUTH_CLIENT_ID'),
+				'OAUTH_CLIENT_PASSWORD' => $options->getValue('OAUTH_CLIENT_PASSWORD'),
+				'OAUTH_TOKEN' => $options->getValue('OAUTH_TOKEN'),
+			];
+
+			if (count(array_filter($settings)) < count($settings)) { continue; }
+
+			$result = $settings;
+			break;
+		}
+
+		return $result;
+	}
+
 	protected function getCompanyFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
-		/** @var TaxSystem $taxSystem */
 		$taxSystem = $this->provider->getTaxSystem();
 
 		return [
@@ -427,7 +580,15 @@ abstract class Options extends TradingService\Reference\Options
 		{
 			$personType = $environment->getPersonType();
 			$personTypeDefault = $this->getPersonTypeDefaultValue($personType, $siteId);
+			$personTypeEnum = $personType->getEnum($siteId);
+			$hasDefaultPersonType = ($personTypeDefault !== null);
 			$user = $environment->getUserRegistry()->getAnonymousUser($this->provider->getServiceCode(), $siteId);
+
+			if (!$hasDefaultPersonType && !empty($personTypeEnum))
+			{
+				$personTypeFirstOption = reset($personTypeEnum);
+				$personTypeDefault = $personTypeFirstOption['ID'];
+			}
 
 			$result = [
 				'PERSON_TYPE' => [
@@ -435,8 +596,8 @@ abstract class Options extends TradingService\Reference\Options
 					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PERSON_TYPE'),
 					'GROUP' => static::getLang('TRADING_SERVICE_COMMON_GROUP_PROPERTY'),
 					'MANDATORY' => 'Y',
-					'VALUES' => $personType->getEnum($siteId),
-					'HIDDEN' => $personTypeDefault !== null && !Market\Config::isExpertMode() ? 'Y' : 'N',
+					'VALUES' => $personTypeEnum,
+					'HIDDEN' => $hasDefaultPersonType && !Market\Config::isExpertMode() ? 'Y' : 'N',
 					'SETTINGS' => [
 						'DEFAULT_VALUE' => $personTypeDefault,
 						'STYLE' => 'max-width: 220px;',
@@ -476,16 +637,61 @@ abstract class Options extends TradingService\Reference\Options
 		$orderClassName = $this->provider->getModelFactory()->getOrderClassName();
 		$fields = $orderClassName::getMeaningfulFields();
 		$options = [];
+		$additional = [];
+		$sort = 3700;
 
 		foreach ($fields as $field)
 		{
 			$options[$field] = [
 				'NAME' => $orderClassName::getMeaningfulFieldTitle($field),
+				'HELP_MESSAGE' => $orderClassName::getMeaningfulFieldHelp($field),
 				'GROUP' => static::getLang('TRADING_SERVICE_COMMON_GROUP_PROPERTY'),
+				'SORT' => $sort++,
 			];
+
+			if ($field === 'EXTERNAL_ID')
+			{
+				$options[$field] += [
+					'VALUES' => [
+						[
+							'ID' => static::EXTERNAL_ID_FIELD_ACCOUNT_NUMBER,
+							'VALUE' => static::getLang('TRADING_SERVICE_COMMON_OPTION_EXTERNAL_ID_FIELD_ACCOUNT_NUMBER'),
+							'GROUP' => static::getLang('TRADING_SERVICE_COMMON_OPTION_EXTERNAL_ID_FIELDS'),
+						],
+					],
+					'SETTINGS' => [
+						'DEFAULT_GROUP' => static::getLang('TRADING_SERVICE_COMMON_OPTION_EXTERNAL_ID_PROPERTIES'),
+					],
+				];
+
+				$additional['ACCOUNT_NUMBER_TEMPLATE'] = [
+					'TYPE' => 'string',
+					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_ACCOUNT_NUMBER_TEMPLATE'),
+					'HELP_MESSAGE' => static::getLang('TRADING_SERVICE_COMMON_OPTION_ACCOUNT_NUMBER_TEMPLATE_HELP'),
+					'SORT' => $sort++,
+					'SETTINGS' => [
+						'DEFAULT_VALUE' => $this->getAccountNumberDefault(),
+						'PLACEHOLDER' => $this->getAccountNumberTemplate(),
+					],
+					'DEPEND' => [
+						'PROPERTY_' . $field => [
+							'RULE' => Market\Utils\UserField\DependField::RULE_ANY,
+							'VALUE' => static::EXTERNAL_ID_FIELD_ACCOUNT_NUMBER,
+						],
+ 					],
+				];
+			}
 		}
 
-		return $this->createPropertyFields($environment, $siteId, $options, 3700);
+		$result = $this->createPropertyFields($environment, $siteId, $options, $sort) + $additional;
+
+		uasort($result, static function($a, $b) {
+			if ($a['SORT'] === $b['SORT']) { return 0; }
+
+			return ($a['SORT'] < $b['SORT'] ? -1 : 1);
+		});
+
+		return $result;
 	}
 
 	protected function createPropertyFields(TradingEntity\Reference\Environment $environment, $siteId, array $fields, $sort)
@@ -541,13 +747,30 @@ abstract class Options extends TradingService\Reference\Options
 					'INTRO' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_SKU_FIELD_DESCRIPTION'),
 					'SORT' => 1000,
 					'HIDDEN' => !Market\Config::isExpertMode() ? 'Y' : 'N',
+					'SETTINGS' => [
+						'VALIGN_PUSH' => true,
+					],
 				],
-				'PRODUCT_SKU_ADV_PREFIX' => [
+				'PRODUCT_USE_SKU_PREFIX' => [
 					'TYPE' => 'boolean',
 					'TAB' => 'STORE',
-					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_SKU_ADV_PREFIX'),
+					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_USE_SKU_PREFIX'),
+					'HELP_MESSAGE' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_USE_SKU_PREFIX_HELP'),
 					'SORT' => 1001,
 					'HIDDEN' => !$this->isAllowProductSkuPrefix() ? 'Y' : 'N',
+				],
+				'PRODUCT_SKU_PREFIX' => [
+					'TYPE' => 'string',
+					'TAB' => 'STORE',
+					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_SKU_PREFIX'),
+					'SORT' => 1002,
+					'HIDDEN' => !$this->isAllowProductSkuPrefix() ? 'Y' : 'N',
+					'DEPEND' => [
+						'PRODUCT_USE_SKU_PREFIX' => [
+							'RULE' => Market\Utils\UserField\DependField::RULE_EMPTY,
+							'VALUE' => false,
+						],
+					]
 				],
 			];
 		}
@@ -585,6 +808,17 @@ abstract class Options extends TradingService\Reference\Options
 					'TAB' => 'STORE',
 					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_STORE_TRACE'),
 					'SORT' => 1110,
+				],
+				'PRODUCT_RATIO_SOURCE' => [
+					'TYPE' => 'exportParam',
+					'TAB' => 'STORE',
+					'MULTIPLE' => 'Y',
+					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_RATIO_SOURCE'),
+					'HELP_MESSAGE' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_RATIO_SOURCE_HELP'),
+					'SORT' => 1120,
+					'SETTINGS' => [
+						'VALIGN_PUSH' => true,
+					],
 				],
 			];
 		}
@@ -632,14 +866,14 @@ abstract class Options extends TradingService\Reference\Options
 							'VALUE' => false,
 						],
 					],
-					'SORT' => 2100,
+					'SORT' => 2010,
 				],
 				'PRODUCT_PRICE_DISCOUNT' => [
 					'TYPE' => 'boolean',
 					'TAB' => 'STORE',
 					'NAME' => static::getLang('TRADING_SERVICE_COMMON_OPTION_PRODUCT_PRICE_DISCOUNT'),
 					'SETTINGS' => [
-						'DEFAULT_VALUE' => '1',
+						'DEFAULT_VALUE' => Market\Reference\Storage\Table::BOOLEAN_Y,
 					],
 					'DEPEND' => [
 						'PRODUCT_PRICE_SOURCE' => [
@@ -647,7 +881,7 @@ abstract class Options extends TradingService\Reference\Options
 							'VALUE' => false,
 						],
 					],
-					'SORT' => 2200,
+					'SORT' => 2020,
 				],
 			];
 		}
@@ -677,24 +911,22 @@ abstract class Options extends TradingService\Reference\Options
 			foreach ($incomingVariants as $statusVariant)
 			{
 				$isRequired = in_array($statusVariant, $incomingRequired, true);
-				$defaultValue = isset($statusDefaults[$statusVariant]) ? $statusDefaults[$statusVariant] : null;
-
-				if (is_array($defaultValue))
-				{
-					$defaultValue = reset($defaultValue);
-				}
+				$defaultValue = isset($statusDefaults[$statusVariant]) ? (array)$statusDefaults[$statusVariant] : [];
 
 				$result['STATUS_IN_' . $statusVariant] = [
 					'TYPE' => 'enumeration',
 					'TAB' => 'STATUS',
 					'GROUP' => static::getLang('TRADING_SERVICE_' . $serviceCode . '_GROUP_STATUS_IN'),
 					'NAME' => $serviceStatus->getTitle($statusVariant),
+					'HELP_MESSAGE' => $serviceStatus->getHelp($statusVariant),
 					'MANDATORY' => $isRequired ? 'Y' : 'N',
+					'MULTIPLE' => 'Y',
 					'VALUES' => $environmentEnum,
 					'SETTINGS' => [
 						'DEFAULT_VALUE' => $defaultValue,
 						'STYLE' => 'max-width: 300px;',
-						'ALLOW_NO_VALUE' => $defaultValue === null || !$isRequired ? 'Y' : 'N',
+						'ALLOW_NO_VALUE' => empty($defaultValue) || !$isRequired ? 'Y' : 'N',
+						'VALIGN_PUSH' => true,
 					],
 					'SORT' => $sort,
 				];
@@ -721,38 +953,28 @@ abstract class Options extends TradingService\Reference\Options
 			$serviceStatus = $this->provider->getStatus();
 			$serviceOutgoingVariants = $serviceStatus->getOutgoingVariants();
 			$serviceOutgoingRequired = $serviceStatus->getOutgoingRequired();
-			$serviceOutgoingMultiple = $serviceStatus->getOutgoingMultiple();
 			$statusDefaults = $this->makeStatusDefaults($environmentStatus->getMeaningfulMap(), $serviceStatus->getOutgoingMeaningfulMap());
 			$sort = 2000;
 			$result = [];
 
 			foreach ($serviceOutgoingVariants as $serviceOutgoingVariant)
 			{
-				$isMultiple = in_array($serviceOutgoingVariant, $serviceOutgoingMultiple, true);
 				$isRequired = in_array($serviceOutgoingVariant, $serviceOutgoingRequired, true);
-				$defaultValue = isset($statusDefaults[$serviceOutgoingVariant]) ? $statusDefaults[$serviceOutgoingVariant] : null;
-
-				if ($isMultiple)
-				{
-					$defaultValue = (array)$defaultValue;
-				}
-				else if (is_array($defaultValue))
-				{
-					$defaultValue = reset($defaultValue);
-				}
+				$defaultValue = isset($statusDefaults[$serviceOutgoingVariant]) ? (array)$statusDefaults[$serviceOutgoingVariant] : [];
 
 				$result['STATUS_OUT_' . $serviceOutgoingVariant] = [
 					'TYPE' => 'enumeration',
 					'TAB' => 'STATUS',
 					'GROUP' => static::getLang('TRADING_SERVICE_' . $serviceCode . '_GROUP_STATUS_OUT'),
 					'NAME' => $serviceStatus->getTitle($serviceOutgoingVariant) . ' (' . $serviceOutgoingVariant . ')',
-					'MULTIPLE' => $isMultiple ? 'Y' : 'N',
+					'MULTIPLE' => 'Y',
 					'MANDATORY' => $isRequired ? 'Y' : 'N',
 					'VALUES' => $environmentStatusEnum,
 					'SETTINGS' => [
 						'DEFAULT_VALUE' => $defaultValue,
 						'STYLE' => 'max-width: 300px;',
-						'ALLOW_NO_VALUE' => $defaultValue === null || !$isRequired ? 'Y' : 'N',
+						'ALLOW_NO_VALUE' => empty($defaultValue) || !$isRequired ? 'Y' : 'N',
+						'VALIGN_PUSH' => true,
 					],
 					'SORT' => $sort,
 				];
@@ -785,13 +1007,37 @@ abstract class Options extends TradingService\Reference\Options
 		return $result;
 	}
 
+	protected function getStatusOutSyncFields(TradingEntity\Reference\Environment $environment, $siteId)
+	{
+		$serviceCode = Market\Data\TextString::toUpper($this->provider->getServiceCode());
+
+		return [
+			'SYNC_STATUS_OUT' => [
+				'TYPE' => 'boolean',
+				'TAB' => 'STATUS',
+				'NAME' => static::getLang('TRADING_SERVICE_COMMON_SYNC_STATUS_OUT'),
+				'HELP_MESSAGE' => static::getLang('TRADING_SERVICE_COMMON_SYNC_STATUS_OUT_HELP', [
+					'#GROUP#' => rtrim(static::getLang('TRADING_SERVICE_' . $serviceCode . '_GROUP_STATUS_OUT'), ': '),
+				]),
+				'SORT' => 2100,
+			],
+		];
+	}
+
 	protected function applyFieldsOverrides(array $fields, array $overrides = null)
 	{
 		if ($overrides !== null)
 		{
 			foreach ($fields as &$field)
 			{
-				$field = $overrides + $field;
+				$fieldOverrides = $overrides;
+
+				if (isset($overrides['DEPEND'], $field['DEPEND']))
+				{
+					$fieldOverrides['DEPEND'] = $overrides['DEPEND'] + $field['DEPEND'];
+				}
+
+				$field = $fieldOverrides + $field;
 
 				if (isset($overrides['SORT']))
 				{

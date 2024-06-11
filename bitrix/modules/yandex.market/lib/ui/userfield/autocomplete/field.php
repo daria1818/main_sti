@@ -2,23 +2,32 @@
 
 namespace Yandex\Market\Ui\UserField\Autocomplete;
 
+use Bitrix\Main;
 use Yandex\Market;
 
 abstract class Field
 {
-	abstract public static function GetUserTypeDescription();
+	public static function GetUserTypeDescription()
+	{
+		throw new Main\NotImplementedException();
+	}
 
-	abstract public static function GetDBColumnType($userField);
+	public static function GetDBColumnType($userField)
+	{
+		throw new Main\NotImplementedException();
+	}
 
-	/**
-	 * @return \Yandex\Market\Ui\UserField\Autocomplete\Provider
-	 */
-	abstract public static function getDataProvider();
+	/** @return Market\Ui\UserField\Autocomplete\Provider */
+	public static function getDataProvider()
+	{
+		throw new Main\NotImplementedException();
+	}
 
-	/**
-	 * @return string
-	 */
-	abstract public static function getLangKey();
+	/** @return string */
+	public static function getLangKey()
+	{
+		throw new Main\NotImplementedException();
+	}
 
 	public static function PrepareSettings($userField)
 	{
@@ -35,7 +44,6 @@ abstract class Field
 		global $APPLICATION;
 
 		$controlId = preg_replace('/[^a-zA-Z0-9_]/i', 'x', $htmlControl['NAME'] . '_' . mt_rand(0, 10000));
-		$autoCompleteValue = null;
 		$dataProvider = static::getDataProvider();
 		$langKey = static::getLangKey();
 		$isMultiple = false;
@@ -87,7 +95,7 @@ abstract class Field
 		global $APPLICATION;
 
 		$dataProvider = static::getDataProvider();
-		$isMainUiFilter = (isset($htmlControl['FORM_NAME']) && $htmlControl['FORM_NAME'] == 'main-ui-filter');
+		$isMainUiFilter = (isset($htmlControl['FORM_NAME']) && $htmlControl['FORM_NAME'] === 'main-ui-filter');
 		$inputName = $htmlControl['NAME'] . ($isMainUiFilter ? '' : '[]');
 		$autoCompleteValueList = $dataProvider::GetValueForAutoCompleteMulti($userField, $htmlControl['VALUE']);
 		$autoCompleteValue = implode(PHP_EOL, $autoCompleteValueList);
@@ -120,7 +128,7 @@ abstract class Field
 				arClearHiddenFields[indClearHiddenFields] = 'jsMLI_<?= $control_id; ?>';
 			}
 		</script>
-		<?
+		<?php
 
 		return ob_get_clean();
 	}
@@ -142,7 +150,7 @@ abstract class Field
 			'type' => 'list',
 			'items' => $enum,
 			'params' => array('multiple' => 'Y'),
-			'filterable' => ''
+			'filterable' => '',
 		];
 	}
 

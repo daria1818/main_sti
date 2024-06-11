@@ -43,4 +43,9 @@ class Item extends Market\Api\Model\Order\Item
 			'instances' => Item\InstanceCollection::class,
 		];
 	}
+
+	public function getRequiredInstanceTypes()
+	{
+		return (array)$this->getField('requiredInstanceTypes');
+	}
 }

@@ -19,19 +19,30 @@ try
 	$arResult['DOCUMENTATION_LINK'] = $format->getDocumentationLink();
 	$arResult['DOCUMENTATION_BETA'] = (Market\Data\TextString::getPosition($typeTitle, '(beta)') !== false);
 
-	$offerTag = $format->getOffer();
+	$root = $format->getOffer();
+	$root->tune($context);
 
-	if (!$offerTag->isDefined())
-	{
-		$arResult['TAGS'][] = $offerTag;
-	}
+	$queue = [
+		$root->getId() => $root,
+	];
 
-	foreach ($offerTag->getChildren() as $childTag)
+	while ($tag = reset($queue))
 	{
-		if (!$childTag->isDefined())
+		$tagId = key($queue);
+
+		if (!$tag->isDefined())
 		{
-			$arResult['TAGS'][] = $childTag;
+			$arResult['TAGS'][$tagId] = $tag;
 		}
+
+		foreach ($tag->getChildren() as $child)
+		{
+			$childId = ($root === $tag ? '' : $tagId . '.') . $child->getId();
+
+			$queue[$childId] = $child;
+		}
+
+		array_shift($queue);
 	}
 }
 catch (Main\SystemException $exception)

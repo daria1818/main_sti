@@ -25,11 +25,30 @@ class Model extends Market\Reference\Storage\Model
 		return Table::getClassName();
 	}
 
+	public static function loadById($id)
+	{
+		try
+		{
+			$result = parent::loadById($id);
+		}
+		catch (Main\ObjectNotFoundException $exception)
+		{
+			throw new Market\Exceptions\Trading\SetupNotFound($exception->getMessage());
+		}
+
+		return $result;
+	}
+
 	public static function loadByTradingInfo(array $tradingInfo)
 	{
 		if (isset($tradingInfo['SETUP_ID']))
 		{
 			$result = static::loadById($tradingInfo['SETUP_ID']);
+
+			if ((int)$result->getExternalId() !== (int)$tradingInfo['TRADING_PLATFORM_ID'])
+			{
+				throw new Market\Exceptions\Trading\SetupNotFound('setup other platform');
+			}
 		}
 		else if (isset($tradingInfo['TRADING_PLATFORM_ID'], $tradingInfo['SITE_ID']))
 		{
@@ -67,7 +86,7 @@ class Model extends Market\Reference\Storage\Model
 		if (empty($list))
 		{
 			$message = static::getLang('TRADING_SETUP_MODEL_NOT_FOUND');
-			throw new Main\ObjectNotFoundException($message);
+			throw new Market\Exceptions\Trading\SetupNotFound($message);
 		}
 
 		return reset($list);
@@ -87,7 +106,7 @@ class Model extends Market\Reference\Storage\Model
 		if (empty($list))
 		{
 			$message = static::getLang('TRADING_SETUP_MODEL_NOT_FOUND');
-			throw new Main\ObjectNotFoundException($message);
+			throw new Market\Exceptions\Trading\SetupNotFound($message);
 		}
 
 		return reset($list);
@@ -115,7 +134,7 @@ class Model extends Market\Reference\Storage\Model
 		if (empty($list))
 		{
 			$message = static::getLang('TRADING_SETUP_MODEL_NOT_FOUND');
-			throw new Main\ObjectNotFoundException($message);
+			throw new Market\Exceptions\Trading\SetupNotFound($message);
 		}
 
 		return reset($list);
@@ -133,6 +152,14 @@ class Model extends Market\Reference\Storage\Model
 		$this->installService();
 		$this->installPlatform();
 		$this->installInternalRecord();
+		$this->postInstallService();
+	}
+
+	public function tweak()
+	{
+		if (!$this->isActive()) { return; }
+
+		$this->tweakService();
 	}
 
 	public function uninstall()
@@ -182,6 +209,27 @@ class Model extends Market\Reference\Storage\Model
 		$this->getService()->getInstaller()->install($environment, $siteId);
 	}
 
+	protected function tweakService()
+	{
+		$environment = $this->getEnvironment();
+		$siteId = $this->getSiteId();
+
+		$this->wakeupService()->getInstaller()->tweak($environment, $siteId, [
+			'SETUP_ID' => $this->getId(),
+		]);
+	}
+
+	protected function postInstallService()
+	{
+		$environment = $this->getEnvironment();
+		$siteId = $this->getSiteId();
+
+		$this->getService()->getOptions()->extendValues($this->getDefinedSettings());
+		$this->getService()->getInstaller()->postInstall($environment, $siteId, [
+			'SETUP_ID' => $this->getId(),
+		]);
+	}
+
 	protected function uninstallService()
 	{
 		$environment = $this->getEnvironment();
@@ -189,10 +237,12 @@ class Model extends Market\Reference\Storage\Model
 		$context = [
 			'SITE_USED' => Facade::hasActiveSetup($siteId, $this->getId()),
 			'SERVICE_USED' => Facade::hasActiveSetupUsingServiceCode($this->getServiceCode(), $this->getId()),
+			'BEHAVIOR_USED' => Facade::hasActiveSetupUsingServiceBehavior($this->getServiceCode(), $this->getBehaviorCode(), $this->getId()),
 			'PLATFORM_USED' => Facade::hasActiveSetupUsingExternalPlatform($this->getExternalId(), $this->getId()),
+			'SETUP_ID' => $this->getId(),
 		];
 
-		$this->getService()->getInstaller()->uninstall($environment, $siteId, $context);
+		$this->wakeupService()->getInstaller()->uninstall($environment, $siteId, $context);
 	}
 
 	protected function installPlatform()
@@ -224,7 +274,7 @@ class Model extends Market\Reference\Storage\Model
 			if ($dbResult->isSuccess())
 			{
 				$id = $dbResult->getId();
-				$this->setField('ID', $id);
+				$this->setField('ID', (string)$id);
 			}
 		}
 
@@ -390,12 +440,14 @@ class Model extends Market\Reference\Storage\Model
 	{
 		$this->activatePlatform();
 		$this->updateActiveFlag(true);
+		$this->syncMultiBehaviorOption();
 	}
 
 	public function deactivate()
 	{
 		$this->deactivatePlatform();
 		$this->updateActiveFlag(false);
+		$this->syncMultiBehaviorOption();
 	}
 
 	protected function activatePlatform()
@@ -418,6 +470,49 @@ class Model extends Market\Reference\Storage\Model
 
 		Market\Result\Facade::handleException($updateResult);
 		$this->setField('ACTIVE', $value);
+	}
+
+	public function syncMultiBehaviorOption()
+	{
+		if ($this->getServiceCode() !== TradingService\Manager::SERVICE_MARKETPLACE) { return; }
+
+		if ($this->isActive())
+		{
+			$queryOther = Table::getList([
+				'select' => [ 'ID' ],
+				'filter' => [
+					'=ACTIVE' => true,
+					'=TRADING_SERVICE' => $this->getServiceCode(),
+					'!=TRADING_BEHAVIOR' => $this->getBehaviorCode(),
+				],
+				'limit' => 1,
+			]);
+
+			$isMulti = (bool)$queryOther->fetch();
+		}
+		else
+		{
+			$querySiblingBehaviors = Table::getList([
+				'select' => [ 'TRADING_BEHAVIOR' ],
+				'filter' => [
+					'=ACTIVE' => true,
+					'=TRADING_SERVICE' => $this->getServiceCode(),
+					'!=ID' => $this->getId(),
+				],
+				'group' => [ 'TRADING_BEHAVIOR' ],
+			]);
+
+			$isMulti = (count($querySiblingBehaviors->fetchAll()) > 1);
+		}
+
+		if ($isMulti)
+		{
+			Market\Config::setOption('menu_multi_behavior_trading', 'Y');
+		}
+		else
+		{
+			Market\Config::removeOption('menu_multi_behavior_trading');
+		}
 	}
 
 	public function getServiceCode()
@@ -462,11 +557,13 @@ class Model extends Market\Reference\Storage\Model
 
 	public function getPlatform()
 	{
-		$serviceCode = $this->getService()->getCode();
-		$siteId = $this->getSiteId();
-		$platformRegistry = $this->getEnvironment()->getPlatformRegistry();
+		$platform = $this->getEnvironment()->getPlatformRegistry()->getPlatform(
+			$this->getService()->getCode(),
+			$this->getSiteId()
+		);
+		$platform->setSetupId($this->getId());
 
-		return $platformRegistry->getPlatform($serviceCode, $siteId);
+		return $platform;
 	}
 
 	public function wakeupService()
@@ -516,13 +613,18 @@ class Model extends Market\Reference\Storage\Model
 	{
 		return array_merge(
 			$this->getSettings()->getValues(),
-			[
-				'SETUP_ID' => $this->getId(),
-				'SITE_ID' => $this->getSiteId(),
-				'PLATFORM_ID' => $this->getExternalId(),
-				'URL_ID' => $this->getUrlId(),
-			]
+			$this->getDefinedSettings()
 		);
+	}
+
+	protected function getDefinedSettings()
+	{
+		return [
+			'SETUP_ID' => $this->getId(),
+			'SITE_ID' => $this->getSiteId(),
+			'PLATFORM_ID' => $this->getExternalId(),
+			'URL_ID' => $this->getUrlId(),
+		];
 	}
 
 	public function getReservedSettingsKeys()

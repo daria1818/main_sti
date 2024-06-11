@@ -23,8 +23,7 @@ trait IblockTypeTrait
             return $item;
         }
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_IB_TYPE_NOT_FOUND'
             )
@@ -44,8 +43,7 @@ trait IblockTypeTrait
             return $item['ID'];
         }
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_IB_TYPE_NOT_FOUND'
             )
@@ -106,13 +104,13 @@ trait IblockTypeTrait
 
     /**
      * Добавляет тип инфоблока, если его не существует
-     * @param array $fields , обязательные параметры - id типа инфоблока
+     * @param array $fields
      * @throws HelperException
      * @return mixed
      */
     public function addIblockTypeIfNotExists($fields = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['ID']);
+        $this->checkRequiredKeys($fields, ['ID']);
 
         $iblockType = $this->getIblockType($fields['ID']);
         if ($iblockType) {
@@ -156,7 +154,7 @@ trait IblockTypeTrait
             return $fields['ID'];
         }
 
-        $this->throwException(__METHOD__, $ib->LAST_ERROR);
+        throw new HelperException($ib->LAST_ERROR);
     }
 
     /**
@@ -173,7 +171,7 @@ trait IblockTypeTrait
             return $iblockTypeId;
         }
 
-        $this->throwException(__METHOD__, $ib->LAST_ERROR);
+        throw new HelperException($ib->LAST_ERROR);
     }
 
     /**
@@ -205,8 +203,7 @@ trait IblockTypeTrait
             return true;
         }
 
-        $this->throwException(
-            __METHOD__,
+        throw new HelperException(
             Locale::getMessage(
                 'ERR_CANT_DELETE_IBLOCK_TYPE', [
                     '#NAME#' => $typeId,
@@ -222,8 +219,11 @@ trait IblockTypeTrait
      */
     public function getIblockTypeLangs($typeId)
     {
+        $lby = 'sort';
+        $lorder = 'asc';
+
         $result = [];
-        $dbres = CLanguage::GetList($lby = 'sort', $lorder = 'asc');
+        $dbres = CLanguage::GetList($lby, $lorder);
         while ($item = $dbres->GetNext()) {
             $values = CIBlockType::GetByIDLang($typeId, $item['LID'], false);
             if (!empty($values)) {
@@ -240,13 +240,13 @@ trait IblockTypeTrait
     /**
      * Сохраняет тип инфоблока
      * Создаст если не было, обновит если существует и отличается
-     * @param array $fields , обязательные параметры - тип инфоблока
+     * @param array $fields
      * @throws HelperException
      * @return bool|mixed
      */
     public function saveIblockType($fields = [])
     {
-        $this->checkRequiredKeys(__METHOD__, $fields, ['ID']);
+        $this->checkRequiredKeys($fields, ['ID']);
 
         $item = $this->getIblockType($fields['ID']);
         $exists = $this->prepareExportIblockType($item);
@@ -283,19 +283,7 @@ trait IblockTypeTrait
             return $ok;
         }
 
-        $ok = $this->getMode('test') ? true : $fields['ID'];
-        if ($this->getMode('out_equal')) {
-            $this->outIf(
-                $ok,
-                Locale::getMessage(
-                    'IB_TYPE_EQUAL',
-                    [
-                        '#NAME#' => $fields['ID'],
-                    ]
-                )
-            );
-        }
-        return $ok;
+        return $this->getMode('test') ? true : $fields['ID'];
     }
 
     /**

@@ -31,7 +31,12 @@ class Field
 
 		if ($value !== null)
 		{
-			$defaults['VALUE'] = $value;
+			$defaults['VALUE'] = static::unifyValue($value);
+		}
+
+		if (isset($userField['VALUE']))
+		{
+			$userField['VALUE'] = static::unifyValue($userField['VALUE']);
 		}
 
 		if ($row !== null)
@@ -41,5 +46,26 @@ class Field
 		}
 
 		return $userField + $defaults;
+	}
+
+	public static function unifyValue($value)
+	{
+		if (is_array($value))
+		{
+			foreach ($value as &$item)
+			{
+				if ($item instanceof Market\Data\Type\CanonicalDateTime)
+				{
+					$item = Main\Type\DateTime::createFromTimestamp($item->getTimestamp());
+				}
+			}
+			unset($item);
+		}
+		else if ($value instanceof Market\Data\Type\CanonicalDateTime)
+		{
+			$value = Main\Type\DateTime::createFromTimestamp($value->getTimestamp());
+		}
+
+		return $value;
 	}
 }

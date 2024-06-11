@@ -7,6 +7,9 @@ use Yandex\Market;
 
 class GridList extends Market\Component\Data\GridList
 {
+	use Market\Reference\Concerns\HasMessage;
+	use Market\Component\Concerns\HasCalculatedFields;
+
 	protected $uiService;
 
 	public function prepareComponentParams($params)
@@ -77,10 +80,69 @@ class GridList extends Market\Component\Data\GridList
 	public function getFields(array $select = [])
 	{
 		$result = parent::getFields($select);
+		$result += $this->getCalculatedFields();
+
+		if (isset($result['DEBUG']))
+		{
+			$result['DEBUG'] = $this->writeDebugCompoundTypes($result['DEBUG'], $result);
+		}
 
 		if (isset($result['SETUP']) && $this->getComponentParam('USE_SERVICE'))
 		{
 			$result['SETUP'] = $this->modifySetupField($result['SETUP']);
+		}
+
+		return $result;
+	}
+
+	protected function getCalculatedFields()
+	{
+		return [
+			'DEBUG' => [
+				'USER_TYPE' => Market\Ui\UserField\Manager::getUserType('compound'),
+				'FIELD_NAME' => 'DEBUG',
+				'LIST_COLUMN_LABEL' => self::getMessage('FIELD_DEBUG', null, 'DEBUG'),
+				'FILTERABLE' => false,
+				'SORTABLE' => false,
+				'USES' => [
+					'CONTEXT',
+					'TRACE',
+				],
+			],
+		];
+	}
+
+	protected function writeDebugCompoundTypes($field, $siblings)
+	{
+		$field['FIELDS'] = [];
+
+		foreach ($field['USES'] as $name)
+		{
+			if (!isset($siblings[$name])) { continue; }
+
+			$field['FIELDS'][$name] = $siblings[$name];
+		}
+
+		return $field;
+	}
+
+	public function load(array $queryParameters = [])
+	{
+		list($commonParameters, $calculatedParameters) = $this->extractLoadCalculatedParameters($queryParameters);
+
+		$result = parent::load($commonParameters);
+		$result = $this->loadCalculated($result, $calculatedParameters);
+
+		return $result;
+	}
+
+	protected function loadCalculatedValue($item, $fieldName)
+	{
+		$result = null;
+
+		if ($fieldName === 'DEBUG')
+		{
+			$result = Market\Ui\UserField\Helper\Renderer::VALUE_HOLDER;
 		}
 
 		return $result;

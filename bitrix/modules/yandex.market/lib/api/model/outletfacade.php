@@ -48,4 +48,35 @@ class OutletFacade
 	{
 		return new Market\Api\Partner\Outlets\Request();
 	}
+
+	public static function load(Market\Api\Reference\HasOauthConfiguration $options, $outletId, Market\Psr\Log\LoggerInterface $logger = null)
+	{
+		$request = static::createLoadRequest();
+
+		$request->setLogger($logger);
+		$request->setOauthClientId($options->getOauthClientId());
+		$request->setOauthToken($options->getOauthToken()->getAccessToken());
+		$request->setCampaignId($options->getCampaignId());
+		$request->setOutletId($outletId);
+
+		$sendResult = $request->send();
+
+		if (!$sendResult->isSuccess())
+		{
+			$errorMessage = implode(PHP_EOL, $sendResult->getErrorMessages());
+			$exceptionMessage = static::getLang('API_OUTLET_FETCH_FAILED', [ '#MESSAGE#' => $errorMessage ], $errorMessage);
+
+			throw new Market\Exceptions\Api\Request($exceptionMessage);
+		}
+
+		/** @var $response Market\Api\Partner\Outlet\Response */
+		$response = $sendResult->getResponse();
+
+		return $response->getOutlet();
+	}
+
+	protected static function createLoadRequest()
+	{
+		return new Market\Api\Partner\Outlet\Request();
+	}
 }

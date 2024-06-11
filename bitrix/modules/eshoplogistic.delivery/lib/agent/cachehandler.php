@@ -18,7 +18,7 @@ class CacheHandler
     /** Agent for clearing cache and managed cache directories
      * @return string
      */
-    public function clean()
+    public static function clean()
     {
 
         $cache = Cache::createInstance();

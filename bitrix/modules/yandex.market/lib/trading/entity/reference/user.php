@@ -9,6 +9,8 @@ abstract class User
 {
 	protected $environment;
 	protected $data;
+	/** @var array|null */
+	protected $searchOnly;
 
 	public function __construct(Environment $environment, $data)
 	{
@@ -72,5 +74,15 @@ abstract class User
 	public function getId()
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getId');
+	}
+
+	public function searchOnly(array $fields)
+	{
+		$this->searchOnly = $fields;
+	}
+
+	protected function canSearch($field)
+	{
+		return $this->searchOnly === null || in_array($field, $this->searchOnly, true);
 	}
 }

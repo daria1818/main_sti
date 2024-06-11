@@ -61,7 +61,7 @@ class Table extends Market\Reference\Storage\Table
 				'size' => 20,
 				'validation' => [__CLASS__, 'validateEntityId'],
 			]),
-			new Main\Entity\StringField('CONTEXT', [
+			new Main\Entity\TextField('CONTEXT', [
 				'serialized' => true,
 			]),
 			new Main\Entity\TextField('TRACE', [
@@ -89,6 +89,7 @@ class Table extends Market\Reference\Storage\Table
 	public static function migrate(Main\DB\Connection $connection)
 	{
 		static::migrateAudit($connection);
+		static::migrateContext($connection);
 	}
 
 	protected static function migrateAudit(Main\DB\Connection $connection)
@@ -96,6 +97,28 @@ class Table extends Market\Reference\Storage\Table
 		$entity = static::getEntity();
 
 		Market\Migration\StorageFacade::updateFieldsLength($connection, $entity, [ 'AUDIT' ]);
+	}
+
+	protected static function migrateContext(Main\DB\Connection $connection)
+	{
+		$entity = static::getEntity();
+		$storedTypes = Market\Migration\StorageFacade::getTableColumnTypes($connection, $entity);
+		$columnName = 'CONTEXT';
+
+		if (!isset($storedTypes[$columnName])) { return; }
+
+		$sqlHelper = $connection->getSqlHelper();
+		$field = $entity->getField($columnName);
+		$fieldType = $sqlHelper->getColumnTypeByField($field);
+
+		if (Market\Data\TextString::toLower($fieldType) === Market\Data\TextString::toLower($storedTypes[$columnName])) { return; }
+
+		$connection->queryExecute(sprintf(
+			'ALTER TABLE %s MODIFY COLUMN %s %s',
+			$sqlHelper->quote($entity->getDBTableName()),
+			$sqlHelper->quote($columnName),
+			$fieldType
+		));
 	}
 
 	public static function validateUrl()
@@ -127,6 +150,7 @@ class Table extends Market\Reference\Storage\Table
 		$result['AUDIT'] = static::extendAuditDescription($result['AUDIT']);
 		$result['SETUP'] = static::extendSetupDescription($result['SETUP']);
 		$result['TRACE'] = static::extendTraceDescription($result['TRACE']);
+		$result['CONTEXT'] = static::extendContextDescription($result['CONTEXT']);
 
 		return $result;
 	}
@@ -188,6 +212,13 @@ class Table extends Market\Reference\Storage\Table
 	protected static function extendTraceDescription($field)
 	{
 		$field['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('trace');
+
+		return $field;
+	}
+
+	protected static function extendContextDescription($field)
+	{
+		$field['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('logMessage');
 
 		return $field;
 	}

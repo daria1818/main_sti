@@ -1,8 +1,8 @@
 <?php
-
+/** @noinspection PhpIncompatibleReturnTypeInspection */
+/** @noinspection PhpReturnDocTypeMismatchInspection */
 namespace Yandex\Market\Trading\Service\MarketplaceDbs\Options;
 
-use Bitrix\Main;
 use Yandex\Market;
 use Yandex\Market\Trading\Entity as TradingEntity;
 use Yandex\Market\Trading\Service as TradingService;
@@ -16,6 +16,15 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 	const SHIPMENT_DATE_BEHAVIOR_DELIVERY_DAY = 'deliveryDay';
 	const SHIPMENT_DATE_BEHAVIOR_ORDER_OFFSET = 'orderOffset';
 	const SHIPMENT_DATE_BEHAVIOR_DELIVERY_OFFSET = 'deliveryOffset';
+
+	const PERIOD_WEEKEND_RULE_EDGE = 'edge';
+	const PERIOD_WEEKEND_RULE_FULL = 'full';
+	const PERIOD_WEEKEND_RULE_NONE = 'none';
+
+	const INTERVAL_FORMAT_TIME = 'time';
+	const INTERVAL_FORMAT_PERIOD = 'period';
+
+	const OUTLET_TYPE_MANUAL = 'manual';
 
 	/** @var TradingService\MarketplaceDbs\Provider */
 	protected $provider;
@@ -38,24 +47,52 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 		return (string)$this->getRequiredValue('TYPE');
 	}
 
-	/** @return int|null */
+	/**
+	 * @deprecated
+	 * @return int|null
+	 */
 	public function getDaysFrom()
 	{
 		return $this->getDaysValue('FROM');
  	}
 
-	/** @return int|null */
+	/**
+	 * @deprecated
+	 * @return int|null
+	 */
 	public function getDaysTo()
 	{
 		return $this->getDaysValue('TO');
  	}
 
- 	protected function getDaysValue($key)
+	public function isFixedPeriod()
+	{
+		return (string)$this->getValue('FIXED_PERIOD') === Market\Ui\UserField\BooleanType::VALUE_Y;
+	}
+
+	/** @return int|null */
+	public function getPeriodFrom()
+	{
+		return $this->getDaysValue('FROM', 'PERIOD');
+	}
+
+	/** @return int|null */
+	public function getPeriodTo()
+	{
+		return $this->getDaysValue('TO', 'PERIOD');
+	}
+
+ 	protected function getDaysValue($key, $from = 'DAYS')
     {
-	    $days = $this->getValue('DAYS');
+	    $days = $this->getValue($from);
 
 	    return isset($days[$key]) && (string)$days[$key] !== '' ? (int)$days[$key] : null;
     }
+
+	public function getOutletType()
+	{
+		return $this->getValue('OUTLET_TYPE');
+	}
 
 	/** @return string[]|null */
 	public function getOutlets()
@@ -65,23 +102,36 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
     	return $values !== null ? (array)$values : null;
     }
 
+	public function isInvertible()
+	{
+		return (string)$this->getValue('INVERTIBLE') === Market\Ui\UserField\BooleanType::VALUE_Y;
+	}
+
 	/** @return ScheduleOptions */
 	public function getSchedule()
     {
     	return $this->getFieldsetCollection('SCHEDULE');
     }
 
-	/** @return string|null */
-	public function getShipmentDelay()
-    {
-	    return $this->getValue('SHIPMENT_DELAY');
-    }
+	/** @return AssemblyDelayOption */
+	public function getAssemblyDelay()
+	{
+		return $this->getFieldset('ASSEMBLY_DELAY');
+	}
 
 	/** @return bool */
 	public function increasePeriodOnWeekend()
     {
-    	return (string)$this->getValue('INCREASE_PERIOD_ON_WEEKEND') === Market\Ui\UserField\BooleanType::VALUE_Y;
+    	return in_array($this->getPeriodWeekendRule(), [
+		    static::PERIOD_WEEKEND_RULE_EDGE,
+		    static::PERIOD_WEEKEND_RULE_FULL,
+	    ], true);
     }
+
+	public function getPeriodWeekendRule()
+	{
+		return $this->getValue('PERIOD_WEEKEND_RULE', static::PERIOD_WEEKEND_RULE_NONE);
+	}
 
 	/** @return HolidayOption */
 	public function getHoliday()
@@ -130,14 +180,111 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 		return $result;
 	}
 
+	public function getIntervalFormat()
+	{
+		return $this->getValue('INTERVAL_FORMAT');
+	}
+
+	/** @return string|null */
+	public function getDigitalAdapter()
+	{
+		return Market\Data\StringType::sanitize($this->getValue('DIGITAL_ADAPTER'));
+	}
+
+	public function getDigitalSettings()
+	{
+		$option = $this->getValue('DIGITAL_SETTINGS');
+
+		return is_array($option) ? $option : [];
+	}
+
+	public function useAutoFinish()
+	{
+		return (string)$this->getValue('AUTO_FINISH') === Market\Ui\UserField\BooleanType::VALUE_Y;
+	}
+
+	protected function applyValues()
+	{
+		$this->applyIncreasePeriodWeekend();
+		$this->applyIntervalFormat();
+		$this->applyOutletType();
+		$this->applyPeriodFromDays();
+		$this->applyShipmentDelayToAssembly();
+		$this->getAssemblyDelay()->applyTimeValue($this->getSchedule());
+	}
+
+	protected function applyIncreasePeriodWeekend()
+	{
+		$option = (string)$this->getValue('INCREASE_PERIOD_ON_WEEKEND');
+
+		if ($option === '') { return; }
+
+		$rule = $option === Market\Ui\UserField\BooleanType::VALUE_Y
+			? static::PERIOD_WEEKEND_RULE_EDGE
+			: static::PERIOD_WEEKEND_RULE_NONE;
+
+		$this->values += [
+			'PERIOD_WEEKEND_RULE' => $rule,
+		];
+		unset($this->values['INCREASE_PERIOD_ON_WEEKEND']);
+	}
+
+	protected function applyIntervalFormat()
+	{
+		$option = (string)$this->getValue('INTERVAL_FORMAT');
+
+		if ($option !== '' || $this->getSchedule()->count() === 0) { return; }
+
+		$this->values['INTERVAL_FORMAT'] = static::INTERVAL_FORMAT_TIME;
+	}
+
+	protected function applyOutletType()
+	{
+		if (
+			$this->getValue('TYPE') !== TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP
+			|| (string)$this->getValue('OUTLET_TYPE') !== ''
+		)
+		{
+			return;
+		}
+
+		$this->values['OUTLET_TYPE'] = static::OUTLET_TYPE_MANUAL;
+	}
+
+	protected function applyShipmentDelayToAssembly()
+	{
+		$shipmentDelay = (string)$this->getValue('SHIPMENT_DELAY');
+		$assemblyDelay = $this->getAssemblyDelay();
+
+		if ($shipmentDelay === '' || !$assemblyDelay->isEmpty()) { return; }
+
+		$assemblyDelay->setValues([
+			'TIME' => $shipmentDelay,
+		]);
+		unset($this->values['SHIPMENT_DELAY']);
+	}
+
+	protected function applyPeriodFromDays()
+	{
+		if ($this->getValue('PERIOD') !== null || $this->isFixedPeriod()) { return; }
+
+		$days = $this->getValue('DAYS');
+
+		if (empty($days)) { return; }
+
+		$this->values['PERIOD'] = $days;
+		unset($this->values['DAYS']);
+	}
+
 	public function getFieldDescription(TradingEntity\Reference\Environment $environment, $siteId)
 	{
 		return parent::getFieldDescription($environment, $siteId) + [
 			'SETTINGS' => [
-				'SUMMARY' => self::getMessage('SUMMARY', null, '#TYPE# &laquo;#ID#&raquo;, #DAYS#'),
+				'SUMMARY' => self::getMessage('SUMMARY', null, '#TYPE# &laquo;#ID#&raquo;, #DAYS# (#HOLIDAY.CALENDAR#)'),
 				'LAYOUT' => 'summary',
 				'MODAL_WIDTH' => 600,
 				'MODAL_HEIGHT' => 450,
+				'VALIGN_PUSH' => 'pill',
 			],
 		];
 	}
@@ -146,19 +293,24 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 	{
 		return
 			$this->getSelfFields($environment, $siteId)
+			+ $this->getDigitalFields($environment, $siteId)
 			+ $this->getHolidayFields($environment, $siteId);
 	}
 
 	protected function getSelfFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
+		$deliveryEnum = $this->getDeliveryEnum($environment, $siteId);
+		$outletTypeEnum = $this->getOutletTypeEnum($environment);
+
 		return [
 			'ID' => [
 				'TYPE' => 'enumeration',
 				'MANDATORY' => 'Y',
 				'NAME' => self::getMessage('ID'),
-				'VALUES' => $this->getDeliveryEnum($environment, $siteId),
+				'VALUES' => $deliveryEnum,
 				'SETTINGS' => [
 					'STYLE' => 'max-width: 220px;',
+					'ALLOW_UNKNOWN' => 'Y', // preserve deactivated services
 				],
 			],
 			'NAME' => [
@@ -175,17 +327,19 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 				'HELP_MESSAGE' => self::getMessage('TYPE_HELP'),
 				'VALUES' => $this->provider->getDelivery()->getTypeEnum(),
 			],
-			'DAYS' => [
-				'TYPE' => 'numberRange',
-				'NAME' => self::getMessage('DAYS'),
-				'HELP_MESSAGE' => self::getMessage('DAYS_HELP'),
+			'OUTLET_TYPE' => [
+				'TYPE' => 'enumeration',
+				'NAME' => self::getMessage('OUTLET_TYPE'),
+				'HELP_MESSAGE' => self::getMessage('OUTLET_TYPE_HELP'),
+				'VALUES' => $outletTypeEnum,
+				'DEPEND' => [
+					'TYPE' => [
+						'RULE' => 'ANY',
+						'VALUE' => TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP,
+					],
+				],
 				'SETTINGS' => [
-					'SUMMARY' => '#FROM#-#TO#',
-					'UNIT' => array_filter([
-						self::getMessage('DAYS_UNIT_1', null, ''),
-						self::getMessage('DAYS_UNIT_2', null, ''),
-						self::getMessage('DAYS_UNIT_5', null, ''),
-					]),
+					'ALLOW_NO_VALUE' => 'N',
 				],
 			],
 			'OUTLET' => [
@@ -197,9 +351,29 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 						'RULE' => 'ANY',
 						'VALUE' => TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP,
 					],
+					'OUTLET_TYPE' => [
+						'RULE' => 'ANY',
+						'VALUE' => static::OUTLET_TYPE_MANUAL,
+					],
 				],
 				'SETTINGS' => [
 					'SERVICE' => $this->provider->getCode(),
+					'VALIGN_PUSH' => true,
+				],
+			],
+			'INVERTIBLE' => [
+				'TYPE' => 'boolean',
+				'NAME' => self::getMessage('INVERTIBLE'),
+				'HELP_MESSAGE' => self::getMessage('INVERTIBLE_HELP'),
+				'DEPEND' => [
+					'TYPE' => [
+						'RULE' => 'ANY',
+						'VALUE' => TradingService\MarketplaceDbs\Delivery::TYPE_DELIVERY,
+					],
+					'@YANDEX_MODE' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+						'VALUE' => [ TradingService\Marketplace\Options::YANDEX_MODE_PULL ],
+					],
 				],
 			],
 			'SHIPMENT_DATE_BEHAVIOR' => [
@@ -227,6 +401,12 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 				'SETTINGS' => [
 					'ALLOW_NO_VALUE' => 'N',
 				],
+				'DEPEND' => [
+					'@YANDEX_MODE' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+						'VALUE' => [ TradingService\Marketplace\Options::YANDEX_MODE_PULL ],
+					],
+				],
 			],
 			'SHIPMENT_DATE_OFFSET' => [
 				'TYPE' => 'number',
@@ -239,6 +419,63 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 							static::SHIPMENT_DATE_BEHAVIOR_DELIVERY_OFFSET,
 							static::SHIPMENT_DATE_BEHAVIOR_ORDER_OFFSET,
 						],
+					],
+				],
+			],
+			'FIXED_PERIOD' => [
+				'TYPE' => 'boolean',
+				'NAME' => self::getMessage('FIXED_PERIOD'),
+				'HELP_MESSAGE' => self::getMessage('FIXED_PERIOD_HELP', [
+					'#DELIVERY_ADMIN_URL#' => Market\Ui\Admin\Path::getPageUrl('sale_delivery_service_list', [
+						'lang' => LANGUAGE_ID,
+					]),
+				]),
+				'DEPEND' => [
+					'@YANDEX_MODE' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+						'VALUE' => [ TradingService\Marketplace\Options::YANDEX_MODE_PULL ],
+					],
+				],
+			],
+			'PERIOD' => [
+				'TYPE' => 'numberRange',
+				'NAME' => self::getMessage('PERIOD'),
+				'SETTINGS' => [
+					'SUMMARY' => '#FROM#-#TO#',
+					'UNIT' => array_filter([
+						self::getMessage('DAYS_UNIT_1', null, ''),
+						self::getMessage('DAYS_UNIT_2', null, ''),
+						self::getMessage('DAYS_UNIT_5', null, ''),
+					]),
+				],
+				'DEPEND' => [
+					'FIXED_PERIOD' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EMPTY,
+						'VALUE' => false,
+					],
+				],
+			],
+			/** @deprecated */
+			'DAYS' => [
+				'TYPE' => 'numberRange',
+				'NAME' => self::getMessage('DAYS'),
+				'HELP_MESSAGE' => self::getMessage('DAYS_HELP'),
+				'SETTINGS' => [
+					'SUMMARY' => '#FROM#-#TO#',
+					'UNIT' => array_filter([
+						self::getMessage('DAYS_UNIT_1', null, ''),
+						self::getMessage('DAYS_UNIT_2', null, ''),
+						self::getMessage('DAYS_UNIT_5', null, ''),
+					]),
+				],
+				'DEPEND' => [
+					'DAYS' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EMPTY,
+						'VALUE' => false,
+					],
+					'FIXED_PERIOD' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EMPTY,
+						'VALUE' => true,
 					],
 				],
 			],
@@ -255,12 +492,16 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 							TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP,
 						],
 					],
+					'@YANDEX_MODE' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+						'VALUE' => [ TradingService\Marketplace\Options::YANDEX_MODE_PULL ],
+					],
 				],
 			],
-			'SHIPMENT_DELAY' => [
-				'TYPE' => 'time',
-				'NAME' => self::getMessage('SHIPMENT_DELAY'),
-				'HELP_MESSAGE' => self::getMessage('SHIPMENT_DELAY_HELP'),
+			'ASSEMBLY_DELAY' => $this->getAssemblyDelay()->getFieldDescription($environment, $siteId) + [
+				'TYPE' => 'fieldset',
+				'NAME' => self::getMessage('ASSEMBLY_DELAY'),
+				'HELP_MESSAGE' => self::getMessage('ASSEMBLY_DELAY_HELP'),
 				'DEPEND' => [
 					'TYPE' => [
 						'RULE' => 'ANY',
@@ -269,23 +510,181 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 							TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP,
 						],
 					],
+					'@YANDEX_MODE' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+						'VALUE' => [ TradingService\Marketplace\Options::YANDEX_MODE_PULL ],
+					],
+				],
+				'SETTINGS' => [
+					'VALIGN' => 'middle',
 				],
 			],
-			'INCREASE_PERIOD_ON_WEEKEND' => [
-				'TYPE' => 'boolean',
-				'NAME' => self::getMessage('INCREASE_PERIOD_ON_WEEKEND'),
-				'HELP_MESSAGE' => self::getMessage('INCREASE_PERIOD_ON_WEEKEND_HELP'),
+			'PERIOD_WEEKEND_RULE' => [
+				'TYPE' => 'enumeration',
+				'NAME' => self::getMessage('PERIOD_WEEKEND_RULE'),
+				'HELP_MESSAGE' => self::getMessage('PERIOD_WEEKEND_RULE_HELP'),
+				'VALUES' => [
+					[
+						'ID' => static::PERIOD_WEEKEND_RULE_FULL,
+						'VALUE' => self::getMessage('PERIOD_WEEKEND_RULE_FULL'),
+					],
+					[
+						'ID' => static::PERIOD_WEEKEND_RULE_EDGE,
+						'VALUE' => self::getMessage('PERIOD_WEEKEND_RULE_EDGE'),
+					],
+					[
+						'ID' => static::PERIOD_WEEKEND_RULE_NONE,
+						'VALUE' => self::getMessage('PERIOD_WEEKEND_RULE_NONE'),
+					],
+				],
+				'SETTINGS' => [
+					'ALLOW_NO_VALUE' => 'N',
+				],
 				'DEPEND' => [
 					'TYPE' => [
 						'RULE' => 'ANY',
 						'VALUE' => [
 							TradingService\MarketplaceDbs\Delivery::TYPE_DELIVERY,
 							TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP,
+						],
+					],
+					'@YANDEX_MODE' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+						'VALUE' => [ TradingService\Marketplace\Options::YANDEX_MODE_PULL ],
+					],
+				],
+			],
+			'INTERVAL_FORMAT' => [
+				'TYPE' => 'enumeration',
+				'NAME' => self::getMessage('INTERVAL_FORMAT'),
+				'HELP_MESSAGE' => self::getMessage('INTERVAL_FORMAT_HELP'),
+				'VALUES' => [
+					[
+						'ID' => static::INTERVAL_FORMAT_TIME,
+						'VALUE' => self::getMessage('INTERVAL_FORMAT_TIME'),
+					],
+					[
+						'ID' => static::INTERVAL_FORMAT_PERIOD,
+						'VALUE' => self::getMessage('INTERVAL_FORMAT_PERIOD'),
+					],
+				],
+				'SETTINGS' => [
+					'ALLOW_NO_VALUE' => 'N',
+				],
+				'DEPEND' => [
+					'TYPE' => [
+						'RULE' => 'ANY',
+						'VALUE' => [
+							TradingService\MarketplaceDbs\Delivery::TYPE_DELIVERY,
+						],
+					],
+					'SCHEDULE' => [
+						'RULE' => 'EMPTY',
+						'VALUE' => false,
+					],
+					'@YANDEX_MODE' => [
+						'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+						'VALUE' => [ TradingService\Marketplace\Options::YANDEX_MODE_PULL ],
+					],
+				],
+			],
+		];
+	}
+
+	protected function getDigitalFields(TradingEntity\Reference\Environment $environment, $siteId)
+	{
+		$digitalAdapters = $environment->getDigitalRegistry()->getAdapters();
+
+		return
+			$this->getDigitalCommonFields($digitalAdapters)
+			+ $this->getDigitalSettingFields($digitalAdapters, $siteId);
+	}
+
+	protected function getDigitalCommonFields(array $digitalAdapters)
+	{
+		return [
+			'AUTO_FINISH' => [
+				'TYPE' => 'boolean',
+				'NAME' => self::getMessage('AUTO_FINISH'),
+				'HELP_MESSAGE' => self::getMessage('AUTO_FINISH_HELP'),
+				'GROUP' => self::getMessage('AUTOMATION'),
+				'DEPEND' => [
+					'TYPE' => [
+						'RULE' => 'ANY',
+						'VALUE' => [
+							TradingService\MarketplaceDbs\Delivery::TYPE_DIGITAL,
+						],
+					],
+				],
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => Market\Ui\UserField\BooleanType::VALUE_Y,
+				],
+			],
+			'DIGITAL_ADAPTER' => [
+				'TYPE' => 'enumeration',
+				'NAME' => self::getMessage('DIGITAL_ADAPTER'),
+				'HELP_MESSAGE' => self::getMessage('DIGITAL_ADAPTER_HELP'),
+				'GROUP' => self::getMessage('AUTOMATION'),
+				'VALUES' => array_map(static function($type, TradingEntity\Reference\Digital $digital) {
+					return [
+						'ID' => $type,
+						'VALUE' => $digital->getTitle(),
+					];
+				}, array_keys($digitalAdapters), array_values($digitalAdapters)),
+				'SETTINGS' => [
+					'STYLE' => 'max-width: 220px;',
+				],
+				'DEPEND' => [
+					'TYPE' => [
+						'RULE' => 'ANY',
+						'VALUE' => [
+							TradingService\MarketplaceDbs\Delivery::TYPE_DIGITAL,
 						],
 					],
 				],
 			],
 		];
+	}
+
+	protected function getDigitalSettingFields(array $digitalAdapters, $siteId)
+	{
+		$result = [];
+
+		/** @var TradingEntity\Reference\Digital $digitalAdapter */
+		foreach ($digitalAdapters as $type => $digitalAdapter)
+		{
+			foreach ($digitalAdapter->getFields($siteId) as $code => $field)
+			{
+				$fullCode = sprintf('DIGITAL_SETTINGS[%s]', $code);
+
+				if (isset($result[$fullCode]))
+				{
+					$result[$fullCode]['DEPEND']['DIGITAL_ADAPTER']['VALUE'][] = $type;
+					continue;
+				}
+
+				if (!isset($field['DEPEND'])) { $field['DEPEND'] = []; }
+
+				$field['DEPEND'] += [
+					'TYPE' => [
+						'RULE' => 'ANY',
+						'VALUE' => [
+							TradingService\MarketplaceDbs\Delivery::TYPE_DIGITAL,
+						],
+					],
+					'DIGITAL_ADAPTER' => [
+						'RULE' => 'ANY',
+						'VALUE' => [
+							$type,
+						],
+					],
+				];
+
+				$result[$fullCode] = $field;
+			}
+		}
+
+		return $result;
 	}
 
 	protected function getHolidayFields(TradingEntity\Reference\Environment $environment, $siteId)
@@ -301,12 +700,29 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 						TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP,
 					],
 				],
+				'@YANDEX_MODE' => [
+					'RULE' => Market\Utils\UserField\DependField::RULE_EXCLUDE,
+					'VALUE' => [ TradingService\Marketplace\Options::YANDEX_MODE_PULL ],
+				],
 			],
 		];
 
 		foreach ($this->getHoliday()->getFields($environment, $siteId) as $name => $field)
 		{
 			$key = sprintf('HOLIDAY[%s]', $name);
+
+			if (isset($field['DEPEND']))
+			{
+				$newDepend = $defaults['DEPEND'];
+
+				foreach ($field['DEPEND'] as $dependName => $rule)
+				{
+					$newName = sprintf('[HOLIDAY][%s]', $dependName);
+					$newDepend[$newName] = $rule;
+				}
+
+				$field['DEPEND'] = $newDepend;
+			}
 
 			$result[$key] = $field + $defaults;
 		}
@@ -323,6 +739,19 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 		});
 	}
 
+	protected function getOutletTypeEnum(TradingEntity\Reference\Environment $environment)
+	{
+		$result = $environment->getOutletRegistry()->getEnum();
+		$result[] = [
+			'ID' => static::OUTLET_TYPE_MANUAL,
+			'VALUE' => self::getMessage('OUTLET_TYPE_MANUAL'),
+			'INVERTIBLE' => false,
+			'SELECTABLE' => false,
+		];
+
+		return $result;
+	}
+
 	protected function getFieldsetCollectionMap()
 	{
 		return [
@@ -334,6 +763,7 @@ class DeliveryOption extends TradingService\Reference\Options\Fieldset
 	{
 		return [
 			'HOLIDAY' => HolidayOption::class,
+			'ASSEMBLY_DELAY' => AssemblyDelayOption::class,
 		];
 	}
 }

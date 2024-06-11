@@ -71,5 +71,6 @@ $MESS["MANIPULATOR"] = "Манипулятор";
 $MESS["REQUIRED_OPEN_CAR"] = "Требуется открытая машина";
 $MESS["UN_CANOPY"] = "Растентовка";
 
+$MESS["DELLINDEV_SHIPMENT_CHOOSE_TIME"] = "Не указано";
 
 ?>

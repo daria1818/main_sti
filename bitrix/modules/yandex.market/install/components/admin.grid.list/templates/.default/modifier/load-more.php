@@ -32,12 +32,12 @@ if (preg_match('/<a class=".*?adm-nav-page-next.*?"(.*?)>/s', $adminList->sNavTe
 				. Loc::getMessage('YANDEX_MARKET_T_ADMIN_GRID_LIST_LOAD_MORE')
 			. '</a>'
 			. '<script>
-				(function() {
-					var element = document.getElementById(\'yamarketAdminListLoadMore\');
-					var AdminList = BX.namespace(\'YandexMarket.AdminList\');
+				setTimeout(function() {
+					var element = top.document.getElementById(\'yamarketAdminListLoadMore\');
+					var AdminList = top.BX.namespace(\'YandexMarket.AdminList\');
 					
 					new AdminList.LoadMore(element, ' . Json::encode($pluginOptions) . ');
-				})();
+				});
 			</script>';
 
 		$adminList->sNavText = preg_replace('/(<a class=".*?adm-nav-page-next".*?>.*?<\\/a>)/s', '$1' . $buttonHtml, $adminList->sNavText , 1);

@@ -21,7 +21,9 @@ trait HasMeaningfulProperties
 
 		if (!empty($propertyValues))
 		{
-			$fillResult = $this->order->fillProperties($propertyValues);
+			$order = method_exists($this, 'getOrder') ? $this->getOrder() : $this->order;
+
+			$fillResult = $order->fillProperties($propertyValues);
 			$fillData = $fillResult->getData();
 
 			if (isset($fillData['FILLED']))

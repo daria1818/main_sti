@@ -19,7 +19,6 @@ $MESS['YANDEX_MARKET_TRADING_BERU_ORDER_VIEW_BASKET_NAME'] = 'Название �
 $MESS['YANDEX_MARKET_TRADING_BERU_ORDER_VIEW_BASKET_PRICE'] = 'Цена на&nbsp;Беру';
 $MESS['YANDEX_MARKET_TRADING_BERU_ORDER_VIEW_BASKET_SUBSIDY'] = 'Предоставленные<br /> скидки';
 $MESS['YANDEX_MARKET_TRADING_BERU_ORDER_VIEW_BASKET_COUNT'] = 'Количество';
-$MESS['YANDEX_MARKET_TRADING_BERU_ORDER_VIEW_BASKET_BOX_COUNT'] = 'Распределено<br /> по&nbsp;грузовым местам';
 $MESS['YANDEX_MARKET_TRADING_BERU_ORDER_VIEW_BASKET_VAT'] = 'Ставка налогов';
 $MESS['YANDEX_MARKET_TRADING_BERU_ORDER_VIEW_BASKET_SUMMARY_ITEMS_TOTAL'] = 'Заплатил покупатель';
 $MESS['YANDEX_MARKET_TRADING_BERU_ORDER_VIEW_BASKET_SUMMARY_SUBSIDY_TOTAL'] = 'Сумма компенсации Беру';

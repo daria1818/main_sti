@@ -5,7 +5,7 @@ namespace Yandex\Market\Ui\UserField\View;
 use Bitrix\Main;
 use Yandex\Market;
 
-class Select
+class Select extends EnumControl
 {
 	use Market\Reference\Concerns\HasLang;
 
@@ -30,64 +30,41 @@ class Select
 			$result .= '<option value="">' . htmlspecialcharsbx($noValueCaption) . '</option>';
 		}
 
-		$result .= static::getOptionsHtml($options, $value, $settings);
+		$result .= static::getOptionsHtml($options, $value, $attributes, $settings);
 		$result .= '</select>';
 
 		return $result;
 	}
 
-	protected static function getOptionsHtml($options, $value, $settings)
+	protected static function openGroup($title, $isFirst)
 	{
-		$useDefaultValue = ($value === null);
-		$valueMap = static::getValueMap($value);
-		$activeGroup = null;
-		$defaultGroup = !empty($settings['DEFAULT_GROUP']) ? $settings['DEFAULT_GROUP'] : null;
-		$result = '';
-
-		foreach (Market\Ui\UserField\Helper\Enum::toArray($options) as $option)
-		{
-			$isSelected = $useDefaultValue ? $option['DEF'] === 'Y' : isset($valueMap[$option['ID']]);
-			$optionGroup = isset($option['GROUP']) ? $option['GROUP'] : $defaultGroup;
-
-			if ($optionGroup !== $activeGroup)
-			{
-				if ($activeGroup !== null)
-				{
-					$result .= '</optgroup>';
-				}
-
-				$activeGroup = $optionGroup;
-
-				if ($optionGroup !== null)
-				{
-					$result .= '<optgroup label="' . str_replace('"', '\\"', $optionGroup) . '">';
-				}
-			}
-
-			$result .=
-				'<option value="' . $option['ID'] . '" ' . ($isSelected ? 'selected' : '') . '>'
-				. $option['VALUE']
-				. '</option>';
-		}
-
-		if ($activeGroup !== null) { $result .= '</optgroup>'; }
-
-		return $result;
+		return sprintf('<optgroup label="%s">', htmlspecialcharsbx($title));
 	}
 
-	protected static function getValueMap($value)
+	protected static function closeGroup()
 	{
-		if (is_array($value))
+		return '</optgroup>';
+	}
+
+	/** @noinspection HtmlUnknownAttribute */
+	protected static function option(array $option, array $attributes, $isSelected)
+	{
+		if (isset($option['ID']) || array_key_exists('ID', $option))
 		{
-			$result = array_flip($value);
-		}
-		else if ((string)$value !== '')
-		{
-			$result = [ $value => true ];
+			$result = sprintf(
+				'<option value="%s" %s>%s</option>',
+				htmlspecialcharsbx($option['ID']),
+				$isSelected ? 'selected' : '',
+				htmlspecialcharsbx($option['VALUE'])
+			);
 		}
 		else
 		{
-			$result = [];
+			$result = sprintf(
+				'<option %s>%s</option>',
+				$isSelected ? 'selected' : '',
+				htmlspecialcharsbx($option['VALUE'])
+			);
 		}
 
 		return $result;

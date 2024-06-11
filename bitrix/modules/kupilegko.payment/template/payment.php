@@ -67,21 +67,24 @@
 	}
 	body .alfabank__content {
 		font-family: arial;
-	    width: 400px;
-	    max-width: 100%;
+	    max-width: 400px;
+	    width: 100%;
 	    padding: 10px 10px 13px;
 	    border: 1px solid #e5e5e5;
 	    text-align: center;
 	    margin-bottom: 12px;
+	    display: flex;
+	    flex-direction: column;
+	    align-items: center;
 	}
 	body .alfabank__payment-link {
 		font-family: arial;
 		display: inline-block;
-		width: 320px;
-		max-width: 100%;
+		max-width: 320px;
+		width: 100%;
 		margin: 8px 0 5px;
-		background-color: #ef3124;
-		color: #FFF;
+		background-color: #ef3124 !important;
+		color: #fff !important;
 		border:none;
 		box-shadow: none;
     	outline: none;
@@ -92,7 +95,7 @@
     	white-space: nowrap;
     	vertical-align: middle;
     	padding: 6px 12px;
-    	text-decoration: none;
+    	text-decoration: none !important;
 	}
 	body .alfabank__payment-link:hover,.alfabank__payment-link:active,.alfabank__payment-link:focus {
 		font-family: arial;
@@ -124,5 +127,12 @@
 		color:#000;
 		font-size: 14px;
 		display: block;
+	}
+	@media(max-width: 500px) {
+		body .sberbank__price-string b {
+			display:block;
+			text-align:center;
+		}
+
 	}
 </style>

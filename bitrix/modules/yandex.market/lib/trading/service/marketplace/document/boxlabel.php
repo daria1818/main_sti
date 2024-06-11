@@ -7,7 +7,9 @@ use Bitrix\Main;
 use Yandex\Market\Trading\Service as TradingService;
 
 class BoxLabel extends TradingService\Reference\Document\AbstractDocument
-	implements TradingService\Reference\Document\HasLoadItems
+	implements
+		TradingService\Reference\Document\HasLoadItems,
+		TradingService\Reference\Document\HasRenderFile
 {
 	use Market\Reference\Concerns\HasLang;
 
@@ -25,12 +27,34 @@ class BoxLabel extends TradingService\Reference\Document\AbstractDocument
 
 	public function getEntityType()
 	{
-		return Market\Trading\Entity\Registry::ENTITY_TYPE_BOX;
+		return Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER;
 	}
 
 	public function getSettings()
 	{
 		return [
+			'FORMAT' => [
+				'TYPE' => 'enumeration',
+				'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_DOCUMENT_BOX_LABEL_FORMAT'),
+				'VALUES' => [
+					[
+						'ID' => 'A6',
+						'VALUE' => static::getLang('TRADING_SERVICE_MARKETPLACE_DOCUMENT_BOX_LABEL_FORMAT_A6', null, 'A6'),
+					],
+					[
+						'ID' => 'A4',
+						'VALUE' => static::getLang('TRADING_SERVICE_MARKETPLACE_DOCUMENT_BOX_LABEL_FORMAT_A4', null, 'A4'),
+					],
+					[
+						'ID' => 'A7',
+						'VALUE' => static::getLang('TRADING_SERVICE_MARKETPLACE_DOCUMENT_BOX_LABEL_FORMAT_A7', null, 'A7'),
+					],
+				],
+				'SETTINGS' => [
+					'ALLOW_NO_VALUE' => 'N',
+				],
+				'PERSISTENT' => 'Y',
+			],
 			'BUNDLE' => [
 				'TYPE' => 'boolean',
 				'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_DOCUMENT_BOX_LABEL_BUNDLE'),
@@ -41,60 +65,74 @@ class BoxLabel extends TradingService\Reference\Document\AbstractDocument
 
 	public function loadItems($entitySelect)
 	{
+		/** @var Market\Api\Reference\HasOauthConfiguration $options */
 		$options = $this->provider->getOptions();
-		$selectBoxesMap = array_flip($entitySelect['BOX']);
 		$result = [];
 
 		foreach ($entitySelect['ORDER'] as $orderId)
 		{
-			$boxLabels = TradingService\Marketplace\Model\Box\LabelDataCollection::fetch($options, $orderId);
-
-			/** @var TradingService\Marketplace\Model\Box\LabelData $boxLabel */
-			foreach ($boxLabels as $boxLabel)
-			{
-				$boxId = $boxLabel->getBoxId();
-
-				if ($boxId === null || isset($selectBoxesMap[$boxId]))
-				{
-					$result[] = $this->makeItem($boxLabel);
-				}
-			}
+			$result[] = [
+				'URL' => sprintf(
+					'https://api.partner.market.yandex.ru/campaigns/%s/orders/%s/delivery/labels.json',
+					$options->getCampaignId(),
+					$orderId
+				),
+				'ORDER_ID' => $orderId,
+				'NUMBER' => $orderId,
+			];
 		}
 
 		return $result;
 	}
 
-	protected function makeItem(TradingService\Marketplace\Model\Box\LabelData $boxLabel)
+	public function canRenderFile(array $items, array $settings = [])
 	{
-		return [
-			'BOX_ID' => $boxLabel->getBoxId(),
-			'NUMBER' => $boxLabel->getNumber(),
-			'ORDER_ID' => $boxLabel->getOrderId(),
-			'ORDER_NUM' => $boxLabel->getOrderNum(),
-			'FULFILMENT_ID' => $boxLabel->getFulfilmentId(),
-			'PLACE' => $boxLabel->getPlace(),
-			'WEIGHT' => $boxLabel->getWeight(),
-			'SUPPLIER_NAME' => $boxLabel->getSupplierName(),
-			'DELIVERY_SERVICE_ID' => $boxLabel->getDeliveryServiceId(),
-			'DELIVERY_SERVICE_NAME' => $boxLabel->getDeliveryServiceName(),
-			'URL' => $boxLabel->getUrl(),
-		];
+		return count($items) === 1;
+	}
+
+	public function renderFile(array $items, array $settings = [])
+	{
+		/** @var Market\Api\Reference\HasOauthConfiguration $options */
+		$options = $this->provider->getOptions();
+		$items = $this->extendItems($items, $settings);
+		$item = reset($items);
+
+		return Market\Api\Partner\File\Facade::download($options, $item['URL']);
 	}
 
 	public function render(array $items, array $settings = [])
 	{
+		$items = $this->extendItems($items, $settings);
+
+		$this->disableAutoPrint();
+
 		if ($this->useBundle($settings))
 		{
-			$this->disableAutoPrint();
 			$result = $this->renderDocument($items, $settings, 'pdfbundle');
 		}
 		else
 		{
-			$this->disableAutoPrint();
 			$result = $this->renderFileWindow($items, $settings);
 		}
 
 		return $result;
+	}
+
+	protected function extendItems(array $items, array $settings)
+	{
+		if (empty($settings['FORMAT']) || $settings['FORMAT'] === 'A6') { return $items; }
+
+		foreach ($items as &$item)
+		{
+			$item['URL'] .=
+				(mb_strpos($item['URL'], '?') === false ? '?' : '&')
+				. http_build_query([
+					'format' => $settings['FORMAT'],
+				]);
+		}
+		unset($item);
+
+		return $items;
 	}
 
 	protected function useBundle(array $settings)
@@ -102,15 +140,6 @@ class BoxLabel extends TradingService\Reference\Document\AbstractDocument
 		return (
 			isset($settings['BUNDLE'])
 			&& (string)$settings['BUNDLE'] === Market\Ui\UserField\BooleanType::VALUE_Y
-		);
-	}
-
-	/** @deprecated */
-	protected function useRenderFile(array $settings)
-	{
-		return (
-			!isset($settings['HTML'])
-			|| (string)$settings['HTML'] !== Market\Ui\UserField\BooleanType::VALUE_Y
 		);
 	}
 
@@ -123,10 +152,7 @@ class BoxLabel extends TradingService\Reference\Document\AbstractDocument
 
 	protected function renderFileWindow(array $items, array $settings = [])
 	{
-		return
-			$this->renderFileWindowList($items)
-			. PHP_EOL
-			. $this->renderFileWindowScript($items);
+		return $this->renderFileWindowList($items);
 	}
 
 	protected function renderFileWindowList(array $items)
@@ -166,34 +192,6 @@ class BoxLabel extends TradingService\Reference\Document\AbstractDocument
 		}
 
 		$result .= '</ul>';
-
-		return $result;
-	}
-
-	protected function renderFileWindowScript(array $items)
-	{
-		$result = '<script>';
-		$result .= '(function() {';
-		$result .= 'var isBlocked = false;';
-		$result .= 'var newWindow;';
-
-		foreach ($items as $itemKey => $item)
-		{
-			$downloadUrl = $this->getDownloadLink($item);
-
-			$result .= PHP_EOL . sprintf('
-				newWindow = window.open("%s");
-				
-				if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
-					isBlocked = true;
-				}',
-				\CUtil::addslashes($downloadUrl)
-			);
-		}
-
-		$result .= PHP_EOL . '!isBlocked && window.close();';
-		$result .= '})();';
-		$result .= PHP_EOL . '</script>';
 
 		return $result;
 	}

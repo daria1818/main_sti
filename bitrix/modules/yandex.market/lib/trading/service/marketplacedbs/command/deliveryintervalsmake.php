@@ -60,18 +60,30 @@ class DeliveryIntervalsMake
 
 	public function execute()
 	{
+		list($startDate, $minDate, $moveFrom, $moveTo) = $this->starter();
 		$daysCount = 0;
-		$increasePeriodOnWeekend = $this->deliveryOption->increasePeriodOnWeekend();
 		$intervals = [];
-		$iterator = clone $this->dateFrom;
-		$dateTo = clone $this->dateTo;
+		$iterator = clone $startDate;
+		$dateTo = $moveTo
+			? clone Market\Data\Date::max($this->dateTo, $minDate, $startDate)
+			: clone $this->dateTo;
 
 		do
 		{
-			$minDateCompare = $this->minDate !== null ? Market\Data\Date::compare($iterator, $this->minDate) : 1;
-			$dayIntervals = ($minDateCompare !== -1) ? $this->timetable->getIntervals($iterator) : [];
+			$minDateCompare = $minDate !== null ? Market\Data\Date::compare($iterator, $minDate) : 1;
+			$dayIntervals = [];
 
-			if (!empty($dayIntervals))
+			if ($minDateCompare >= 0 || $moveFrom || $moveTo)
+			{
+				$dayIntervals = $this->timetable->getIntervals($iterator);
+			}
+
+			if (empty($dayIntervals))
+			{
+				if ($moveFrom && $minDateCompare === -1) { $minDate->add('P1D'); }
+				if ($moveTo) { $dateTo->add('P1D'); }
+			}
+			else if ($minDateCompare >= 0)
 			{
 				foreach ($dayIntervals as $interval)
 				{
@@ -83,10 +95,6 @@ class DeliveryIntervalsMake
 				}
 
 				++$daysCount;
-			}
-			else if ($increasePeriodOnWeekend)
-			{
-				$dateTo->add('P1D');
 			}
 
 			$iterator->add('P1D');
@@ -100,6 +108,35 @@ class DeliveryIntervalsMake
 		);
 
 		return $intervals;
+	}
+
+	protected function starter()
+	{
+		$rule = $this->deliveryOption->getPeriodWeekendRule();
+
+		if ($rule === TradingService\MarketplaceDbs\Options\DeliveryOption::PERIOD_WEEKEND_RULE_FULL)
+		{
+			$startDate = $this->minDate !== null ? $this->minDate : $this->now;
+			$minDate = $this->dateFrom;
+			$moveFrom = true;
+			$moveTo = true;
+		}
+		else if ($rule === TradingService\MarketplaceDbs\Options\DeliveryOption::PERIOD_WEEKEND_RULE_EDGE)
+		{
+			$startDate =  $this->dateFrom;
+			$minDate = $this->minDate;
+			$moveFrom = false;
+			$moveTo = true;
+		}
+		else
+		{
+			$startDate =  $this->dateFrom;
+			$minDate = $this->minDate;
+			$moveFrom = false;
+			$moveTo = false;
+		}
+
+		return [$startDate, $minDate, $moveFrom, $moveTo];
 	}
 
 	/** @deprecated */

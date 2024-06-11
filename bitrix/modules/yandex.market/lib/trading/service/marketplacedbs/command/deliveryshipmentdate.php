@@ -109,10 +109,12 @@ class DeliveryShipmentDate
 			? TradingService\MarketplaceDbs\Options\ScheduleOption::MATCH_UNTIL_END
 			: TradingService\MarketplaceDbs\Options\ScheduleOption::MATCH_AFTER_START;
 
-		while (
-			$offset > 0
-			|| !$this->shipmentTimetable->isMatch($result, $matchRule)
-		)
+		if (!$this->shipmentTimetable->isMatch($result, $matchRule))
+		{
+			++$offset;
+		}
+
+		while ($offset > 0)
 		{
 			$result = $this->shipmentTimetable->getNextWorkingDay($result, !$direction);
 			--$offset;
@@ -148,27 +150,70 @@ class DeliveryShipmentDate
 		return $result;
 	}
 
-	protected function getDelay()
-	{
-		$delay = Market\Data\Time::makeIntervalString($this->deliveryOption->getShipmentDelay());
-
-		if ($delay === null)
-		{
-			$delay = Market\Data\Time::makeIntervalString($this->shipmentSchedule->getShipmentDelay());
-		}
-
-		return $delay;
-	}
-
 	protected function applyDelay(Main\Type\Date $date, $direction)
 	{
-		$delay = $this->getDelay();
+		if (!$direction) { return $date; }
 
-		if ($delay === null || !$direction) { return $date; }
+		$schedule = $this->deliveryOption->getSchedule();
+		$assemblyDelay = $this->deliveryOption->getAssemblyDelay();
 
-		$date->add($delay);
+		if ($assemblyDelay->isEmpty())
+		{
+			$schedule = $this->shipmentSchedule->getSchedule();
+			$assemblyDelay = $this->shipmentSchedule->getAssemblyDelay();
+
+			if ($assemblyDelay->isEmpty()) { return $date; }
+		}
+
+		$delayDays = $assemblyDelay->getDays();
+
+		if ($this->isAfterOrderBefore($date, $assemblyDelay))
+		{
+			++$delayDays;
+		}
+		else
+		{
+			$timeDelay = $this->orderBeforeTimeInterval($schedule, $assemblyDelay);
+
+			if ($timeDelay !== null)
+			{
+				$date->add($timeDelay);
+			}
+		}
+
+		if ($delayDays > 0)
+		{
+			$date = $this->getShipmentReadyDate($date, $delayDays, $direction);
+		}
 
 		return $date;
+	}
+
+	protected function isAfterOrderBefore(
+		Main\Type\Date $date,
+		TradingService\MarketplaceDbs\Options\AssemblyDelayOption $assemblyDelay
+	)
+	{
+		return Market\Data\Time::compare($assemblyDelay->getTimeBefore(), $date->format('H:i')) === -1;
+	}
+
+	protected function orderBeforeTimeInterval(
+		TradingService\MarketplaceDbs\Options\ScheduleOptions $schedule,
+		TradingService\MarketplaceDbs\Options\AssemblyDelayOption $assemblyDelay
+	)
+	{
+		$untilTime = Market\Data\Time::min(
+			$schedule->firstUntilTime(),
+			$this->shipmentSchedule->getSchedule()->firstUntilTime()
+		);
+		$beforeTime = $assemblyDelay->getTimeBefore();
+		list($diffSign, $diffTime) = Market\Data\Time::diff($untilTime, $beforeTime);
+
+		if ($diffTime === null || $diffTime === '00:00' || $diffSign === -1) { return null; }
+
+		$diffTime = Market\Data\Time::parse($diffTime);
+
+		return sprintf('PT%sH%sM', (int)$diffTime[0], (int)$diffTime[1]);
 	}
 
 	protected function applyLimit(Main\Type\Date $date, $direction)

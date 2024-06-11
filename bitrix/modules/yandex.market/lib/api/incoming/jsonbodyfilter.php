@@ -13,6 +13,8 @@ class JsonBodyFilter implements Main\Type\IRequestFilter
 			$rawInput = file_get_contents('php://input');
 			$postData = Main\Web\Json::decode($rawInput);
 
+			if (!is_array($postData)) { return []; }
+
 			$result = [
 				'post' => $postData,
 			];

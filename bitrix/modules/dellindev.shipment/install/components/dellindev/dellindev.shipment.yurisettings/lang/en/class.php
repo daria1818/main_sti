@@ -1,3 +1,3 @@
 <?
-$MESS["SALE_LOCATION_MAP_BUTTON"] = "Map locations";
+$MESS["SALE_LOCATION_MAP_BUTTON"] = "РЎРѕРїРѕСЃС‚Р°РІРёС‚СЊ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёСЏ";
 ?>

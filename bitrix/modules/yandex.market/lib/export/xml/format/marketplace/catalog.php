@@ -10,7 +10,14 @@ class Catalog extends Xml\Format\YandexMarket\Simple
 
 	public function getDocumentationLink()
 	{
-		return 'https://yandex.ru/support/marketplace/catalog/yml-simple.html';
+		return 'https://yandex.ru/support/marketplace/assortment/fields/index.html';
+	}
+
+	public function getSupportedFields()
+	{
+		return [
+			'SHOP_DATA',
+		];
 	}
 
 	public function getRoot()
@@ -30,6 +37,14 @@ class Catalog extends Xml\Format\YandexMarket\Simple
 		$this->sanitizeOffer($result);
 		$this->overrideTags($result->getChildren(), [
 			'vendor' => [ 'required' => true ],
+			'delivery' => [ 'deprecated' => true ],
+			'pickup' => [ 'deprecated' => true ],
+			'leadtime' => [ 'deprecated' => true ],
+			'delivery-weekday' => [ 'deprecated' => true ],
+			'availability' => [ 'deprecated' => true ],
+			'transport-unit' => [ 'deprecated' => true ],
+			'min-delivery-pieces' => [ 'deprecated' => true ],
+			'quantum' => [ 'deprecated' => true ],
 		]);
 
 		return $result;

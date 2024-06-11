@@ -15,6 +15,7 @@ $MESS['YANDEX_MARKET_EXPORT_SETUP__ENTITY_IBLOCK_LINK_FIELD'] = 'Инфобло�
 $MESS['YANDEX_MARKET_EXPORT_SETUP__ENTITY_HTTPS_FIELD'] = 'HTTPS';
 $MESS['YANDEX_MARKET_EXPORT_SETUP__ENTITY_HTTPS_FIELD_HELP_MESSAGE'] = 'Выберите настройку, если на&nbsp;вашем сайте настроен SSL&#8209;сертификат и&nbsp;вы&nbsp;хотите, чтобы при переходе по&nbsp;ссылкам на&nbsp;товары использовался протокол HTTPS';
 $MESS['YANDEX_MARKET_EXPORT_SETUP__ENTITY_ENABLE_AUTO_DISCOUNTS_FIELD'] = 'Поддерживать автоскидки';
+$MESS['YANDEX_MARKET_EXPORT_SETUP__ENTITY_ENABLE_AUTO_DISCOUNTS_FIELD_HELP_MESSAGE'] = 'Показывать <a href="https://yandex.ru/support/marketplace/tools/dbs/discounts.html" target="_blank">скидки на товары</a> при изменении цены в прайс-листе';
 $MESS['YANDEX_MARKET_EXPORT_SETUP__ENTITY_ENABLE_CPA_FIELD'] = 'Можно купить на Маркете';
 $MESS['YANDEX_MARKET_EXPORT_SETUP__ENTITY_AUTOUPDATE_FIELD'] = 'Обновлять YML автоматически';
 $MESS['YANDEX_MARKET_EXPORT_SETUP__ENTITY_PARAM_FIELD'] = 'Поля';

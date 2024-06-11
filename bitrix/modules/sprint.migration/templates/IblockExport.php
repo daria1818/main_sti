@@ -7,6 +7,7 @@
  * @var $extendUse
  * @var $extendClass
  * @var $moduleVersion
+ * @var $author
  * @formatter:off
  */
 
@@ -19,6 +20,8 @@ namespace Sprint\Migration;
 class <?php echo $version ?> extends <?php echo $extendClass ?>
 
 {
+    protected $author = "<?php echo $author ?>";
+
     protected $description = "<?php echo $description ?>";
 
     protected $moduleVersion = "<?php echo $moduleVersion ?>";
@@ -45,9 +48,9 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
     $helper->Iblock()->saveGroupPermissions($iblockId, <?php echo var_export($iblockPermissions, 1) ?>);
 <?php endif; ?>
 <?php if (!empty($iblockProperties)): ?>
-<?php foreach ($iblockProperties as $iblockProperty): ?>
+<?php foreach ($iblockProperties as $iblockProperty) { ?>
         $helper->Iblock()->saveProperty($iblockId, <?php echo var_export($iblockProperty, 1) ?>);
-    <?php endforeach; ?>
+    <?php } ?>
 <?php endif; ?>
 <?php if (!empty($exportElementForm)): ?>
         $helper->UserOptions()->saveElementForm($iblockId, <?php echo var_export($exportElementForm, 1) ?>);
@@ -68,10 +71,5 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
     $helper->UserOptions()->saveSectionGrid($iblockId, <?php echo var_export($exportSectionGrid, 1) ?>);
 <?php endif; ?>
 
-    }
-
-    public function down()
-    {
-        //your code ...
     }
 }

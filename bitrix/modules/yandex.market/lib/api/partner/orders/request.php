@@ -13,6 +13,8 @@ class Request extends Market\Api\Partner\Reference\Request
 	protected $pageSize;
 	protected $fromDate;
 	protected $toDate;
+	protected $updatedAtFrom;
+	protected $updatedAtTo;
 	protected $fromShipmentDate;
 	protected $toShipmentDate;
 	protected $fake;
@@ -36,6 +38,8 @@ class Request extends Market\Api\Partner\Reference\Request
 		$pageSize = $this->getPageSize();
 		$fromDate = $this->getFromDate();
 		$toDate = $this->getToDate();
+		$updatedAtFrom = $this->getUpdatedAtFrom();
+		$updatedAtTo = $this->getUpdatedAtTo();
 		$fromShipmentDate = $this->getFromShipmentDate();
 		$toShipmentDate = $this->getToShipmentDate();
 		$fake = $this->getFake();
@@ -68,6 +72,16 @@ class Request extends Market\Api\Partner\Reference\Request
 		if ($toDate !== null)
 		{
 			$result['toDate'] = Market\Data\Date::convertForService($toDate, Market\Data\Date::FORMAT_DEFAULT_SHORT);
+		}
+
+		if ($updatedAtFrom !== null)
+		{
+			$result['updatedAtFrom'] = Market\Data\Date::convertForService($updatedAtFrom);
+		}
+
+		if ($updatedAtTo !== null)
+		{
+			$result['updatedAtTo'] = Market\Data\Date::convertForService($updatedAtTo);
 		}
 
 		if ($fromShipmentDate !== null)
@@ -116,6 +130,14 @@ class Request extends Market\Api\Partner\Reference\Request
 
 				case 'toDate':
 					$this->setToDate($value);
+				break;
+
+				case 'updatedAtFrom':
+					$this->setUpdatedAtFrom($value);
+				break;
+
+				case 'updatedAtTo':
+					$this->setUpdatedAtTo($value);
 				break;
 
 				case 'fromShipmentDate':
@@ -185,6 +207,26 @@ class Request extends Market\Api\Partner\Reference\Request
 	public function getFromDate()
 	{
 		return $this->fromDate;
+	}
+
+	public function setUpdatedAtFrom($date)
+	{
+		$this->updatedAtFrom = $date;
+	}
+
+	public function getUpdatedAtFrom()
+	{
+		return $this->updatedAtFrom;
+	}
+
+	public function setUpdatedAtTo($date)
+	{
+		$this->updatedAtTo = $date;
+	}
+
+	public function getUpdatedAtTo()
+	{
+		return $this->updatedAtTo;
 	}
 
 	public function setToDate($date)

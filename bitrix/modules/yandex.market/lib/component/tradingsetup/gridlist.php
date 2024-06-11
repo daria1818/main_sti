@@ -55,6 +55,95 @@ class GridList extends Market\Component\Model\GridList
 		$this->setComponentParam('TITLE', $title);
 	}
 
+	public function processPostAction($action, $data)
+	{
+		if ($action === 'reinstall')
+		{
+			$this->processReinstall($data);
+		}
+		else if ($action === 'enablePushStocks')
+		{
+			$this->processEnablePushStocks($data);
+		}
+		else if ($action === 'disablePushStocks')
+		{
+			$this->processDisablePushStocks($data);
+		}
+		else
+		{
+			parent::processPostAction($action, $data);
+		}
+	}
+
+	protected function processReinstall($data)
+	{
+		global $APPLICATION;
+
+		$model = $this->getModelClass();
+		$successUrl = $APPLICATION->GetCurPageParam('', [ 'postAction' ]);
+		list($commonParameters) = $this->extractLoadCalculatedParameters($data);
+
+		$setupList = $model::loadList(array_diff_key($commonParameters, [
+			'select' => true,
+			'limit' => true,
+			'offset' => true,
+		]));
+
+		/** @var TradingSetup\Model $setup */
+		foreach ($setupList as $setup)
+		{
+			Market\Reference\Assert::typeOf($setup, TradingSetup\Model::class, 'setup');
+
+			if ($setup->isActive())
+			{
+				$setup->install();
+				$setup->activate();
+				$setup->tweak();
+			}
+			else
+			{
+				$setup->deactivate();
+				$setup->uninstall();
+			}
+		}
+
+		Market\Utils\ServerStamp\Facade::reset();
+		\CAdminNotify::DeleteByTag(Market\Trading\State\PushAgent::NOTIFY_DISABLED);
+
+		LocalRedirect($successUrl);
+	}
+
+	protected function processEnablePushStocks($data)
+	{
+		global $APPLICATION;
+
+		list($commonParameters) = $this->extractLoadCalculatedParameters($data);
+
+		$routine = new Market\Trading\Routine\EnablePushStocks(array_diff_key($commonParameters, [
+			'select' => true,
+		]));
+
+		$routine->run();
+		$routine->notify();
+
+		LocalRedirect($APPLICATION->GetCurPageParam('', [ 'postAction' ]));
+	}
+
+	protected function processDisablePushStocks($data)
+	{
+		global $APPLICATION;
+
+		list($commonParameters) = $this->extractLoadCalculatedParameters($data);
+		$routine = new Market\Trading\Routine\DisablePushStocks(array_diff_key($commonParameters, [
+			'select' => true,
+		]));
+
+		$routine->run();
+		$routine->notify();
+
+		LocalRedirect($APPLICATION->GetCurPageParam('', [ 'postAction' ]));
+	}
+
 	public function getFields(array $select = [])
 	{
 		$this->resolveTitle();
@@ -102,6 +191,7 @@ class GridList extends Market\Component\Model\GridList
 		$siteId = reset($sites);
 		$leftFields = [
 			'CAMPAIGN_ID' => true,
+			'BUSINESS_ID' => true,
 			'YANDEX_INCOMING_URL' => true,
 		];
 		$result = [];
@@ -293,6 +383,7 @@ class GridList extends Market\Component\Model\GridList
 
 		$setup->install();
 		$setup->activate();
+		$setup->tweak();
 	}
 
 	protected function deactivateItem($id)

@@ -11,6 +11,7 @@ class PaySystem extends Market\Trading\Entity\Reference\PaySystem
 {
 	/** @var Environment */
 	protected $environment;
+	protected $paySystemRowCache = [];
 
 	public function __construct(Environment $environment)
 	{
@@ -54,6 +55,11 @@ class PaySystem extends Market\Trading\Entity\Reference\PaySystem
 		}
 
 		return $result;
+	}
+
+	public function getInnerPaySystemId()
+	{
+		return (int)Sale\PaySystem\Manager::getInnerPaySystemId();
 	}
 
 	public function getCompatible(TradingEntity\Reference\Order $order, $deliveryId = null)
@@ -111,11 +117,12 @@ class PaySystem extends Market\Trading\Entity\Reference\PaySystem
 		/** @var Sale\Payment $payment */
 		foreach ($paymentCollection as $payment)
 		{
-			if (!$payment->isInner())
-			{
-				$result = $payment;
-				break;
-			}
+			$paySystem = $payment->getPaySystem();
+
+			if ($paySystem !== null && $paySystem->getField('ACTION_FILE') === 'inner') { continue; }
+
+			$result = $payment;
+			break;
 		}
 
 		return $result;
@@ -154,11 +161,39 @@ class PaySystem extends Market\Trading\Entity\Reference\PaySystem
 		$deliveryEntity->configureShipment($calculatableOrder, $deliveryId);
 	}
 
+	public function suggestPaymentType($paySystemId)
+	{
+		if ($this->isInnerPaySystem($paySystemId)) { return null; }
+
+		$paySystemRow = $this->getPaySystemRow($paySystemId);
+
+		if (!$paySystemRow) { return null; }
+
+		if ($paySystemRow['IS_CASH'] === 'Y')
+		{
+			$result = Market\Data\Trading\PaySystem::TYPE_POSTPAID;
+		}
+		else if ($paySystemRow['IS_CASH'] === 'A')
+		{
+			$result = Market\Data\Trading\PaySystem::TYPE_PREPAID;
+		}
+		else if ($paySystemRow['IS_CASH'] === 'N' && $paySystemRow['ACTION_FILE'] !== 'cash')
+		{
+			$result = Market\Data\Trading\PaySystem::TYPE_PREPAID;
+		}
+		else
+		{
+			$result = null;
+		}
+
+		return $result;
+	}
+
 	public function suggestPaymentMethod($paySystemId, array $supportedMethods = null)
 	{
-		if ((int)$paySystemId === Sale\PaySystem\Manager::getInnerPaySystemId()) { return null; }
+		if ($this->isInnerPaySystem($paySystemId)) { return null; }
 
-		$paySystemRow = Sale\PaySystem\Manager::getById($paySystemId);
+		$paySystemRow = $this->getPaySystemRow($paySystemId);
 
 		if (!$paySystemRow) { return null; }
 
@@ -234,6 +269,8 @@ class PaySystem extends Market\Trading\Entity\Reference\PaySystem
 				Market\Data\Trading\PaySystem::METHOD_YANDEX,
 				Market\Data\Trading\PaySystem::METHOD_APPLE_PAY,
 				Market\Data\Trading\PaySystem::METHOD_GOOGLE_PAY,
+				Market\Data\Trading\PaySystem::METHOD_CREDIT,
+				Market\Data\Trading\PaySystem::METHOD_CERTIFICATE,
 			],
 			'cash' => [
 				Market\Data\Trading\PaySystem::METHOD_CASH_ON_DELIVERY,
@@ -255,5 +292,23 @@ class PaySystem extends Market\Trading\Entity\Reference\PaySystem
 		}
 
 		return $result;
+	}
+
+	protected function isInnerPaySystem($paySystemId)
+	{
+		return (int)$paySystemId === Sale\PaySystem\Manager::getInnerPaySystemId();
+	}
+
+	protected function getPaySystemRow($paySystemId)
+	{
+		if (
+			!isset($this->paySystemRowCache[$paySystemId])
+			&& !array_key_exists($paySystemId, $this->paySystemRowCache)
+		)
+		{
+			$this->paySystemRowCache[$paySystemId] = Sale\PaySystem\Manager::getById($paySystemId);
+		}
+
+		return $this->paySystemRowCache[$paySystemId];
 	}
 }

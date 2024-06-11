@@ -31,6 +31,29 @@ class StorageFacade
 		}
 	}
 
+	public static function dropPrimary(Main\DB\Connection $connection, Main\Entity\Base $entity)
+	{
+		$sqlHelper = $connection->getSqlHelper();
+
+		$connection->queryExecute(sprintf(
+			'ALTER TABLE %s DROP PRIMARY KEY',
+			$sqlHelper->quote($entity->getDBTableName())
+		));
+	}
+
+	public static function createPrimary(Main\DB\Connection $connection, Main\Entity\Base $entity)
+	{
+		$sqlHelper = $connection->getSqlHelper();
+
+		$connection->queryExecute(sprintf(
+			'ALTER TABLE %s ADD PRIMARY KEY(%s)',
+			$sqlHelper->quote($entity->getDBTableName()),
+			implode(', ', array_map(static function($name) use ($entity, $sqlHelper) {
+				return $sqlHelper->quote($entity->getField($name)->getColumnName());
+			}, $entity->getPrimaryArray()))
+		));
+	}
+
 	public static function dropIndexes(Main\DB\Connection $connection, Main\Entity\Base $entity, $indexes)
 	{
 		$tableName = $entity->getDBTableName();
@@ -83,7 +106,7 @@ class StorageFacade
 		}
 	}
 
-	protected static function getTableColumnTypes(Main\DB\Connection $connection, Main\Entity\Base $entity)
+	public static function getTableColumnTypes(Main\DB\Connection $connection, Main\Entity\Base $entity)
 	{
 		$result = [];
 		$sqlHelper = $connection->getSqlHelper();

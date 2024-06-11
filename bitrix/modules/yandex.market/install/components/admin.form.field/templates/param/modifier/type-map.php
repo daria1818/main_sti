@@ -10,17 +10,10 @@ $arResult['NODE_AVAILABLE_SOURCES'] = [];
 $isExpertMode = Market\Config::isExpertMode();
 $variableSourceTypes = null;
 $templateSourceTypes = null;
-$templateAvailableTags = [
-	'name' => true,
-	'model' => true,
-	'dimensions' => true,
-	'param' => true,
-];
 
 /** @var Market\Export\Xml\Tag\Base $tag */
-foreach ($arResult['TAGS'] as $tag)
+foreach ($arResult['TAGS'] as $tagId => $tag)
 {
-	$tagId = $tag->getId();
 	$nodeList = [ $tag ];
 
 	if ($tag->hasAttributes())
@@ -34,7 +27,6 @@ foreach ($arResult['TAGS'] as $tag)
 		$nodeSources = [];
 		$valueType = $node->getValueType();
 		$typeMap = null;
-		$isSupportTemplate = false;
 
 		if (!isset($arResult['TYPE_MAP'][$valueType]))
 		{
@@ -51,8 +43,6 @@ foreach ($arResult['TAGS'] as $tag)
 
 		if (isset($typeMap[Market\Export\Entity\Data::TYPE_STRING]))
 		{
-			$isSupportTemplate = ($isExpertMode || isset($templateAvailableTags[$nodeFullType]));
-
 			if ($variableSourceTypes === null)
 			{
 				$variableSourceTypes = [];
@@ -68,23 +58,20 @@ foreach ($arResult['TAGS'] as $tag)
 
 			$nodeSources = $variableSourceTypes;
 
-			if ($isSupportTemplate)
+			if ($templateSourceTypes === null)
 			{
-				if ($templateSourceTypes === null)
-				{
-					$templateSourceTypes = [];
+				$templateSourceTypes = [];
 
-					foreach ($arResult['SOURCE_TYPE_ENUM'] as $sourceEnum)
+				foreach ($arResult['SOURCE_TYPE_ENUM'] as $sourceEnum)
+				{
+					if ($sourceEnum['TEMPLATE'])
 					{
-						if ($sourceEnum['TEMPLATE'])
-						{
-							$templateSourceTypes[$sourceEnum['ID']] = true;
-						}
+						$templateSourceTypes[$sourceEnum['ID']] = true;
 					}
 				}
-
-				$nodeSources = array_merge($nodeSources, $templateSourceTypes);
 			}
+
+			$nodeSources = array_merge($nodeSources, $templateSourceTypes);
 		}
 
 		foreach ($arResult['SOURCE_FIELD_ENUM'] as $fieldEnum)

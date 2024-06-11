@@ -83,7 +83,7 @@ class Status extends TradingService\Common\Status
 		return [];
 	}
 
-	public function isCanceled($status)
+	public function isCanceled($status, $subStatus = null)
 	{
 		return $status === static::STATUS_CANCELLED;
 	}

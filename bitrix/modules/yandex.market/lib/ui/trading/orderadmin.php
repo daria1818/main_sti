@@ -10,6 +10,8 @@ class OrderAdmin extends Market\Ui\Reference\Page
 	use Market\Reference\Concerns\HasLang;
 	use Market\Ui\Trading\Concerns\HasHandleMigration;
 
+	protected $serviceCode;
+
 	protected static function includeMessages()
 	{
 		Main\Localization\Loc::loadMessages(__FILE__);
@@ -57,7 +59,6 @@ class OrderAdmin extends Market\Ui\Reference\Page
 	protected function redirectUrl($url)
 	{
 		LocalRedirect($url);
-		die();
 	}
 
 	protected function showUrlList(Market\Trading\Setup\Collection $collection, array $urls)
@@ -83,7 +84,22 @@ class OrderAdmin extends Market\Ui\Reference\Page
 		echo '</ul>';
 	}
 
+	public function setServiceCode($serviceCode)
+	{
+		$this->serviceCode = $serviceCode;
+	}
+
 	protected function getServiceCode()
+	{
+		if ($this->serviceCode === null)
+		{
+			$this->serviceCode = $this->resolveServiceCode();
+		}
+
+		return $this->serviceCode;
+	}
+
+	protected function resolveServiceCode()
 	{
 		$result = (string)$this->request->get('service');
 
@@ -104,11 +120,19 @@ class OrderAdmin extends Market\Ui\Reference\Page
 
 	protected function getSetupCollection()
 	{
+		$behavior = $this->request->get('behavior');
+		$filter = [
+			'=TRADING_SERVICE' => $this->getServiceCode(),
+			'=ACTIVE' => Market\Trading\Setup\Table::BOOLEAN_Y,
+		];
+
+		if ($behavior !== null && $behavior !== '')
+		{
+			$filter['=TRADING_BEHAVIOR'] = $behavior;
+		}
+
 		$collection = Market\Trading\Setup\Collection::loadByFilter([
-			'filter' => [
-				'=TRADING_SERVICE' => $this->getServiceCode(),
-				'=ACTIVE' => Market\Trading\Setup\Table::BOOLEAN_Y,
-			],
+			'filter' => $filter,
 		]);
 
 		if (count($collection) === 0)

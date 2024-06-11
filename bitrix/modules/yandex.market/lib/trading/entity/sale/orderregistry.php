@@ -19,8 +19,22 @@ class OrderRegistry extends EntityReference\OrderRegistry
 		Main\Localization\Loc::loadMessages(__FILE__);
 	}
 
+	/**
+	 * @noinspection NotOptimalIfConditionsInspection
+	 * @noinspection PhpCastIsUnnecessaryInspection
+	 */
 	public static function useAccountNumber()
 	{
+		if (Market\Config::getOption('trading_order_use_id', 'N') === 'Y') { return false; }
+
+		if (
+			Main\Loader::includeModule('sale')
+			&& class_exists(Sale\Integration\Numerator\NumeratorOrder::class)
+		)
+		{
+			return Sale\Integration\Numerator\NumeratorOrder::isUsedNumeratorForOrder();
+		}
+
 		return (string)Main\Config\Option::get('sale', 'account_number_template') !== '';
 	}
 
@@ -176,6 +190,8 @@ class OrderRegistry extends EntityReference\OrderRegistry
 
 	public function loadOrderList($orderIds)
 	{
+		if (empty($orderIds)) { return []; }
+
 		$result = [];
 		$internalOrders = [];
 		$orderClassName = static::getOrderClassName();
@@ -258,6 +274,8 @@ class OrderRegistry extends EntityReference\OrderRegistry
 	{
 		$result = [];
 		$select = [ 'ORDER_ID', 'EXTERNAL_ORDER_ID' ];
+		$setupIds = $this->platformSetupIds($platform);
+		$setupMap = $setupIds !== null ? array_flip($setupIds) : null;
 
 		if ($useAccountNumber === null)
 		{
@@ -269,28 +287,58 @@ class OrderRegistry extends EntityReference\OrderRegistry
 			$select['ACCOUNT_NUMBER'] = 'ORDER.ACCOUNT_NUMBER';
 		}
 
-		$query = Sale\TradingPlatform\OrderTable::getList([
-			'filter' => [
-				'=TRADING_PLATFORM_ID' => $platform->getId(),
-				'=EXTERNAL_ORDER_ID' => $externalIds,
-			],
-			'select' => $select
-		]);
-
-		while ($row = $query->fetch())
+		if ($setupMap !== null)
 		{
-			$externalOrderId = $row['EXTERNAL_ORDER_ID'];
-			$accountNumber = $row['ORDER_ID'];
+			$select[] = 'PARAMS';
+		}
 
-			if ($useAccountNumber && (string)$row['ACCOUNT_NUMBER'] !== '')
+		foreach (array_chunk($externalIds, 500) as $externalChunk)
+		{
+			$query = Sale\TradingPlatform\OrderTable::getList([
+				'filter' => [
+					'=TRADING_PLATFORM_ID' => $platform->getId(),
+					'=EXTERNAL_ORDER_ID' => $externalChunk,
+				],
+				'select' => $select
+			]);
+
+			while ($row = $query->fetch())
 			{
-				$accountNumber = $row['ACCOUNT_NUMBER'];
-			}
+				if (
+					$setupMap !== null
+					&& isset($row['PARAMS']['SETUP_ID'])
+					&& !isset($setupMap[$row['PARAMS']['SETUP_ID']])
+				)
+				{
+					continue;
+				}
 
-			$result[$externalOrderId] = $accountNumber;
+				$externalOrderId = $row['EXTERNAL_ORDER_ID'];
+				$accountNumber = $row['ORDER_ID'];
+
+				if ($useAccountNumber && (string)$row['ACCOUNT_NUMBER'] !== '')
+				{
+					$accountNumber = $row['ACCOUNT_NUMBER'];
+				}
+
+				$result[$externalOrderId] = $accountNumber;
+			}
 		}
 
 		return $result;
+	}
+
+	protected function platformSetupIds(EntityReference\Platform $platform)
+	{
+		$setupId = $platform->getSetupId();
+		$groupIds = $platform->getGroupSetupIds();
+
+		if ($setupId === null && $groupIds === null) { return null; }
+
+		return array_merge(
+			(array)$setupId,
+			(array)$groupIds
+		);
 	}
 
 	public function search($externalId, EntityReference\Platform $platform, $useAccountNumber = null)

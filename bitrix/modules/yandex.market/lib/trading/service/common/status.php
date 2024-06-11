@@ -9,6 +9,7 @@ use Yandex\Market\Trading\Service as TradingService;
 abstract class Status extends TradingService\Reference\Status
 {
 	const VIRTUAL_CREATED = 'CREATED';
+	const VIRTUAL_RETURN = 'RETURN';
 
 	abstract public function getIncomingVariants();
 
@@ -22,6 +23,7 @@ abstract class Status extends TradingService\Reference\Status
 
 	abstract public function getOutgoingMeaningfulMap();
 
+	/** @deprecated */
 	public function getOutgoingMultiple()
 	{
 		return [];
@@ -29,8 +31,15 @@ abstract class Status extends TradingService\Reference\Status
 
 	public function isChanged($orderId, $status, $substatus = null)
 	{
+		$compare = $status . ':' . $substatus;
+
+		return ($this->getStored($orderId) !== $compare);
+	}
+
+	public function getStored($orderId)
+	{
 		$serviceKey = $this->provider->getUniqueKey();
 
-		return Market\Trading\State\OrderStatus::isChanged($serviceKey, $orderId, $status . ':' . $substatus);
+		return Market\Trading\State\OrderStatus::getValue($serviceKey, $orderId);
 	}
 }

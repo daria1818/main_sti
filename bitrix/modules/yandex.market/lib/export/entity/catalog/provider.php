@@ -79,9 +79,18 @@ class Provider
 		return $result;
 	}
 
-	public static function hasCatalogTypeCompatibility()
+	protected static function hasCatalogTypeCompatibility()
 	{
 		return !static::supportSkuAvailableCalculation();
+	}
+
+	public static function isCatalogTypeCompatibility(array $context)
+	{
+		return (
+			$context['HAS_OFFER']
+			&& empty($context['OFFER_ONLY'])
+			&& static::useCatalogTypeCompatibility()
+		);
 	}
 
 	public static function useCatalogTypeCompatibility()

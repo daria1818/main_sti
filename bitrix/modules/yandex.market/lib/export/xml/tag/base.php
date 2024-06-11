@@ -20,10 +20,14 @@ class Base extends Xml\Reference\Node
 	protected $hasEmptyValue;
 	/** @var bool */
 	protected $isMultiple;
+	/** @var bool */
+	protected $isUnion;
 	/** @var int|null */
 	protected $maxCount;
 	/** @var string|null */
 	protected $wrapperName;
+	/** @var bool */
+	protected $isDeprecated;
 
 	protected function refreshParameters()
 	{
@@ -35,13 +39,25 @@ class Base extends Xml\Reference\Node
 		$this->attributes = isset($parameters['attributes']) ? (array)$parameters['attributes'] : [];
 		$this->hasEmptyValue = !empty($this->children) || !empty($parameters['empty_value']);
 		$this->isMultiple = !empty($parameters['multiple']);
+		$this->isUnion = !empty($parameters['union']);
 		$this->maxCount = isset($parameters['max_count']) ? (int)$parameters['max_count'] : null;
 		$this->wrapperName = isset($parameters['wrapper_name']) ? (string)$parameters['wrapper_name'] : null;
+		$this->isDeprecated = !empty($parameters['deprecated']);
+	}
+
+	public function isUnion()
+	{
+		return $this->isUnion;
 	}
 
 	public function isMultiple()
 	{
 		return $this->isMultiple;
+	}
+
+	public function isDeprecated()
+	{
+		return $this->isDeprecated;
 	}
 
 	public function isSelfClosed()
@@ -83,43 +99,49 @@ class Base extends Xml\Reference\Node
 		return $this->children;
 	}
 
-	public function addChildren(array $tags, $position = null)
+	public function addChildren(array $tags, $position = null, $after = false)
 	{
-		if (is_string($position) && !is_numeric($position))
+		if (empty($tags)) { return; }
+
+		$offset = null;
+
+		if (is_numeric($position))
+		{
+			$offset = (int)$position;
+		}
+		else if (is_string($position))
 		{
 			$positionChild = $this->getChild($position);
-			$positionOffset = $positionChild !== null ? array_search($positionChild, $this->children, true) : false;
+			$positionOffset = $positionChild !== null
+				? array_search($positionChild, $this->children, true)
+				: false;
 
 			if ($positionOffset !== false)
 			{
-				array_splice($this->children, $positionOffset, 0, $tags);
-			}
-			else
-			{
-				foreach ($tags as $tag)
-				{
-					$this->children[] = $tag;
-				}
+				$offset = $positionOffset;
 			}
 		}
-		else if ($position !== null)
+
+		if ($offset !== null && $after)
 		{
-			array_splice($this->children, $position, 0, $tags);
+			$offset += 1;
+		}
+
+		if ($offset !== null)
+		{
+			array_splice($this->children, $offset, 0, $tags);
 		}
 		else
 		{
-			foreach ($tags as $tag)
-			{
-				$this->children[] = $tag;
-			}
+			array_push($this->children, ...$tags);
 		}
 
 		$this->hasEmptyValue = true;
 	}
 
-	public function addChild(Base $tag, $position = null)
+	public function addChild(Base $tag, $position = null, $after = false)
 	{
-		$this->addChildren([ $tag ], $position);
+		$this->addChildren([ $tag ], $position, $after);
 	}
 
 	public function removeChild(Base $tag)
@@ -139,6 +161,34 @@ class Base extends Xml\Reference\Node
 		$nameLang = Market\Data\TextString::toUpper($nameLang);
 
 		return 'EXPORT_TAG_' . $nameLang;
+	}
+
+	public function tune(array $context)
+	{
+		$this->tuneSelf($context);
+		$this->tuneAttributes($context);
+		$this->tuneChildren($context);
+	}
+
+	protected function tuneSelf(array $context)
+	{
+		// nothing by default
+	}
+
+	protected function tuneChildren(array $context)
+	{
+		foreach ($this->children as $child)
+		{
+			$child->tune($context);
+		}
+	}
+
+	protected function tuneAttributes(array $context)
+	{
+		foreach ($this->attributes as $attribute)
+		{
+			$attribute->tune($context);
+		}
 	}
 
 	public function getPrimary()
@@ -241,40 +291,45 @@ class Base extends Xml\Reference\Node
 	 */
 	public function extendTagDescriptionList(&$tagDescriptionList, array $context)
 	{
-		$tagId = $this->id;
-		$isFound = false;
+		if (!isset($context['TAG_LEVEL'])) { $context['TAG_LEVEL'] = 0; }
 
-		// update exists
+		$foundTags = [];
 
-		foreach ($tagDescriptionList as &$tagDescription)
+		// search exists
+
+		foreach ($tagDescriptionList as &$existDescription)
 		{
-			if ($tagDescription['TAG'] === $tagId)
+			if ($existDescription['TAG'] === $this->id)
 			{
-				$isFound = true;
-				$tagDescription = $this->extendTagDescription($tagDescription, $context);
+				$existDescription = $this->extendTagDescription($existDescription, $context);
+
+				$foundTags[] = &$existDescription;
 			}
 		}
-		unset($tagDescription);
+		unset($existDescription);
 
-		// if not found add self if not empty
+		// create default
 
-		if (!$isFound)
+		if (empty($foundTags))
 		{
-			$tagDescription = $this->extendTagDescription([], $context);
+			$newDescription = $this->extendTagDescription([], $context);
 
-			if (!empty($tagDescription))
+			if (!empty($newDescription))
 			{
-				$tagDescription['TAG'] =  $tagId;
-				$tagDescriptionList[] = $tagDescription;
+				$newDescription['TAG'] = $this->id;
+
+				$foundTags[] = &$newDescription;
+				$tagDescriptionList[] = &$newDescription;
 			}
 		}
 
-		// extend children
+		// apply
 
-		foreach ($this->getChildren() as $child)
+		foreach ($foundTags as &$foundDescription)
 		{
-			$child->extendTagDescriptionList($tagDescriptionList, $context);
+			$foundDescription = $this->extendChildrenDescription($tagDescriptionList, $foundDescription, $context);
 		}
+		unset($foundDescription);
 	}
 
 	/**
@@ -320,6 +375,47 @@ class Base extends Xml\Reference\Node
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Расширяем описание источников для дочерних тегов
+	 *
+	 * @param array $tagDescriptionList
+	 * @param array $tagDescription
+	 * @param array $context
+	 *
+	 * @return array
+	 */
+	protected function extendChildrenDescription(&$tagDescriptionList, $tagDescription, array $context)
+	{
+		if ($context['TAG_LEVEL'] > 0)
+		{
+			if (!isset($tagDescription['CHILDREN']) || !is_array($tagDescription['CHILDREN']))
+			{
+				$tagDescription['CHILDREN'] = [];
+			}
+
+			$childrenValues = &$tagDescription['CHILDREN'];
+			$childrenContext = $context;
+
+			if (!isset($childrenContext['TAG_CHAIN'])) { $childrenContext['TAG_CHAIN'] = []; }
+
+			$childrenContext['TAG_CHAIN'][] = $tagDescriptionList;
+		}
+		else
+		{
+			$childrenValues = &$tagDescriptionList;
+			$childrenContext = $context;
+		}
+
+		++$childrenContext['TAG_LEVEL'];
+
+		foreach ($this->getChildren() as $child)
+		{
+			$child->extendTagDescriptionList($childrenValues, $childrenContext);
+		}
+
+		return $tagDescription;
 	}
 
 	/**
@@ -407,21 +503,65 @@ class Base extends Xml\Reference\Node
 	}
 
 	/**
+	 * @param $tagValuesList array
+	 * @param $context array
+	 * @param \SimpleXMLElement $parent
+	 * @return Market\Result\XmlNode[]
+	 */
+	public function exportTagUnion($tagValuesList, $context, \SimpleXMLElement $parent)
+	{
+		$result = [];
+		$maxCount = $this->getMaxCount();
+		$tagCount = 0;
+		$tagValues = $this->getTagValues($tagValuesList, $this->id, true);
+		$unionTag = null;
+
+		if (empty($tagValues)) { $tagValues[] = []; } // try export defaults
+
+		foreach ($tagValues as $tagValue)
+		{
+			$exportResult = $this->exportTagValue($tagValue, $tagValuesList, $context, $parent, $unionTag);
+
+			if ($exportResult->isSuccess())
+			{
+				++$tagCount;
+
+				if ($unionTag === null)
+				{
+					$unionTag = $exportResult->getXmlElement();
+				}
+
+				if ($maxCount !== null && $tagCount >= $maxCount)
+				{
+					break;
+				}
+			}
+
+			$result[] = $exportResult;
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Выгружаем значение тега (запускает выгрузку дочерних тегов и аттрибутов)
 	 *
-	 * @param                   $tagValue
-	 * @param                   $tagValuesList
-	 * @param                   $context
-	 * @param \SimpleXMLElement $parent
+	 * @param array                		$tagValue
+	 * @param array                		$tagValuesList
+	 * @param array               		$context
+	 * @param \SimpleXMLElement 		$parent
+	 * @param \SimpleXMLElement|null 	$unionTag
 	 *
 	 * @return \Yandex\Market\Result\XmlNode
 	 */
-	protected function exportTagValue($tagValue, $tagValuesList, $context, \SimpleXMLElement $parent)
+	protected function exportTagValue($tagValue, $tagValuesList, $context, \SimpleXMLElement $parent, \SimpleXMLElement $unionTag = null)
 	{
 		$result = new Market\Result\XmlNode();
 		$isValid = true;
 		$value = null;
 		$settings = isset($tagValue['SETTINGS']) ? $tagValue['SETTINGS'] : null;
+
+		$context['TAG_LEVEL'] = isset($context['TAG_LEVEL']) ? $context['TAG_LEVEL'] + 1 : 0;
 
 		if (!$this->hasEmptyValue)
 		{
@@ -433,11 +573,20 @@ class Base extends Xml\Reference\Node
 
 		if ($isValid)
 		{
-			$node = $this->exportNode($value, $context, $parent, $result, $settings);
+			if ($unionTag !== null)
+			{
+				$node = $this->appendNode($value, $context, $unionTag, $result, $settings);
+			}
+			else
+			{
+				$node = $this->exportNode($value, $context, $parent, $result, $settings);
+			}
+
 			$attributes = isset($tagValue['ATTRIBUTES']) ? $tagValue['ATTRIBUTES'] : [];
+			$children = $context['TAG_LEVEL'] > 0 && $this->getParameter('tree') === true ? (array)$tagValue['CHILDREN'] : $tagValuesList;
 
 			$hasAttributes = $this->exportTagAttributes($attributes, $context, $node, $result, $settings);
-			$hasChildren = $this->exportTagChildren($tagValuesList, $context, $node, $result);
+			$hasChildren = $this->exportTagChildren($children, $context, $node, $result);
 
 			if ($this->hasEmptyValue && !$hasChildren && !$hasAttributes)
 			{
@@ -452,6 +601,14 @@ class Base extends Xml\Reference\Node
 				else
 				{
 					$result->invalidate();
+				}
+			}
+
+			if (($hasChildren || $hasAttributes) && $this->getParameter('critical') === true)
+			{
+				foreach ($result->getErrors() as $error)
+				{
+					$error->markCritical();
 				}
 			}
 
@@ -524,7 +681,11 @@ class Base extends Xml\Reference\Node
 		{
 			$isError = $child->isRequired(); // error for parent if children required
 
-			if ($child->isMultiple())
+			if ($child->isUnion())
+			{
+				$childResultList = $child->exportTagUnion($tagValuesList, $context, $parent);
+			}
+			else if ($child->isMultiple())
 			{
 				$childResultList = $child->exportTagMultiple($tagValuesList, $context, $parent);
 			}
@@ -592,6 +753,50 @@ class Base extends Xml\Reference\Node
 	}
 
 	/**
+	 * Добавляем значение тега для xml-элемента
+	 *
+	 * @param                                   $value
+	 * @param array                             $context
+	 * @param \SimpleXMLElement                 $node
+	 * @param Market\Result\XmlNode|null        $nodeResult
+	 * @param array|null                        $settings
+	 *
+	 * @return \SimpleXMLElement
+	 */
+	public function appendNode($value, array $context, \SimpleXMLElement $node, Market\Result\XmlNode $nodeResult = null, $settings = null)
+	{
+		$result = $node;
+
+		if (!$this->hasEmptyValue)
+		{
+			$valueExport = (string)$this->formatValue($value, $context, $nodeResult, $settings);
+			$existValue = (string)$result[0];
+
+			if ($valueExport === '')
+			{
+				// nothing
+			}
+			else if ($existValue !== '')
+			{
+				$glue = $this->getParameter('glue');
+
+				if ($glue === null)
+				{
+					$glue = ', ';
+				}
+
+				$result[0] = $existValue . $glue . $valueExport;
+			}
+			else
+			{
+				$result[0] = $valueExport;
+			}
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Удаляем дочерний тег xml-элемента
 	 *
 	 * @param \SimpleXMLElement      $parent
@@ -644,14 +849,14 @@ class Base extends Xml\Reference\Node
 						$to->addError($error);
 					}
 				}
-				else
+				else if (
+					!isset($foundWarningMessages[$errorUniqueKey])
+					&& $error->getCode() !== Market\Error\XmlNode::XML_NODE_VALIDATE_EMPTY
+				)
 				{
-					if (!isset($foundWarningMessages[$errorUniqueKey]))
-					{
-						$foundWarningMessages[$errorUniqueKey] = true;
+					$foundWarningMessages[$errorUniqueKey] = true;
 
-						$to->addWarning($error);
-					}
+					$to->addWarning($error);
 				}
 			}
 
@@ -695,7 +900,7 @@ class Base extends Xml\Reference\Node
 	 * Получаем значение тега (вспомогательный метод)
 	 *
 	 * @param      $tagValuesList
-	 * @param      $tagName
+	 * @param      $tagId
 	 * @param bool $isMultiple
 	 *
 	 * @return mixed

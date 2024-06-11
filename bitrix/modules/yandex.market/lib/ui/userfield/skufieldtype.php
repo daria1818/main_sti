@@ -106,7 +106,7 @@ class SkuFieldType
 		$firstIblockOption = reset($iblockOptions);
 		$firstIblockId = $firstIblockOption !== false ? (int)$firstIblockOption['ID'] : null;
 		$htmlId = Market\Ui\UserField\Helper\Attributes::convertNameToId($htmlControl['NAME']) . '_TABLE';
-		$inputName = preg_replace('/\[\]$/', '', $htmlControl['NAME']);
+		$inputName = preg_replace('/\[]$/', '', $htmlControl['NAME']);
 
 		$result = '<div class="js-plugin" data-plugin="Field.SkuField.Table" data-base-name="' . $inputName . '" id="' . htmlspecialcharsbx($htmlId) . '">';
 		$result .= '<table border="0">';
@@ -310,5 +310,50 @@ class SkuFieldType
 	protected static function isMultipleValue($value)
 	{
 		return (is_array($value) && !static::isSingleValue($value));
+	}
+
+	/**
+	 * @noinspection PhpUnused
+	 * @noinspection PhpUnusedParameterInspection
+	 */
+	public static function ymExportValue(array $userField, $value, array $row = null)
+	{
+		$isOriginSingle = static::isSingleValue($value);
+		$valueMultiple = static::valueAsMultiple($value);
+
+		if (empty($valueMultiple)) { return $isOriginSingle ? null : []; }
+
+		$result = [];
+		$iblockEnum = static::getIblockEnum();
+		$iblockMap = array_column($iblockEnum, 'VALUE', 'ID');
+
+		foreach (static::valueAsMultiple($value) as $one)
+		{
+			if (!isset($one['IBLOCK'], $one['FIELD']))
+			{
+				$result[] = $one;
+				continue;
+			}
+
+			if (!isset($iblockMap[$one['IBLOCK']]))
+			{
+				$result[] = [ $one['IBLOCK'], $one['FIELD'] ];
+				continue;
+			}
+
+			$iblockId = $one['IBLOCK'];
+			$iblockName = $iblockMap[$one['IBLOCK']];
+			$fieldEnum = static::getFieldEnum($iblockId);
+			$fieldMap = array_column($fieldEnum, 'VALUE', 'ID');
+			$fieldName = isset($fieldMap[$one['FIELD']]) ? $fieldMap[$one['FIELD']] : $one['FIELD'];
+
+			$result[] = [
+				$iblockName,
+				$fieldName,
+				Data\Catalog::getCatalogTypeTitle($iblockId),
+			];
+		}
+
+		return $isOriginSingle ? reset($result) : $result;
 	}
 }

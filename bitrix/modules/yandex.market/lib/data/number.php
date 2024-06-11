@@ -15,6 +15,8 @@ class Number
 
 	public static function normalize($value)
 	{
+		if (!is_scalar($value)) { return null; }
+
 		$value = trim($value);
 		$result = null;
 
@@ -24,5 +26,14 @@ class Number
 		}
 
 		return $result;
+	}
+
+	public static function castInteger($value)
+	{
+		if (!is_scalar($value)) { return null; }
+
+		$value = trim($value);
+
+		return $value !== '' && is_numeric($value) ? (int)$value : null;
 	}
 }

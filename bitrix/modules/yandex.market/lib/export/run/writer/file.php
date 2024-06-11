@@ -119,10 +119,43 @@ class File extends Base
 
 	public function writeTagList($elementList, $parentName, $position = null)
 	{
-		$searchName = null;
-		$isAfterSearch = false;
+		$anchorPosition = $this->anchorPosition($parentName, $position);
+
+		if ($anchorPosition === null) { return []; }
+
+		$contents = '';
 		$result = [];
 
+		foreach ($elementList as $elementId => $element)
+		{
+			$elementContent = $element instanceof \SimpleXMLElement ? $element->asXML() : $element;
+
+			$result[$elementId] = Market\Export\Run\Helper\BinaryString::getLength($elementContent);
+			$contents .= $elementContent;
+		}
+
+		$this->writeSplice($anchorPosition, $anchorPosition, $contents);
+
+		return $result;
+	}
+
+	protected function anchorPosition($parentName, $position = null)
+	{
+		list($searchName, $isAfterSearch) = $this->anchorTag($parentName, $position);
+		$result = $this->getPosition($searchName);
+
+		if ($result === null) { return null; }
+
+		if ($isAfterSearch)
+		{
+			$result += Market\Export\Run\Helper\BinaryString::getLength($searchName);
+		}
+
+		return $result;
+	}
+
+	protected function anchorTag($parentName, $position = null)
+	{
 		switch ($position)
 		{
 			case static::POSITION_AFTER:
@@ -132,6 +165,7 @@ class File extends Base
 
 			case static::POSITION_BEFORE:
 				$searchName = '<' . $parentName . '>';
+				$isAfterSearch = false;
 			break;
 
 			case static::POSITION_PREPEND:
@@ -142,37 +176,25 @@ class File extends Base
 			case static::POSITION_APPEND:
 			default:
 				$searchName = '</' . $parentName . '>';
+				$isAfterSearch = false;
 			break;
 		}
 
-		$tagClosePosition = $this->getPosition($searchName);
-
-		if ($tagClosePosition !== null)
-		{
-			if ($isAfterSearch)
-			{
-				$tagClosePosition += Market\Export\Run\Helper\BinaryString::getLength($searchName);
-			}
-
-			$contents = '';
-
-			foreach ($elementList as $elementId => $element)
-			{
-				$result[$elementId] = true;
-				$contents .= $element instanceof \SimpleXMLElement ? $element->asXML() : $element;
-			}
-
-			$this->writeSplice($tagClosePosition, $tagClosePosition, $contents);
-		}
-
-		return $result;
+		return [$searchName, $isAfterSearch];
 	}
 
 	public function writeTag($element, $parentName, $position = null)
 	{
-		$writeResultList = $this->writeTagList([ $element ], $parentName, $position);
+		$writeResultList = $this->writeTagList([ static::NULL_REFERENCE => $element ], $parentName, $position);
 
 		return reset($writeResultList);
+	}
+
+	public function writeParent($elementName, $parentName, $position = null)
+	{
+		$tag = '<' . $elementName . '></' . $elementName . '>';
+
+		return $this->writeTag($tag, $parentName, $position);
 	}
 
 	public function updateAttributeList($tagName, $elementAttributeList, $idAttr = 'id')
@@ -300,17 +322,18 @@ class File extends Base
 					}
 				}
 
-				if ($closePosition === null)
+				if ($closePosition === null) { continue; }
+
+				$element = $elementList[$elementId];
+				$elementContent = $element instanceof \SimpleXMLElement ? $element->asXML() : $element;
+				$elementLength = Market\Export\Run\Helper\BinaryString::getLength($elementContent);
+				$result[$elementId] = $elementLength;
+
+				if (isset($positionMap[$closePosition]))
 				{
-					// not found, nothing to update
-				}
-				else if (isset($positionMap[$closePosition]))
-				{
-					$result[$elementId] = true;
-					$element = $elementList[$elementId];
 					$mergeElementId = $positionMap[$closePosition];
 					$mergePosition = $position;
-					$mergeContents = $element instanceof \SimpleXMLElement ? $element->asXML() : $element;
+					$mergeContents = $elementContent;
 
 					if (isset($waitMergePositions[$elementId]))
 					{
@@ -325,9 +348,7 @@ class File extends Base
 				}
 				else
 				{
-					$result[$elementId] = true;
-					$element = $elementList[$elementId];
-					$newContents = $element instanceof \SimpleXMLElement ? $element->asXML() : $element;
+					$newContents = $elementContent;
 
 					if (isset($waitMergePositions[$elementId]))
 					{
@@ -617,7 +638,9 @@ class File extends Base
 	{
 		if (isset($this->fileResource))
 		{
+			fflush($this->fileResource);
 			fclose($this->fileResource);
+
 			$this->fileResource = null;
 		}
 	}
@@ -627,6 +650,7 @@ class File extends Base
 		if (isset($this->tempResource))
 		{
 			fclose($this->tempResource);
+
 			$this->tempResource = null;
 		}
 	}
@@ -700,7 +724,8 @@ class File extends Base
 			{
 				throw new Main\SystemException(Market\Config::getLang('EXPORT_RUN_WRITER_FILE_CANT_WRITE_FILE'));
 			}
-			else if ($loopLength <= 0)
+
+			if ($loopLength <= 0)
 			{
 				$failCount++;
 

@@ -26,6 +26,11 @@ class NumberType
 		]);
 	}
 
+	public static function checkFields($arUserField, $value)
+	{
+		return static::callParent('checkFields', [$arUserField, $value]);
+	}
+
 	public static function GetAdminListViewHtml($userField, $htmlControl)
 	{
 		$value = Helper\Value::asSingle($userField, $htmlControl);
@@ -52,7 +57,9 @@ class NumberType
 
 		$result = View\Number::getControl($value, [
 			'name' => $htmlControl['NAME'],
-		]);
+		] + array_filter([
+			'size' => isset($userField['SETTINGS']['SIZE']) ? (int)$userField['SETTINGS']['SIZE'] : null,
+		]));
 
 		if ($result !== '' && $unit)
 		{

@@ -9,10 +9,8 @@ $arResult['SUPPORT_WARNINGS'] = [
 ];
 
 /** @var \Yandex\Market\Export\Xml\Tag\Base $tag */
-foreach ($arResult['TAGS'] as $tag)
+foreach ($arResult['TAGS'] as $tagId => $tag)
 {
-	$tagId = $tag->getId();
-
 	if (!isset($arResult['SUPPORT_WARNINGS'][$tagId])) { continue; }
 
 	foreach ($arParams['VALUE'] as &$rowValue)

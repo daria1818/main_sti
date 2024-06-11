@@ -54,16 +54,16 @@ class Action extends TradingService\Reference\Action\DataAction
 
 			$this->resolveOrderMarker($isStateReached, $sendResult);
 
-			if ($isStateReached)
-			{
-				$this->logState($orderId, $statusOut);
-				$this->saveState($orderId, $statusOut);
-			}
-			else
+			if (!$isStateReached)
 			{
 				$errorMessage = implode(PHP_EOL, $sendResult->getErrorMessages());
 				throw new Market\Exceptions\Api\Request($errorMessage);
 			}
+
+			$this->logState($orderId, $statusOut);
+			$this->saveState($orderId, $statusOut);
+			$this->saveData($orderId);
+			$this->finalize($orderId, $statusOut);
 		}
 	}
 
@@ -82,8 +82,11 @@ class Action extends TradingService\Reference\Action\DataAction
 
 		try
 		{
+			$orderFacade = $this->provider->getModelFactory()->getOrderFacadeClassName();
 			list($status, $subStatus) = $this->getExternalStatus($state);
-			Market\Api\Model\OrderFacade::submitStatus($options, $orderId, $status, $subStatus, $logger);
+			$payload = $this->getExternalPayload($status, $subStatus);
+
+			$this->externalOrder = $orderFacade::submitStatus($options, $orderId, $status, $subStatus, $logger, $payload);
 		}
 		catch (Market\Exceptions\Api\Request $exception)
 		{
@@ -99,6 +102,11 @@ class Action extends TradingService\Reference\Action\DataAction
 		return [ $state, null ];
 	}
 
+	protected function getExternalPayload($status, $subStatus)
+	{
+		return [];
+	}
+
 	protected function fixStatus(Main\Result $sendResult, $orderId, $state)
 	{
 		return false;
@@ -107,13 +115,6 @@ class Action extends TradingService\Reference\Action\DataAction
 	protected function checkHasStatus($orderId, $state)
 	{
 		return false;
-	}
-
-	protected function loadExternalOrder($orderId)
-	{
-		$options = $this->provider->getOptions();
-
-		return Market\Api\Model\OrderFacade::load($options, $orderId);
 	}
 
 	protected function logState($orderId, $state)
@@ -141,6 +142,24 @@ class Action extends TradingService\Reference\Action\DataAction
 
 		Market\Trading\State\OrderStatus::setValue($serviceKey, $orderId, implode(':', $fullStatus));
 		Market\Trading\State\OrderStatus::commit($serviceKey, $orderId);
+	}
+
+	protected function finalize($orderId, $state)
+	{
+		// nothing by default
+	}
+
+	protected function saveData($orderId)
+	{
+		$serviceKey = $this->provider->getUniqueKey();
+		$data = $this->makeData();
+
+		Market\Trading\State\OrderData::setValues($serviceKey, $orderId, $data);
+	}
+
+	protected function makeData()
+	{
+		return [];
 	}
 
 	protected function getMarkerCode()

@@ -6,9 +6,14 @@ $MESS['YANDEX_MARKET_MODULE_NOT_INSTALLED'] = 'Модуль не установ�
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_SESSION_EXPIRED'] = 'Истекла сессия';
 
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_TITLE'] = 'Прайс-лист готов';
-$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_DETAILS'] = '<a href="#URL#" target="_blank">Посмотреть YML</a>';
+$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_DOWNLOAD'] = 'Скачать';
+$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_OPEN'] = 'Открыть';
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_LOG'] = '<a href="#URL#" target="_blank">Журнал ошибок</a>';
-$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_PUBLISH'] = 'Не забудьте добавить прайс-лист в <a href="https://partner.market.yandex.ru" target="_blank">личный кабинет маркетплейса</a>.<br /> Для этого перейдите в раздел Ассортимент и выберите пункт Прайс-листы';
+$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_PUBLISH'] = 'Не забудьте добавить прайс-лист в <a href="https://partner.market.yandex.ru" target="_blank">личный кабинет маркетплейса</a>.<br /> Для этого перейдите в раздел Товары и выберите пункт Каталог';
+
+$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_STAT_2'] = 'Выгружено товаров: #COUNT# шт.';
+$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_STAT_1'] = 'Не выгружены из-за ошибки: #COUNT# шт.';
+$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_STAT_4'] = 'Не выгружены дубликаты: #COUNT# шт.';
 
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_PROGRESS_TITLE'] = 'Выполняем выгрузку';
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_PROGRESS_STEP'] = 'Шаг &laquo;#STEP#&raquo;';
@@ -30,7 +35,10 @@ $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_FIELD_OFFER_PAGE_SIZE'] = 'Количест
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_FIELD_TIME_LIMIT'] = 'Длительность шага';
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_FIELD_TIME_LIMIT_UNIT'] = 'сек.';
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_FIELD_TIME_LIMIT_SLEEP'] = ', интервал';
-$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_FIELD_TIME_LIMIT_HELP'] = 'Эти параметры определяют нагрузку на&nbsp;сервер. Чем больше длительность шага и&nbsp;меньше интервал, тем выше нагрузка. Если выгрузка файла проходит нормально, параметры лучше не&nbsp;менять.';
+$MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_FIELD_TIME_LIMIT_HELP'] = '
+<p>Параметры по&nbsp;умолчанию позволяют быстро выгрузить прайс-лист на&nbsp;большинстве серверов.</p>
+<p>Если сталкиваетесь с&nbsp;ошибкой, связанной с&nbsp;повышенной нагрузкой (memory_limit, HTTP-статус: 500), уменьшите длительность шага и&nbsp;увеличьте интервал.</p>
+';
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_BUTTON_START'] = 'Запустить выгрузку';
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_BUTTON_STOP'] = 'Прервать';
 $MESS['YANDEX_MARKET_ADMIN_SETUP_RUN_ACTION_RUN_COPY_LINK'] = 'Копировать';

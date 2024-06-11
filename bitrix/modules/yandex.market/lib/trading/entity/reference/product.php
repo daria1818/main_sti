@@ -27,6 +27,19 @@ abstract class Product
 	}
 
 	/**
+	 * Соответствие идентификатора товара и offerId сервиса
+	 *
+	 * @param int[] $productIds
+	 * @param array{IBLOCK: string, FIELD: string}[] $skuMap
+	 *
+	 * @return array<int, string> bitrixProductId => serviceOfferId
+	 */
+	public function getSkuMap($productIds, $skuMap)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getSkuMap');
+	}
+
+	/**
 	 * Соответствие offerId сервиса и идентификатора товара
 	 *
 	 * @param string[] $offerIds
@@ -37,6 +50,18 @@ abstract class Product
 	public function getOfferMap($offerIds, $skuMap)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getOfferMap');
+	}
+
+	/**
+	 * Отладочные данные по товарам
+	 *
+	 * @param int[] $productIds
+	 *
+	 * @return array<int, array>
+	 */
+	public function debugBasketData($productIds)
+	{
+		return [];
 	}
 
 	/**
@@ -51,5 +76,17 @@ abstract class Product
 	public function getBasketData($productIds, $quantities = null, array $context = [])
 	{
 		return [];
+	}
+
+	/**
+	 * Тип маркировки товара
+	 *
+	 * @param string $code
+	 *
+	 * @return string
+	 */
+	public function getMarkingGroupType($code)
+	{
+		return null;
 	}
 }

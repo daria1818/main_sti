@@ -59,6 +59,35 @@ abstract class Source
     }
 
 	/**
+	 * Поиск поля по названию
+	 *
+	 * @param string $query
+	 * @param array $context
+	 *
+	 * @return array
+	 */
+	public function suggestFields($query, array $context = [])
+	{
+		$result = [];
+		$fields = $this->getFields($context);
+
+		if (!is_array($fields)) { return $result; }
+
+		foreach ($fields as $field)
+		{
+			if (
+				Market\Data\TextString::getPositionCaseInsensitive($field['VALUE'], $query) !== false
+				|| Market\Data\TextString::getPositionCaseInsensitive($field['ID'], $query) !== false
+			)
+			{
+				$result[] = $field;
+			}
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Варианты значений сущности
 	 *
 	 * @param       $field

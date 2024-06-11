@@ -2,9 +2,10 @@
 
 namespace Yandex\Market\Export\IblockLink;
 
-use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 use Yandex\Market;
+use Yandex\Market\Export\Glossary;
+use Yandex\Market\Watcher;
 
 Loc::loadMessages(__FILE__);
 
@@ -43,6 +44,12 @@ class Model extends Market\Reference\Storage\Model
 	protected function createTagDescriptionList()
 	{
 		$paramCollection = $this->getParamCollection();
+
+		return $this->describeTagDescriptionList($paramCollection);
+	}
+
+	protected function describeTagDescriptionList(Market\Export\Param\Collection $paramCollection)
+	{
 		$result = [];
 		$textType = Market\Export\Entity\Manager::TYPE_TEXT;
 
@@ -53,6 +60,7 @@ class Model extends Market\Reference\Storage\Model
 			$tagResult = [
 				'TAG' => $param->getField('XML_TAG'),
 				'VALUE' => null,
+				'CHILDREN' => $this->describeTagDescriptionList($param->getChildren()),
 				'ATTRIBUTES' => [],
 				'SETTINGS' => $param->getSettings()
 			];
@@ -171,6 +179,56 @@ class Model extends Market\Reference\Storage\Model
 		return $result;
 	}
 
+	public function getSetupBindEntities()
+	{
+		$context = $this->getIblockContext();
+		$result = [
+			new Watcher\Track\BindEntity(Glossary::ENTITY_OFFER, $context['IBLOCK_ID']),
+		];
+
+		if ($context['HAS_OFFER'])
+		{
+			$result[] = new Watcher\Track\BindEntity(Glossary::ENTITY_OFFER, $context['OFFER_IBLOCK_ID']);
+		}
+
+		if ($this->hasCurrencyConversion())
+		{
+			$result[] = new Market\Watcher\Track\BindEntity(Glossary::ENTITY_CURRENCY);
+		}
+
+		return $result;
+	}
+
+	protected function hasCurrencyConversion()
+	{
+		$result = false;
+		$tags = [
+			'price',
+			'oldprice',
+			'currencyId',
+		];
+
+		foreach ($tags as $tagName)
+		{
+			$tagDescription = $this->getTagDescription($tagName);
+
+			if (!isset($tagDescription['VALUE']['TYPE'], $tagDescription['VALUE']['FIELD'])) { continue; }
+
+			$source = Market\Export\Entity\Manager::getSource($tagDescription['VALUE']['TYPE']);
+
+			if (
+				method_exists($source, 'hasCurrencyConversion')
+				&& $source->hasCurrencyConversion($tagDescription['VALUE']['FIELD'], $tagDescription['SETTINGS'])
+			)
+			{
+				$result = true;
+				break;
+			}
+		}
+
+		return $result;
+	}
+
 	/**
 	 * @return array
 	 */
@@ -181,6 +239,7 @@ class Model extends Market\Reference\Storage\Model
 		];
 
 		$result += $this->getIblockContext();
+		$result += $this->getTagContext();
 
 		// sales notes
 
@@ -253,6 +312,27 @@ class Model extends Market\Reference\Storage\Model
 		}
 
 		return $this->iblockContext;
+	}
+
+	protected function getTagContext()
+	{
+		$result = [];
+		$priceTag = $this->getTagDescription('price');
+
+		if (isset($priceTag['SETTINGS']['USER_GROUP']))
+		{
+			$selectedGroup = (int)$priceTag['SETTINGS']['USER_GROUP'];
+			$groups = Market\Data\UserGroup::getDefaults();
+
+			if (!in_array($selectedGroup, $groups, true))
+			{
+				$groups[] = $selectedGroup;
+			}
+
+			$result['USER_GROUPS'] = $groups;
+		}
+
+		return $result;
 	}
 
 	public function getDeliveryOptions()
@@ -370,6 +450,95 @@ class Model extends Market\Reference\Storage\Model
 			case 'DELIVERY':
 				$result = Market\Export\Delivery\Collection::getClassName();
 			break;
+		}
+
+		return $result;
+	}
+
+	protected function queryChildCollection($collectionClassName, $fieldKey)
+	{
+		if ($fieldKey === 'PARAM')
+		{
+			return $this->queryParamCollection($collectionClassName, $fieldKey);
+		}
+
+		return parent::queryChildCollection($collectionClassName, $fieldKey);
+	}
+
+	/**
+	 * @param class-string<Market\Export\Param\Collection> $collectionClassName
+	 * @param string $fieldKey
+	 *
+	 * @return Market\Export\Param\Collection
+	 */
+	protected function queryParamCollection($collectionClassName, $fieldKey)
+	{
+		$queryParams = $this->getChildCollectionQueryParameters($fieldKey);
+		$queryParams['order'] = [ 'PARENT_ID' => 'asc' ];
+		$queryParams['filter'] = array_diff_key($queryParams['filter'], [
+			'=PARENT_ID' => true,
+		]);
+
+		/** @var $flatCollection Market\Export\Param\Collection */
+		$flatCollection = $collectionClassName::load($this, $queryParams);
+		$flatCollection->initChildren();
+		$flatCollection->preloadReference();
+
+		return $this->makeParamCollectionTree($collectionClassName, $flatCollection);
+	}
+
+	/**
+	 * @param class-string<Market\Export\Param\Collection> $collectionClassName
+	 * @param Market\Export\Param\Collection $flatCollection
+	 *
+	 * @return Market\Export\Param\Collection
+	 */
+	protected function makeParamCollectionTree($collectionClassName, $flatCollection)
+	{
+		$valueTreeMap = [];
+		$result = new $collectionClassName;
+
+		/** @var Market\Export\Param\Model $param */
+		foreach ($flatCollection as $param)
+		{
+			$valueId = (int)$param->getId();
+			$parentId = (int)$param->getField('PARENT_ID');
+			$parentLevel = $result;
+
+			if (empty($parentId)) // is root
+			{
+				$parentTree = [];
+			}
+			else
+			{
+				if (!isset($valueTreeMap[$parentId])) { continue; }
+
+				$parentTree = $valueTreeMap[$parentId];
+			}
+
+			foreach ($parentTree as $parentId)
+			{
+				/** @var Market\Export\Param\Model $child */
+				$child = $parentLevel->getItemById($parentId);
+
+				if ($child === null)
+				{
+					$parentLevel = null;
+					break;
+				}
+
+				$parentLevel = $child->initChildren();
+			}
+
+			if ($parentLevel === null) { continue; }
+
+			$param->setCollection($parentLevel);
+			$parentLevel->addItem($param);
+
+			$selfTree = $parentTree;
+			$selfTree[] = $valueId;
+
+			$valueTreeMap[$valueId] = $selfTree;
 		}
 
 		return $result;

@@ -41,6 +41,11 @@ abstract class AbstractProvider
 			: null;
 	}
 
+	public function setComponentResult($key, $value)
+	{
+		$this->component->arResult[$key] = $value;
+	}
+
 	public function getComponentParam($key)
 	{
 		return isset($this->component->arParams[$key])

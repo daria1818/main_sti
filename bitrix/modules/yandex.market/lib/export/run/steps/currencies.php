@@ -16,6 +16,7 @@ class Currencies extends Base
 	public function run($action, $offset = null)
 	{
 		$result = new Market\Result\Step();
+
 		$context = $this->getContext();
 		$currencyList = $this->getCurrencyList($context);
 
@@ -48,7 +49,7 @@ class Currencies extends Base
 		return Market\Logger\Table::ENTITY_TYPE_EXPORT_RUN_CURRENCY;
 	}
 
-	protected function buildTagValues($elementId, $tagDescription, $currencyData, $context)
+	protected function buildTagValues($elementId, $tagDescription, $currencyData, $context, Market\Export\Xml\Tag\Base $root = null)
 	{
 		$result = new Market\Result\XmlValue();
 
@@ -64,6 +65,7 @@ class Currencies extends Base
 	{
 		return [
 			Market\Export\Run\Manager::ENTITY_TYPE_PROMO => true,
+			Market\Export\Run\Manager::ENTITY_TYPE_COLLECTION => true,
 			Market\Export\Run\Manager::ENTITY_TYPE_GIFT => true,
 		];
 	}

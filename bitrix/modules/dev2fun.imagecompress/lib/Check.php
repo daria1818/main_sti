@@ -2,7 +2,7 @@
 /**
  * @author darkfriend <hi@darkfriend.ru>
  * @copyright dev2fun
- * @version 0.6.8
+ * @version 0.7.0
  */
 
 namespace Dev2fun\ImageCompress;
@@ -48,7 +48,9 @@ class Check
         }
         //$obj = self::$optiClasses[$algorithm]::getInstance(); // PHP7+
         $check = $obj->isPNGOptim();
-        if (!$check) self::$lastError = $obj->lastError;
+        if (!$check) {
+            self::$lastError = $obj->LAST_ERROR;
+        }
         return $check;
     }
 
@@ -58,7 +60,7 @@ class Check
      * @deprecated
      * @uses Check::isOptim()
      */
-    public static function isJPEGOptim($algorithm)
+    public static function isJPEGOptim($algorithm, ?string $path = null)
     {
         if (!$algorithm || empty(self::$optiClasses[$algorithm])) return false;
         Loader::includeModule(\Dev2funImageCompress::MODULE_ID);
@@ -72,15 +74,18 @@ class Check
         }
         //$obj = self::$optiClasses[$algorithm]::getInstance(); // PHP7+
         $check = $obj->isJPEGOptim();
-        if (!$check) self::$lastError = $obj->lastError;
+        if (!$check) {
+            self::$lastError = $obj->LAST_ERROR;
+        }
         return $check;
     }
 
     /**
      * @param string $algorithm
+     * @param string|null $path
      * @return bool
      */
-    public static function isOptim($algorithm)
+    public static function isOptim(string $algorithm, ?string $path = null)
     {
         if (!$algorithm || empty(self::$optiClasses[$algorithm])) return false;
         Loader::includeModule(\Dev2funImageCompress::MODULE_ID);
@@ -108,8 +113,10 @@ class Check
                 break;
         }
         //$obj = self::$optiClasses[$algorithm]::getInstance(); // PHP7+
-        $check = $obj->isOptim();
-        if (!$check) self::$lastError = $obj->lastError;
+        $check = $obj->isOptim($path);
+        if (!$check) {
+            self::$lastError = $obj->lastError;
+        }
         return $check;
     }
 
@@ -120,7 +127,7 @@ class Check
      * @throws \Bitrix\Main\ArgumentNullException
      * @throws \Bitrix\Main\ArgumentOutOfRangeException
      */
-    public static function isActiveByMimeType($mimeType)
+    public static function isActiveByMimeType(string $mimeType)
     {
         switch ($mimeType) {
             case 'image/jpeg' :
@@ -166,7 +173,7 @@ class Check
 
             if (!$algorithmJpeg)
                 throw new \Exception(Loc::getMessage('DEV2FUN_IMAGECOMPRESS_NOT_CHOICE', ['#ALGORITHM#' => 'JPEG']));
-            if ($algorithmJpeg == 'jpegoptim' && !Option::get(\Dev2funImageCompress::MODULE_ID, 'path_to_jpegoptim'))
+            if ($algorithmJpeg === 'jpegoptim' && !Option::get(\Dev2funImageCompress::MODULE_ID, 'path_to_jpegoptim'))
                 throw new \Exception(Loc::getMessage('DEV2FUN_IMAGECOMPRESS_NO_PATH', ['#MODULE#' => 'jpegoptim']));
             if (!self::isJPEGOptim($algorithmJpeg)) {
                 if (!self::$lastError)
@@ -177,7 +184,7 @@ class Check
             if (!$algorithmPng) {
                 throw new \Exception(Loc::getMessage('DEV2FUN_IMAGECOMPRESS_NOT_CHOICE', ['#ALGORITHM#' => 'PNG']));
             }
-            if ($algorithmPng == 'optipng' && !Option::get(\Dev2funImageCompress::MODULE_ID, 'path_to_optipng')) {
+            if ($algorithmPng === 'optipng' && !Option::get(\Dev2funImageCompress::MODULE_ID, 'path_to_optipng')) {
                 throw new \Exception('Не указан путь до optipng');
             }
             if (!self::isPNGOptim($algorithmPng)) {

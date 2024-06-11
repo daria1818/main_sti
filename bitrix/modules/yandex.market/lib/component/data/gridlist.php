@@ -242,6 +242,7 @@ class GridList extends Market\Component\Base\GridList
 	{
 		if ($this->isAllowBatch())
 		{
+			$selectedIds = [];
 			$dataClass = $this->getDataClass();
 			$parameters = [
 				'filter' => $this->getActionSelectedFilter($data),
@@ -258,6 +259,8 @@ class GridList extends Market\Component\Base\GridList
 				$this->deleteItem($id);
 			}
 		}
+
+		return $selectedIds;
 	}
 
 	protected function getActionSelectedFilter($data)

@@ -54,15 +54,14 @@ if($result["ERROR"] == '' && $saleModulePermissions >= "W" && check_bitrix_sessi
                 $result = $ajaxService::getTerminalsForAjax($kladr,$appkey);
 
                 break;
-            case "get_city_kladr":
-
+            case "get_city_kladr":           
                 $q = isset($_REQUEST['query'])?$_REQUEST['query']: null;
-
+                $appkey = (isset($_REQUEST['appkey']) && !empty($_REQUEST['appkey']))?
+                                             $_REQUEST['appkey'] :
+                                             $ajaxService::LoggerInfo($action, 'appkey is null or empty');
                 if(mb_strtolower(SITE_CHARSET) != 'utf-8')
                     $q = \Bitrix\Main\Text\Encoding::convertEncoding($q, SITE_CHARSET, 'utf-8');
-
-                $result['LIST'] = $ajaxService::searchCityForAjax($q);
-
+                $result['LIST'] = $ajaxService::searchCityForAjax($q, $appkey);
                 break;
             default:
                 $result["ERROR"] = "Error! Wrong action!";

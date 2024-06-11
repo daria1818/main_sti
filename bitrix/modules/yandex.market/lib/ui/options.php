@@ -40,6 +40,9 @@ class Options extends Market\Ui\Reference\Page
 			'TRADING' => [
 				'name' => Market\Config::getLang('OPTIONS_TAB_TRADING'),
 			],
+			'SALES_BOOST' => [
+				'name' => Market\Config::getLang('OPTIONS_TAB_SALES_BOOST'),
+			],
 			'PERMISSIONS' => [
 				'name' => Market\Config::getLang('OPTIONS_TAB_PERMISSIONS'),
 				'fields' => [
@@ -58,9 +61,16 @@ class Options extends Market\Ui\Reference\Page
 			+ $this->getCatalogOptions()
 			+ $this->getAdditionalOptions()
 			+ $this->getUserPhoneOptions()
+			+ $this->getTradingOrderOptions()
+			+ $this->getTradingBasketOptions()
 			+ $this->getTradingLogOptions()
 			+ $this->getTradingTaxSystemOptions()
 			+ $this->getTradingServerOptions()
+			+ $this->getTradingStocksOptions()
+			+ $this->getTradingListenOptions()
+			+ $this->getTradingPushOptions()
+			+ $this->getServerStampOptions()
+			+ $this->getSalesBoostRefreshOptions()
 		;
 	}
 
@@ -136,6 +146,14 @@ class Options extends Market\Ui\Reference\Page
 				'TYPE' => 'boolean',
 				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_EXPORT'),
 				'NAME' => Market\Config::getLang('UI_OPTION_EXPORT_WRITER_MEMORY'),
+			],
+			'export_writer_index' => [
+				'TYPE' => 'boolean',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_EXPORT'),
+				'NAME' => Market\Config::getLang('UI_OPTION_EXPORT_WRITER_INDEX'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 'Y',
+				],
 			],
 		];
 	}
@@ -348,6 +366,29 @@ class Options extends Market\Ui\Reference\Page
 		];
 	}
 
+	protected function getTradingOrderOptions()
+	{
+		return [
+			'trading_order_use_id' => [
+				'TYPE' => 'boolean',
+				'TAB' => 'TRADING',
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_ORDER_USE_ID'),
+			],
+		];
+	}
+
+	protected function getTradingBasketOptions()
+	{
+		return [
+			'trading_basket_name_original' => [
+				'TYPE' => 'boolean',
+				'TAB' => 'TRADING',
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_BASKET_NAME_ORIGINAL'),
+				'HELP_MESSAGE' => Market\Config::getLang('UI_OPTION_TRADING_BASKET_NAME_ORIGINAL_HELP'),
+			],
+		];
+	}
+
 	protected function getTradingLogOptions()
 	{
 		return [
@@ -380,6 +421,210 @@ class Options extends Market\Ui\Reference\Page
 				'TYPE' => 'boolean',
 				'TAB' => 'TRADING',
 				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_DDOS_GUARD'),
+			],
+		];
+	}
+
+	protected function getTradingStocksOptions()
+	{
+		return [
+			'trading_auto_product_offer' => [
+				'TYPE' => 'boolean',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_PRODUCT'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_AUTO_PRODUCT_OFFER'),
+				'HELP_MESSAGE' => Market\Config::getLang('UI_OPTION_TRADING_AUTO_PRODUCT_OFFER_HELP'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 'Y',
+				],
+			],
+			'trading_reserve_days' => [
+				'TYPE' => 'number',
+				'TAB' => 'TRADING',
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_RESERVE_DAYS'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 7,
+					'MIN_VALUE' => 1,
+					'UNIT' => Market\Config::getLang('UI_OPTION_DAYS_UNIT'),
+				]
+			],
+			'experiment_trading_sibling_reserved_stop' => [
+				'TYPE' => 'boolean',
+				'TAB' => 'TRADING',
+				'NAME' => Market\Config::getLang('UI_OPTION_EXPERIMENT_TRADING_SIBLING_RESERVED_STOP'),
+			],
+		];
+	}
+
+	protected function getTradingListenOptions()
+	{
+		return [
+			'trading_pull_period' => [
+				'TYPE' => 'number',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_LISTEN'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_PULL_PERIOD'),
+				'HELP_MESSAGE' => Market\Config::getLang('UI_OPTION_TRADING_PULL_PERIOD_HELP'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 600,
+				],
+			],
+			'trading_silent_basket' => [
+				'TYPE' => 'boolean',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_LISTEN'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_SILENT_BASKET'),
+			],
+		];
+	}
+
+	protected function getTradingPushOptions()
+	{
+		$isAgentCli = Market\Utils::isAgentUseCron();
+
+		return [
+			Market\Trading\State\PushAgent::optionName('period_restart') => [
+				'TYPE' => 'integer',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_PUSH'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_PERIOD_RESTART'),
+				'HELP_MESSAGE' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_PERIOD_RESTART_HELP'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 300,
+					'MIN_VALUE' => 1,
+				],
+			],
+			Market\Trading\State\PushAgent::optionName('period_refresh') => [
+				'TYPE' => 'integer',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_PUSH'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_PERIOD_REFRESH'),
+				'HELP_MESSAGE' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_PERIOD_REFRESH_HELP'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 1800,
+					'MIN_VALUE' => 1,
+				],
+			],
+			Market\Trading\State\PushAgent::optionName('page_size') => [
+				'TYPE' => 'integer',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_PUSH'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_PAGE_SIZE'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 500,
+					'MIN_VALUE' => 1,
+				],
+			],
+			Market\Trading\State\PushAgent::optionName('time_limit') => [
+				'TYPE' => 'integer',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_PUSH'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_TIME_LIMIT'),
+				'HELP_MESSAGE' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_TIME_LIMIT_HINT'),
+				'HIDDEN' => $isAgentCli,
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 5,
+					'MIN_VALUE' => 1,
+				],
+			],
+			Market\Trading\State\PushAgent::optionName('time_limit_cli') => [
+				'TYPE' => 'integer',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_PUSH'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_TIME_LIMIT'),
+				'HELP_MESSAGE' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_TIME_LIMIT_HINT'),
+				'HIDDEN' => !$isAgentCli,
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 30,
+					'MIN_VALUE' => 1,
+				],
+			],
+			Market\Trading\State\PushAgent::optionName('expire_days') => [
+				'TYPE' => 'number',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_TRADING_PUSH'),
+				'NAME' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_EXPIRE_DAYS'),
+				'HELP_MESSAGE' => Market\Config::getLang('UI_OPTION_TRADING_PUSH_EXPIRE_DAYS_HINT'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 7,
+					'MIN_VALUE' => 1,
+					'UNIT' => Market\Config::getLang('UI_OPTION_DAYS_UNIT'),
+				],
+			],
+		];
+	}
+
+	protected function getServerStampOptions()
+	{
+		$result = [];
+		$controller = new Market\Utils\ServerStamp\Controller();
+
+		foreach ($controller->properties() as $property)
+		{
+			$name = $property->name();
+			$title = $property->title();
+
+			$result['server_stamp_disable_' . $name] = [
+				'TYPE' => 'boolean',
+				'TAB' => 'TRADING',
+				'GROUP' => Market\Config::getLang('UI_OPTION_GROUP_SERVER_STAMP'),
+				'NAME' => Market\Config::getLang('UI_OPTION_SERVER_STAMP_DISABLE_PROPERTY', [
+					'#TITLE#' => $title,
+				]),
+			];
+		}
+
+		return $result;
+	}
+
+	protected function getSalesBoostRefreshOptions()
+	{
+		return [
+			'sales_boost_auto_update' => [
+				'TYPE' => 'boolean',
+				'TAB' => 'SALES_BOOST',
+				'NAME' => Market\Config::getLang('UI_OPTION_SALES_BOOST_AUTO_UPDATE'),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => 'Y',
+				],
+			],
+			'sales_boost_refresh_period' => [
+				'TYPE' => 'enumeration',
+				'TAB' => 'SALES_BOOST',
+				'EDIT_IN_LIST' => (Market\Utils::isAgentUseCron() ? 'Y' : 'N'),
+				'NAME' => Market\Config::getLang('UI_OPTION_SALES_BOOST_REFRESH_PERIOD'),
+				'NOTE' => Market\Utils::isAgentUseCron() ? null : Market\Config::getLang('UI_OPTION_SALES_BOOST_REFRESH_PERIOD_WARNING'),
+				'VALUES' => array_reverse(array_map(static function($period) {
+					return [
+						'ID' => $period,
+						'VALUE' => Market\Config::getLang('UI_OPTION_SALES_BOOST_REFRESH_PERIOD_' . $period),
+					];
+				}, [
+					604800, // week
+					259200, // three days
+					86400, // one day
+					43200, // half day
+					21600, // six hours
+					10800, // three hours
+					7200, // two hours
+					3600, // one hour
+					1800, // half hour
+				])),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => Market\Utils::isAgentUseCron() ? 86400 : null,
+					'CAPTION_NO_VALUE' => Market\Config::getLang('UI_OPTION_SALES_BOOST_REFRESH_PERIOD_DISABLE'),
+				],
+			],
+			'sales_boost_refresh_time' => [
+				'TYPE' => 'time',
+				'TAB' => 'SALES_BOOST',
+				'NAME' => Market\Config::getLang('UI_OPTION_SALES_BOOST_REFRESH_TIME'),
+				'DEPEND' => [
+					'sales_boost_refresh_period' => [
+						'RULE' => 'EMPTY',
+						'VALUE' => false,
+					],
+				],
 			],
 		];
 	}

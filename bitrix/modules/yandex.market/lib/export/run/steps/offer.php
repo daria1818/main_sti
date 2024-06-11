@@ -7,18 +7,19 @@ use Yandex\Market;
 
 Main\Localization\Loc::loadMessages(__FILE__);
 
+/**
+ * @method Market\Export\Xml\Tag\Base getTag($type = null)
+*/
 class Offer extends Base
 {
 	const ELEMENT_TYPE_PRODUCT = 1;
+	/** @noinspection PhpUnused */
 	const ELEMENT_TYPE_SET = 2;
 	const ELEMENT_TYPE_SKU = 3;
 	const ELEMENT_TYPE_OFFER = 4;
+	/** @noinspection PhpUnused */
 	const ELEMENT_TYPE_FREE_OFFER = 5;
 	const ELEMENT_TYPE_EMPTY_SKU = 6;
-
-	protected $queryExcludeFilterList = [];
-	protected $isCatalogTypeCompatibility;
-	protected $sourceCurrencyConversion = null;
 
 	public function getName()
 	{
@@ -73,132 +74,84 @@ class Offer extends Base
 		return $result;
 	}
 
-	public function getTotalCount($isDisableCalculation = false)
-	{
-		if ($this->totalCount === null && !$isDisableCalculation)
-		{
-			$this->totalCount = 0;
-
-			$iblockConfigList = $this->getIblockConfigList();
-			$iblockConfigIndex = 0;
-
-			foreach ($iblockConfigList as $iblockConfig)
-			{
-				if ($iblockConfig['EXPORT_ALL'])
-				{
-					$queryFilters = $this->makeQueryFilters([], [], $iblockConfig['CONTEXT']);
-
-					foreach ($queryFilters as $queryFilter)
-					{
-						$this->totalCount += $this->queryTotalCount($queryFilter, $iblockConfig['CONTEXT']);
-					}
-				}
-				else
-				{
-					$filterCountList = $this->getCount($iblockConfigIndex, false);
-
-					$this->totalCount += $filterCountList->getSum();
-				}
-
-				$iblockConfigIndex++;
-			}
-		}
-
-		return $this->totalCount;
-	}
-
 	public function getCount($offset = null, $isNeedAll = null)
 	{
 		$result = new Market\Result\StepCount();
-		$offsetIblockConfigIndex = null;
-		$offsetFilterIndex = null;
+		$offsetObject = new Market\Data\Run\Offset($offset, [
+			'iblock',
+			'filter',
+		]);
 
-		if (isset($offset))
+		foreach ($this->getIblockConfigList($isNeedAll) as $iblockConfig)
 		{
-			$offsetParts = explode(':', $offset);
-			$offsetIblockConfigIndex = (int)$offsetParts[0];
-			$offsetFilterIndex = isset($offsetParts[1]) ? (int)$offsetParts[1] : null;
-		}
-
-		$iblockConfigList = $this->getIblockConfigList($isNeedAll);
-		$iblockConfigIndex = 0;
-
-		foreach ($iblockConfigList as $iblockConfig)
-		{
-			if ($offsetIblockConfigIndex !== null && $offsetIblockConfigIndex !== $iblockConfigIndex) // is iblock out of offset
-			{
-				$iblockConfigIndex++;
-				continue;
-			}
+			if (!$offsetObject->tick('iblock')) { continue; }
 
 			$counterManager = new Market\Export\Run\Counter\Manager();
 
 			do
 			{
-				$isNeedRepeatCount = false;
-				$counter = null;
-				$sourceFilterIndex = 0;
-				$previousFilterSum = 0;
-
 				try
 				{
+					$isNeedRepeatCount = false;
+					$counter = null;
+					$previousFilterSum = 0;
+
 					foreach ($iblockConfig['FILTER_LIST'] as $sourceFilter)
 					{
-						if ($offsetFilterIndex === null || $offsetFilterIndex >= $sourceFilterIndex) // is filter in offset or no offset
+						if (!$offsetObject->tick('filter')) { continue; }
+
+						$filterContext = $sourceFilter['CONTEXT'] + $iblockConfig['CONTEXT'];
+						$filterBuilder = new Market\Export\Routine\QueryBuilder\Filter();
+						$exportFilter = $filterBuilder->boot($sourceFilter['FILTER'], $filterContext);
+						$queryFilters = $this->compileQueryFilters($filterBuilder, $exportFilter, [], $filterContext);
+
+						$filterCount = 0;
+						$isIblockConfigFilter = ($sourceFilter['ID'] === null);
+
+						if ($isIblockConfigFilter)
 						{
-							$filterContext = $sourceFilter['CONTEXT'] + $iblockConfig['CONTEXT'];
+							$totalCount = 0;
 
-							$this->initializeFilterContext($filterContext, $sourceFilter['FILTER']);
-
-							$queryFilters = $this->makeQueryFilters($sourceFilter['FILTER'], [], $filterContext);
-							$filterCount = 0;
-							$isIblockConfigFilter = ($sourceFilter['ID'] === null);
-
-							if ($isIblockConfigFilter)
+							foreach ($queryFilters as $queryFilter)
 							{
-								$totalCount = 0;
-
-								foreach ($queryFilters as $queryFilter)
-								{
-									$totalCount += $this->queryTotalCount($queryFilter, $filterContext);
-								}
-
-								$filterCount = $totalCount - $previousFilterSum;
-
-								if ($this->isCatalogTypeCompatibility($filterContext))
-								{
-									$result->addCountWarning($iblockConfig['ID'], new Market\Error\Base(
-										Market\Config::getLang('EXPORT_RUN_STEP_OFFER_COUNT_CATALOG_TYPE_COMPATIBILITY')
-									));
-								}
-							}
-							else if (!empty($sourceFilter['FILTER']))
-							{
-								if ($counter === null)
-								{
-									$counter = $counterManager->getCounter();
-									$counter->start();
-								}
-
-								foreach ($queryFilters as $queryFilter)
-								{
-									$filterCount += $this->queryCount($queryFilter, $filterContext, $counter);
-								}
-
-								$previousFilterSum += $filterCount;
+								$totalCount += $this->queryTotalCount($queryFilter, $filterContext);
 							}
 
-							if ($isIblockConfigFilter) // is iblock link
+							$filterCount = $totalCount - $previousFilterSum;
+
+							if ($this->isCatalogTypeCompatibility($filterContext))
 							{
-								$result->setCount($iblockConfig['ID'], $filterCount);
-							}
-							else
-							{
-								$result->setCount($iblockConfig['ID'] . ':' . $sourceFilter['ID'], $filterCount);
+								$result->addCountWarning($iblockConfig['ID'], new Market\Error\Base(
+									Market\Config::getLang('EXPORT_RUN_STEP_OFFER_COUNT_CATALOG_TYPE_COMPATIBILITY')
+								));
 							}
 						}
+						else if (!empty($sourceFilter['FILTER']))
+						{
+							if ($counter === null)
+							{
+								$counter = $counterManager->getCounter();
+								$counter->start();
+							}
 
-						$sourceFilterIndex++;
+							foreach ($queryFilters as $queryFilter)
+							{
+								$filterCount += $this->queryCount($queryFilter, $filterContext, $counter);
+							}
+
+							$previousFilterSum += $filterCount;
+						}
+
+						if ($isIblockConfigFilter) // is iblock link
+						{
+							$result->setCount($iblockConfig['ID'], $filterCount);
+						}
+						else
+						{
+							$result->setCount($iblockConfig['ID'] . ':' . $sourceFilter['ID'], $filterCount);
+						}
+
+						$filterBuilder->release($sourceFilter['FILTER'], $filterContext);
 					}
 
 					if ($counter !== null)
@@ -223,81 +176,29 @@ class Offer extends Base
 				}
 			}
 			while ($isNeedRepeatCount);
-
-			$iblockConfigIndex++;
 		}
 
 		return $result;
 	}
 
-	/**
-	 * Запускаем выгрузку
-	 *
-	 * @param string $action
-	 * @param string|null $offset
-	 *
-	 * @return Market\Result\Step
-	 *
-	 * @throws \Bitrix\Main\LoaderException
-	 * @throws \Bitrix\Main\ObjectNotFoundException
-	 * @throws \Bitrix\Main\SystemException
-	 */
 	public function run($action, $offset = null)
 	{
 		$result = new Market\Result\Step();
 
 		$this->setRunAction($action);
 
-		$iblockConfigList = $this->getIblockConfigList();
 		$formatTag = $this->getTag();
-
-		// calculate offset and total
-
-		$offsetIblockConfigIndex = null;
-		$offsetFilterIndex = null;
-		$offsetQueryIndex = null;
-		$offsetFilterShift = null;
-		$totalFilterCount = 0;
-		$iblockConfigWeightList = [];
-
-		if ($offset !== null)
-		{
-			$offsetParts = explode(':', $offset);
-			$offsetIblockConfigIndex = (int)$offsetParts[0];
-			$offsetFilterIndex = isset($offsetParts[1]) ? (int)$offsetParts[1] : null;
-			$offsetQueryIndex = isset($offsetParts[2]) ? (int)$offsetParts[2] : null;
-			$offsetFilterShift = isset($offsetParts[3]) ? (int)$offsetParts[3] : null;
-
-			if ($offsetFilterShift === null && $offsetQueryIndex > 2) // compatibility offset without multiple queries
-			{
-				$offsetFilterShift = $offsetQueryIndex;
-				$offsetQueryIndex = 0;
-			}
-		}
-
-		foreach ($iblockConfigList as $iblockConfig)
-		{
-			$iblockConfigWeight = count($iblockConfig['FILTER_LIST']);
-
-			$iblockConfigWeightList[] = $iblockConfigWeight;
-			$totalFilterCount += $iblockConfigWeight;
-		}
-
-		$result->setTotal($totalFilterCount);
-
-		// run export
-
-		$iblockConfigIndex = 0;
 		$isTimeExpired = false;
+		$offsetObject = new Market\Data\Run\Offset($offset, [
+			'iblock',
+			'filter',
+			'query',
+			'element',
+		]);
 
-		foreach ($iblockConfigList as $iblockConfig)
+		foreach ($this->getIblockConfigList() as $iblockConfig)
 		{
-			if ($offsetIblockConfigIndex !== null && $offsetIblockConfigIndex > $iblockConfigIndex) // is iblock out of offset
-			{
-				$result->increaseProgress($iblockConfigWeightList[$iblockConfigIndex]);
-				$iblockConfigIndex++;
-				continue;
-			}
+			if (!$offsetObject->tick('iblock')) { continue; }
 
 			$tagDescriptionList = $iblockConfig['TAG_DESCRIPTION_LIST'];
 			$iblockContext = $iblockConfig['CONTEXT'];
@@ -312,65 +213,39 @@ class Offer extends Base
 				$changes = $this->getChanges();
 				$changesFilter = $this->getQueryChangesFilter($changes, $iblockContext);
 
-				if ($changesFilter === null) // changed other entity
-				{
-					$result->increaseProgress($iblockConfigWeightList[$iblockConfigIndex]);
-					$iblockConfigIndex++;
-					continue;
-				}
+				if ($changesFilter === null) { continue; } // changed other entity
 			}
 
 			$formatTag->extendTagDescriptionList($tagDescriptionList, $iblockContext);
 
+			$selectBuilder = new Market\Export\Routine\QueryBuilder\Select();
 			$sourceSelect = $this->getSourceSelect($tagDescriptionList);
+			$sourceSelect = $selectBuilder->boot($sourceSelect, $iblockContext);
+			$querySelect = $selectBuilder->compile($sourceSelect, $iblockContext);
 
-			$this->sortSourceSelect($sourceSelect);
-			$this->initializeQueryContext($iblockContext, $sourceSelect);
-			$this->sortSourceSelect($sourceSelect);
 			$this->applySelectMap($tagDescriptionList, $iblockContext);
 
-			$querySelect = $this->makeQuerySelect($sourceSelect, $iblockContext);
-			$sourceFilterIndex = 0;
-
-			if ($hasIblockLimit && ($offsetFilterIndex !== null || $offsetFilterShift !== null))
+			if ($hasIblockLimit && $offsetObject->get('filter') !== null)
 			{
 				$iblockReadyCount = $this->getSuccessCount($iblockContext);
 				$isExceededIblockLimit = ($iblockReadyCount >= $iblockLimit);
+
+				if ($isExceededIblockLimit) { continue; }
 			}
 
 			foreach ($iblockConfig['FILTER_LIST'] as $filterConfig)
 			{
-				if ($isExceededIblockLimit)
-				{
-					$result->increaseProgress(1);
-					$result->setOffset($iblockConfigIndex + 1);
-					$sourceFilterIndex++;
-					continue;
-				}
-
-				if ($offsetFilterIndex !== null && $offsetFilterIndex > $sourceFilterIndex)
-				{
-					$result->increaseProgress(1);
-					$sourceFilterIndex++;
-					continue;
-				}
+				if (!$offsetObject->tick('filter')) { continue; }
 
 				$filterContext = $filterConfig['CONTEXT'] + $iblockContext;
+				$filterBuilder = new Market\Export\Routine\QueryBuilder\Filter();
 
-				$this->initializeFilterContext($filterContext, $filterConfig['FILTER']);
-
-				$queryFilters = $this->makeQueryFilters($filterConfig['FILTER'], $sourceSelect, $filterContext, $changesFilter);
-				$queryFilterIndex = 0;
-				$queryFilterCount = count($queryFilters);
+				$exportFilter = $filterBuilder->boot($filterConfig['FILTER'], $filterContext);
+				$queryFilters = $this->compileQueryFilters($filterBuilder, $exportFilter, $sourceSelect, $filterContext, $changesFilter);
 
 				foreach ($queryFilters as $queryFilter)
 				{
-					if ($offsetQueryIndex !== null && $offsetQueryIndex > $queryFilterIndex)
-					{
-						$result->increaseProgress(1 / $queryFilterCount);
-						$queryFilterIndex++;
-						continue;
-					}
+					if (!$offsetObject->tick('query')) { continue; }
 
 					$filterResult = $this->exportIblockFilter(
 						$queryFilter,
@@ -378,7 +253,7 @@ class Offer extends Base
 						$querySelect,
 						$tagDescriptionList,
 						$filterContext,
-						$offsetFilterShift,
+						$offsetObject->get('element'),
 						$iblockLimit,
 						$iblockReadyCount
 					);
@@ -389,69 +264,45 @@ class Offer extends Base
 					{
 						$isTimeExpired = true;
 
-						$result->setOffset($iblockConfigIndex . ':' . $sourceFilterIndex . ':' . $queryFilterIndex . ':' . $filterResult['OFFSET']);
+						$offsetObject->set('element', $filterResult['OFFSET']);
 					}
 					else if ($hasIblockLimit && $iblockReadyCount >= $iblockLimit)
 					{
 						$isExceededIblockLimit = true;
+						$isTimeExpired = $this->getProcessor()->isTimeExpired();
 
-						$result->increaseProgress(1 / $queryFilterCount);
-						$result->setOffset($iblockConfigIndex + 1);
+						$offsetObject->next('iblock');
+						break;
 					}
 					else
 					{
 						$isTimeExpired = $this->getProcessor()->isTimeExpired();
 
-						$result->increaseProgress(1 / $queryFilterCount);
-
-						if ($queryFilterIndex + 1 < $queryFilterCount)
-						{
-							$result->setOffset($iblockConfigIndex . ':' . $sourceFilterIndex . ':' . ($queryFilterIndex + 1));
-						}
-						else
-						{
-							$result->setOffset($iblockConfigIndex . ':' . ($sourceFilterIndex + 1));
-						}
+						$offsetObject->next('query');
 					}
 
 					if ($isTimeExpired) { break; }
-
-					$offsetFilterShift = null;
-
-					$queryFilterIndex++;
 				}
 
-				$this->releaseFilterContext($filterContext, $filterConfig['FILTER']);
+				$filterBuilder->release($exportFilter, $filterContext);
 
-				if ($isTimeExpired) { break; }
-
-				$offsetQueryIndex = null;
-				$offsetFilterShift = null;
-
-				$sourceFilterIndex++;
+				if ($isExceededIblockLimit || $isTimeExpired) { break; }
 			}
 
-			$this->releaseQueryContext($iblockContext, $sourceSelect);
-
-			if ($isExceededIblockLimit)
-			{
-				$isTimeExpired = $this->getProcessor()->isTimeExpired();
-			}
+			$selectBuilder->release($sourceSelect, $iblockContext);
 
 			if ($isTimeExpired) { break; }
-
-			$offsetFilterIndex = null;
-			$offsetQueryIndex = null;
-			$offsetFilterShift = null;
-
-			$iblockConfigIndex++;
 		}
 
-		if ($this->getParameter('progressCount') === true)
+		if ($isTimeExpired)
 		{
-			$readyCount = $this->getReadyCount();
+			$result->setOffset((string)$offsetObject);
+			$result->setTotal(1);
 
-			$result->setReadyCount($readyCount);
+			if ($this->getParameter('progressCount') === true)
+			{
+				$result->setReadyCount($this->getReadyCount());
+			}
 		}
 
 		return $result;
@@ -494,7 +345,7 @@ class Offer extends Base
 
 	protected function useHashCollision()
 	{
-		return true;
+		return $this->getFormat()->useOfferHashCollision();
 	}
 
 	protected function usePrimaryCollision($context)
@@ -562,51 +413,51 @@ class Offer extends Base
 
 	protected function getTagResultHash($tagResult, $tagValues)
 	{
-		$result = '';
 		$xmlContents = $tagResult->getXmlContents();
 
-		if ($xmlContents !== null)
+		if ($xmlContents === null) { return ''; }
+
+		return $this->calculateXmlContentHash($xmlContents, $tagValues->getType());
+	}
+
+	public function calculateXmlContentHash($xmlContent, $tagType = null)
+	{
+		if ($this->useHashCollision())
 		{
-			if ($this->useHashCollision())
-			{
-				$tagType = $tagValues->getType();
-				$tag = $this->getTag($tagType);
-				$primaryName = $this->getTagPrimaryName($tag);
+			$tag = $this->getTag($tagType);
+			$primaryName = $this->getTagPrimaryName($tag);
 
-				$xmlContents = preg_replace('/^(<[^ ]+) ' . $primaryName . '="[^"]*?"/', '$1', $xmlContents); // remove id attr for check tag contents
-				$xmlContents = preg_replace_callback('/(<url>.*?\?)(.*?)(#.*)?(<\/url>)/', static function($matches) {
-					$utmMarker = 'utm_';
-					$queryString = $matches[2];
+			$xmlContent = preg_replace('/^(<[^ ]+) ' . $primaryName . '="[^"]*?"/', '$1', $xmlContent); // remove id attr for check tag contents
+			$xmlContent = preg_replace_callback('/(<url>.*?\?)(.*?)(#.*)?(<\/url>)/', static function($matches) {
+				$utmMarker = 'utm_';
+				$queryString = $matches[2];
 
-					if (Market\Data\TextString::getPosition($queryString, $utmMarker) !== false)
+				if (Market\Data\TextString::getPosition($queryString, $utmMarker) !== false)
+				{
+					$glue = '&amp;';
+					$isChanged = false;
+					$queryParameters = explode($glue, $queryString);
+
+					foreach ($queryParameters as $queryParameterIndex => $queryParameter)
 					{
-						$glue = '&amp;';
-						$isChanged = false;
-						$queryParameters = explode($glue, $queryString);
-
-						foreach ($queryParameters as $queryParameterIndex => $queryParameter)
+						if (Market\Data\TextString::getPosition($queryParameter, $utmMarker) === 0)
 						{
-							if (Market\Data\TextString::getPosition($queryParameter, $utmMarker) === 0)
-							{
-								$isChanged = true;
-								unset($queryParameters[$queryParameterIndex]);
-							}
-						}
-
-						if ($isChanged)
-						{
-							$queryString = implode($glue, $queryParameters);
+							$isChanged = true;
+							unset($queryParameters[$queryParameterIndex]);
 						}
 					}
 
-					return $matches[1] . $queryString . $matches[3] . $matches[4];
-				}, $xmlContents); // remove utm from url
-			}
+					if ($isChanged)
+					{
+						$queryString = implode($glue, $queryParameters);
+					}
+				}
 
-			$result = md5($xmlContents);
+				return $matches[1] . $queryString . $matches[3] . $matches[4];
+			}, $xmlContent); // remove utm from url
 		}
 
-		return $result;
+		return md5($xmlContent);
 	}
 
 	protected function getStorageDataClass()
@@ -748,74 +599,11 @@ class Offer extends Base
 
 	protected function getIgnoredTypeChanges()
 	{
-		$result = [
+		return [
 			Market\Export\Run\Manager::ENTITY_TYPE_PROMO => true,
 			Market\Export\Run\Manager::ENTITY_TYPE_GIFT => true,
+			Market\Export\Run\Manager::ENTITY_TYPE_COLLECTION => true,
 		];
-
-		if (!$this->hasSourceCurrencyConversion())
-		{
-			$result[Market\Export\Run\Manager::ENTITY_TYPE_CURRENCY] = true;
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Используется ли конвератция валюты
-	 *
-	 * @return bool
-	 */
-	protected function hasSourceCurrencyConversion()
-	{
-		if ($this->sourceCurrencyConversion === null)
-		{
-			$this->sourceCurrencyConversion = $this->findSourceCurrencyConversion();
-		}
-
-		return $this->sourceCurrencyConversion;
-	}
-
-	/**
-	 * Проверяем источники для профиля на наличие конвертации валюты
-	 *
-	 * @return bool
-	 */
-	protected function findSourceCurrencyConversion()
-	{
-		$setup = $this->getSetup();
-		$iblockLinkCollection = $setup->getIblockLinkCollection();
-		$tags = [
-			'price',
-			'oldprice',
-			'currencyId'
-		];
-		$result = false;
-
-		/** @var Market\Export\IblockLink\Model $iblockLink */
-		foreach ($iblockLinkCollection as $iblockLink)
-		{
-			foreach ($tags as $tagName)
-			{
-				$tagDescription = $iblockLink->getTagDescription($tagName);
-
-				if (isset($tagDescription['VALUE']['TYPE'], $tagDescription['VALUE']['FIELD']))
-				{
-					$source = $this->getSource($tagDescription['VALUE']['TYPE']);
-
-					if (
-						method_exists($source, 'hasCurrencyConversion')
-						&& $source->hasCurrencyConversion($tagDescription['VALUE']['FIELD'], $tagDescription['SETTINGS'])
-					)
-					{
-						$result = true;
-						break 2;
-					}
-				}
-			}
-		}
-
-		return $result;
 	}
 
 	/**
@@ -839,7 +627,7 @@ class Offer extends Base
 				'ID' => $iblockLink->getInternalId(),
 				'EXPORT_ALL' => $iblockLink->isExportAll(),
 				'TAG_DESCRIPTION_LIST' => $iblockLink->getTagDescriptionList(),
-				'FILTER_LIST' => $this->getSourceFilterList($iblockLink, $iblockContext, $isNeedAll),
+				'FILTER_LIST' => $this->getSourceFilterList($iblockLink, $isNeedAll),
 				'CONTEXT' => $iblockContext,
 			];
 		}
@@ -860,16 +648,15 @@ class Offer extends Base
 	 * @param int $successCount
 	 *
 	 * @return array 'OFFSET' => отстут для пошагового запроса, 'SUCCESS_COUNT' => количество успешно выгруженных тегов
-	 *
-	 * @throws Main\ObjectNotFoundException
 	 */
 	protected function exportIblockFilter($queryFilter, $sourceSelect, $querySelect, $tagDescriptionList, $context, $queryOffset = null, $limit = null, $successCount = 0)
 	{
+		$elementFetcher = $this->createElementFetcher($context);
+		$collectionLink = new Offer\CollectionLink($this->getSetup(), $this->getFormat(), $this->getRunAction());
 		$queryDistinct = !empty($queryFilter['DISTINCT']) ? $queryFilter['DISTINCT'] : null;
 		$useDistinct = ($queryDistinct !== null);
 		$hasLimit = ($limit > 0);
-		$sourceChunkSize = 500;
-		$processChunkSize = ($hasLimit ? $limit : $sourceChunkSize);
+		$processChunkSize = ($hasLimit ? $limit : 500);
 		$result = [
 			'OFFSET' => null,
 			'SUCCESS_COUNT' => 0
@@ -880,37 +667,23 @@ class Offer extends Base
 
 		do
 		{
-			$queryResult = $this->loadElements($queryFilter, $querySelect, $context, $queryOffset);
+			$queryResult = $elementFetcher->load($queryFilter, $querySelect, $context, $queryOffset);
 			$queryOffset = (int)$queryResult['OFFSET'];
 
 			$this->processExportElementList($queryResult['ELEMENT'], $queryResult['PARENT'], $context);
 
 			foreach ($this->chunkElementList($queryResult['ELEMENT'], $processChunkSize, $useDistinct) as $elementChunk)
 			{
-				$sourceValueList = null;
-
-				// load source value
-
-				foreach (array_chunk($elementChunk, $sourceChunkSize, true) as $elementsPart)
-				{
-					$partSourceValueList = $this->extractElementListValues($sourceSelect, $elementsPart, $queryResult['PARENT'], $context);
-
-					if ($sourceValueList === null)
-					{
-						$sourceValueList = $partSourceValueList;
-					}
-					else
-					{
-						$sourceValueList += $partSourceValueList;
-					}
-				}
+				$parentChunk = array_intersect_key($queryResult['PARENT'], array_column($elementChunk, 'PARENT_ID', 'PARENT_ID'));
+				$sourceValueList = $this->extractElementListValues($sourceSelect, $elementChunk, $parentChunk, $context);
+				$sourceValueList = $collectionLink->extend(array_column($elementChunk, 'ID'), $sourceValueList);
 
 				// write
 
 				$writeLimit = ($hasLimit ? $limit - $successCount : null);
 				$tagValuesList = $this->buildTagValuesList($tagDescriptionList, $sourceValueList, $context);
 				$writeData = [
-					'PARENT_LIST' => $queryResult['PARENT'],
+					'PARENT_LIST' => $parentChunk,
 					'SOURCE_VALUE' => $sourceValueList,
 				];
 
@@ -922,15 +695,12 @@ class Offer extends Base
 				}
 
 				$writeResultList = $this->writeData($tagValuesList, $elementChunk, $context, $writeData, $writeLimit);
+				$written = array_filter($writeResultList, static function(array $writeResult) { return $writeResult['STATUS'] === static::STORAGE_STATUS_SUCCESS; });
 
-				foreach ($writeResultList as $writeResult)
-				{
-					if ($writeResult['STATUS'] === static::STORAGE_STATUS_SUCCESS)
-					{
-						$successCount++;
-						$result['SUCCESS_COUNT']++;
-					}
-				}
+				$collectionLink->commit(array_column($written, 'ID', 'ID'));
+
+				$successCount += count($written);
+				$result['SUCCESS_COUNT'] += count($written);
 
 				if ($hasLimit && $successCount >= $limit) { break; }
 			}
@@ -940,7 +710,8 @@ class Offer extends Base
 				$result['OFFSET'] = null;
 				break;
 			}
-			else if ($queryResult['HAS_NEXT'] && $this->getProcessor()->isTimeExpired())
+
+			if ($queryResult['HAS_NEXT'] && $this->getProcessor()->isTimeExpired())
 			{
 				$result['OFFSET'] = $queryOffset;
 				break;
@@ -951,37 +722,26 @@ class Offer extends Base
 		return $result;
 	}
 
+	protected function createElementFetcher(array $context)
+	{
+		$fetcher = new Market\Export\Routine\QueryBuilder\ElementFetcher();
+
+		if (empty($context['IGNORE_EXCLUDE']))
+		{
+			$fetcher->exclude(
+				$this->getStorageDataClass(),
+				$this->getStorageReadyFilter($context),
+				'ELEMENT_ID',
+				$context['HAS_OFFER'] && !empty($context['USE_DISTINCT']) ? 'PARENT_ID' : null
+			);
+		}
+
+		return $fetcher;
+	}
+
 	protected function processExportElementList(&$elementList, &$parentList, $context)
 	{
 		// nothing by default
-	}
-
-	protected function initializeQueryContext(&$iblockContext, &$sourceSelect)
-	{
-		$originalSelect = $sourceSelect;
-
-		// initial
-
-		foreach ($sourceSelect as $sourceType => $sourceFields)
-		{
-			$source = $this->getSource($sourceType);
-
-			$source->initializeQueryContext($sourceFields, $iblockContext, $sourceSelect);
-		}
-
-		// extended select
-
-		foreach ($sourceSelect as $sourceType => $sourceFields)
-		{
-			$originalFields = isset($originalSelect[$sourceType]) ? (array)$originalSelect[$sourceType] : [];
-			$diffFields = array_diff($sourceFields, $originalFields);
-
-			if (empty($diffFields)) { continue; }
-
-			$source = $this->getSource($sourceType);
-
-			$source->initializeQueryContext($sourceFields, $iblockContext, $sourceSelect);
-		}
 	}
 
 	protected function applySelectMap(&$tagDescriptionList, $iblockContext)
@@ -1017,43 +777,17 @@ class Offer extends Base
 						unset($innerSourceMap);
 					}
 				}
+
+				if (isset($tagDescription['CHILDREN']) && is_array($tagDescription['CHILDREN']))
+				{
+					$this->applySelectMap($tagDescription['CHILDREN'], $iblockContext);
+				}
 			}
 			unset($tagDescription);
 		}
 	}
 
-	protected function releaseQueryContext($iblockContext, $sourceSelect)
-	{
-		foreach ($sourceSelect as $sourceType => $sourceFields)
-		{
-			$source = $this->getSource($sourceType);
-
-			$source->releaseQueryContext($sourceFields, $iblockContext, $sourceSelect);
-		}
-	}
-
-	protected function initializeFilterContext(&$filterContext, &$sourceFilter)
-	{
-		foreach ($sourceFilter as $sourceType => $sourceFields)
-		{
-			if (is_numeric($sourceType)) { continue; } // no support for logic filters
-
-			$source = $this->getSource($sourceType);
-			$source->initializeFilterContext($sourceFields, $filterContext, $sourceFilter);
-		}
-	}
-
-	protected function releaseFilterContext($filterContext, $sourceFilter)
-	{
-		foreach ($sourceFilter as $sourceType => $sourceFields)
-		{
-			if (is_numeric($sourceType)) { continue; } // no support for logic filters
-
-			$source = $this->getSource($sourceType);
-			$source->releaseFilterContext($sourceFields, $filterContext, $sourceFilter);
-		}
-	}
-
+	/** @noinspection DuplicatedCode */
 	protected function getQueryChangesFilter($changes, $context)
 	{
 		$changesFilter = [];
@@ -1130,6 +864,7 @@ class Offer extends Base
 				break;
 
 				case Market\Export\Run\Manager::ENTITY_TYPE_PROMO:
+					/** @noinspection TypeUnsafeArraySearchInspection */
 					if (isset($context['PROMO_ID']) && in_array($context['PROMO_ID'], (array)$entityIds))
 					{
 						$isNeedFull = true;
@@ -1146,7 +881,8 @@ class Offer extends Base
 				$changesFilter = [];
 				break;
 			}
-			else if (isset($entityType) && isset($entityFilter))
+
+			if (isset($entityType, $entityFilter))
 			{
 				if (!isset($changesFilter[$entityType]))
 				{
@@ -1172,7 +908,7 @@ class Offer extends Base
 	protected function queryCount($queryFilter, $queryContext, Market\Export\Run\Counter\Base $counter)
 	{
 		$countContext = $queryContext;
-		$countContext['PAGE_SIZE'] = (int)($this->getParameter('offerPageSize') ?: Market\Config::getOption('export_count_offer_page_size') ?: 100);
+		$countContext['PAGE_SIZE'] = (int)(Market\Config::getOption('export_count_offer_page_size') ?: 100);
 		$countContext['CATALOG_TYPE_COMPATIBILITY'] = $queryContext['HAS_OFFER'] && $this->isCatalogTypeCompatibility($queryContext);
 		$countContext['USE_DISTINCT'] = !empty($queryFilter['DISTINCT']);
 
@@ -1213,746 +949,29 @@ class Offer extends Base
 		return $result;
 	}
 
-	/**
-	 * Запрашиваем элементы из базы данных
-	 *
-	 * @param $queryFilter
-	 * @param $querySelect
-	 * @param $queryContext
-	 * @param $offset
-	 * @param $limit
-	 *
-	 * @return array
-	 */
-	protected function loadElements($queryFilter, $querySelect, $queryContext, $offset = 0, $limit = null)
+	protected function compileQueryFilters(
+		Market\Export\Routine\QueryBuilder\Filter $filterBuilder,
+		array $sourceFilter,
+		array $sourceSelect,
+		array $context,
+		array $changesFilter = null
+	)
 	{
-		if ($queryFilter['DIRECTION'] === 'OFFER')
-		{
-			$result = $this->loadElementsByOffer($queryFilter, $querySelect, $queryContext, $offset, $limit);
-		}
-		else
-		{
-			$result = $this->loadElementsBySelf($queryFilter, $querySelect, $queryContext, $offset, $limit);
-		}
+		$queryFilters = $filterBuilder->compile($sourceFilter, $sourceSelect, $context, $changesFilter);
+		$queryFilters = $this->applyFewQueryFiltersModifications($queryFilters, $context);
 
-		return $result;
+		return $queryFilters;
 	}
 
-	protected function loadElementsBySelf($queryFilter, $querySelect, $queryContext, $offset = 0, $limit = null)
+	protected function applyFewQueryFiltersModifications(array $queryFilters, array $filterContext)
 	{
-		$parentList = [];
-		$hasOffers = isset($queryContext['OFFER_PROPERTY_ID']);
-
-		// elements
-
-		$pageSize = $this->getQueryElementListPageSize($queryContext, $limit);
-
-		$elementFilter = $queryFilter['ELEMENT'];
-		$elementFilter = $this->extendQueryElementListFilter($elementFilter, $queryContext, 'ELEMENT');
-
-		$elementQueryResult = $this->queryElementList($elementFilter, $querySelect['ELEMENT'], $queryContext, $offset, $pageSize);
-		$elementList = $elementQueryResult['ELEMENT'];
-
-		// offers
-
-		if ($hasOffers)
+		foreach ($queryFilters as &$queryFilter)
 		{
-			$isCatalogTypeCompatibility = $this->isCatalogTypeCompatibility($queryContext);
-			$foundParents = [];
-
-			if ($isCatalogTypeCompatibility)
-			{
-				$parentList = $elementList;
-			}
-			else
-			{
-				foreach ($elementList as $elementId => $element)
-				{
-					if ($this->getElementCatalogType($element, $queryContext) === static::ELEMENT_TYPE_SKU)
-					{
-						$parentList[$elementId] = $element;
-					}
-				}
-
-				$elementList = array_diff_key($elementList, $parentList);
-			}
-
-			if (!empty($parentList))
-			{
-				$offerFilter = $queryFilter['OFFERS'];
-				$offerFilter['=PROPERTY_' . $queryContext['OFFER_PROPERTY_ID']] = array_keys($parentList);
-				$offerFilter = $this->extendQueryOfferListFilter($offerFilter, $queryContext, 'ELEMENT');
-
-				$offerQueryResult = $this->queryOfferList($offerFilter, $querySelect['OFFERS'], $queryContext);
-
-				$foundParents = array_column($offerQueryResult['ELEMENT'], 'ID', 'PARENT_ID');
-
-				$offerList = $offerQueryResult['ELEMENT'];
-				$offerList = $this->processQueryResultOfferList($offerList, $queryContext, 'ELEMENT');
-
-				$elementList += $offerList;
-			}
-
-			foreach ($parentList as $parentId => $parent)
-			{
-				if (!isset($foundParents[$parentId]))
-				{
-					unset($parentList[$parentId]);
-				}
-				else if ($isCatalogTypeCompatibility)
-				{
-					if (isset($elementList[$parentId]))
-					{
-						unset($elementList[$parentId]);
-					}
-				}
-			}
+			$queryFilter = $this->applyQueryFilterModifications($queryFilter, $filterContext);
 		}
+		unset($queryFilter);
 
-		return [
-			'ELEMENT' => $elementList,
-			'PARENT' => $parentList,
-			'OFFSET' => $elementQueryResult['OFFSET'],
-			'HAS_NEXT' => $elementQueryResult['HAS_NEXT'],
-		];
-	}
-
-	protected function loadElementsByOffer($queryFilter, $querySelect, $queryContext, $offset = 0, $limit = null)
-	{
-		$hasOffers = isset($queryContext['OFFER_PROPERTY_ID']);
-		$elementList = [];
-		$parentList = [];
-		$hasNext = false;
-
-		if ($hasOffers)
-		{
-			// offers
-
-			$pageSize = $this->getQueryElementListPageSize($queryContext, $limit, 'OFFER');
-
-			$offerFilter = $queryFilter['OFFERS'];
-			$offerFilter = $this->extendQueryOfferListFilter($offerFilter, $queryContext, 'OFFER');
-
-			$offerQueryResult = $this->queryOfferList($offerFilter, $querySelect['OFFERS'], $queryContext, $offset, $pageSize);
-
-			$elementList = $offerQueryResult['ELEMENT'];
-			$elementList = $this->processQueryResultOfferList($elementList, $queryContext, 'OFFER');
-
-			$offset = $offerQueryResult['OFFSET'];
-			$hasNext = $offerQueryResult['HAS_NEXT'];
-
-			// parents
-
-			$parentMap = array_column($elementList, 'ID', 'PARENT_ID');
-
-			if (!empty($parentMap))
-			{
-				$elementFilter = $queryFilter['ELEMENT'];
-				$elementFilter['=ID'] = array_keys($parentMap);
-				$elementFilter = $this->extendQueryElementListFilter($elementFilter, $queryContext, 'OFFER');
-
-				$elementQueryResult = $this->queryElementList($elementFilter, $querySelect['ELEMENT'], $queryContext);
-				$parentList = $elementQueryResult['ELEMENT'];
-			}
-
-			// unset elements without parent
-
-			$elementList = array_filter($elementList, static function($element) use ($parentList) {
-				return isset($parentList[$element['PARENT_ID']]);
-			});
-		}
-
-		return [
-			'ELEMENT' => $elementList,
-			'PARENT' => $parentList,
-			'OFFSET' => $offset,
-			'HAS_NEXT' => $hasNext,
-		];
-	}
-
-	protected function queryElementList($filter, $select, $context, $offset = 0, $pageSize = null)
-	{
-		$elementList = [];
-		$count = 0;
-
-		if ($offset > 0)
-		{
-			$filter[] = [ '>ID' => $offset ];
-		}
-
-		if ($pageSize > 0)
-		{
-			$paging = [ 'nTopCount' => $pageSize ];
-		}
-		else
-		{
-			$paging = false;
-		}
-
-		$select[] = 'ID';
-
-		$queryElementList = \CIBlockElement::GetList(
-			[ 'ID' => 'ASC' ],
-			$filter,
-			false,
-			$paging,
-			$select
-		);
-
-		while ($element = $queryElementList->Fetch())
-		{
-			$elementList[$element['ID']] = $element;
-
-			$offset = (int)$element['ID'];
-			++$count;
-		}
-
-		return [
-			'ELEMENT' => $elementList,
-			'OFFSET' => $offset,
-			'HAS_NEXT' => ($pageSize > 0 && $count >= $pageSize),
-		];
-	}
-
-	protected function queryOfferList($filter, $select, $context, $offset = 0, $pageSize = null)
-	{
-		$offerList = [];
-		$count = 0;
-
-		$skuPropertyKey = 'PROPERTY_' . $context['OFFER_PROPERTY_ID'];
-		$skuPropertyValueKey = $skuPropertyKey . '_VALUE';
-
-		if ($offset > 0)
-		{
-			$filter[] = [ '>ID' => $offset ];
-		}
-
-		if ($pageSize > 0)
-		{
-			$paging = [ 'nTopCount' => $pageSize ];
-		}
-		else
-		{
-			$paging = false;
-		}
-
-		$select[] = $skuPropertyKey;
-		$select[] = 'ID';
-
-		$queryOfferList = \CIBlockElement::GetList(
-			[ 'ID' => 'ASC' ],
-			$filter,
-			false,
-			$paging,
-			$select
-		);
-
-		while ($offer = $queryOfferList->Fetch())
-		{
-			$offerElementId = (int)$offer[$skuPropertyValueKey];
-
-			if ($offerElementId > 0)
-			{
-				$offer['PARENT_ID'] = $offerElementId;
-
-				$offerList[$offer['ID']] = $offer;
-			}
-
-			$offset = (int)$offer['ID'];
-			++$count;
-		}
-
-		return [
-			'ELEMENT' => $offerList,
-			'OFFSET' => $offset,
-			'HAS_NEXT' => ($pageSize > 0 && $count >= $pageSize),
-		];
-	}
-
-	/**
-	 * Количество элементов обрабатываемых за один шаг
-	 *
-	 * @param $context array
-	 * @param $limit int|null
-	 * @param $direction string
-	 *
-	 * @return int
-	 */
-	protected function getQueryElementListPageSize($context, $limit = null, $direction = 'ELEMENT')
-	{
-		if ($limit > 0)
-		{
-			$result = (int)$limit;
-		}
-		else
-		{
-			$parameter = (int)$this->getParameter('offerPageSize');
-			$option = (int)Market\Config::getOption('export_run_offer_page_size');
-
-			if ($parameter > 0)
-			{
-				$result = $parameter;
-			}
-			else if ($option > 0)
-			{
-				$result = $option;
-			}
-			else if ($direction === 'OFFER' || !$context['HAS_OFFER'])
-			{
-				$result = 100;
-			}
-			else
-			{
-				$result = 50;
-			}
-		}
-
-		return $result;
-	}
-
-	/**
-	 * @param array $filter
-	 * @param array $context
-	 * @param string $direction
-	 *
-	 * @return array
-	 */
-	protected function extendQueryElementListFilter($filter, $context, $direction = 'ELEMENT')
-	{
-		if (empty($context['IGNORE_EXCLUDE']))
-		{
-			if ($direction !== 'OFFER')
-			{
-				$filter[] = [
-					'!ID' => $this->getQueryExcludeFilter($context)
-				];
-			}
-
-			if ($context['HAS_OFFER'] && !empty($context['USE_DISTINCT']))
-			{
-				$filter[] = [
-					'!ID' => $this->getQueryExcludeFilter($context, 'PARENT_ID')
-				];
-			}
-		}
-
-		return $filter;
-	}
-
-	/**
-	 * @param array $filter
-	 * @param array $context
-	 * @param string $direction
-	 *
-	 * @return array
-	 */
-	protected function extendQueryOfferListFilter($filter, $context, $direction = 'ELEMENT')
-	{
-		if (
-			empty($context['IGNORE_EXCLUDE'])
-			&& !$this->isDelayedExcludeQueryOffers($context, $direction)
-		)
-		{
-			$filter[] = [
-				'!ID' => $this->getQueryExcludeFilter($context)
-			];
-		}
-
-		return $filter;
-	}
-
-	/**
-	 * @param array<int, array> $offerList
-	 * @param array $context
-	 * @param string $direction
-	 *
-	 * @return array<int, array>
-	 */
-	protected function processQueryResultOfferList($offerList, $context, $direction = 'ELEMENT')
-	{
-		if (
-			!empty($offerList)
-			&& empty($context['IGNORE_EXCLUDE'])
-			&& $this->isDelayedExcludeQueryOffers($context, $direction)
-		)
-		{
-			$storageDataClass = $this->getStorageDataClass();
-			$storageReadyFilter = $this->getStorageReadyFilter($context);
-			$offerIds = array_keys($offerList);
-
-			foreach (array_chunk($offerIds, 500) as $offerIdsChunk)
-			{
-				$storageReadyFilter['@ELEMENT_ID'] = $offerIdsChunk;
-
-				$queryReadyOffers = $storageDataClass::getList([
-					'filter' => $storageReadyFilter,
-					'select' => [ 'ELEMENT_ID' ]
-				]);
-
-				while ($readyOffer = $queryReadyOffers->fetch())
-				{
-					if (isset($offerList[$readyOffer['ELEMENT_ID']]))
-					{
-						unset($offerList[$readyOffer['ELEMENT_ID']]);
-					}
-				}
-			}
-		}
-
-		return $offerList;
-	}
-
-	/**
-	 * Отложенное исключение торговых предложений
-	 *
-	 * @param $context
-	 * @param $direction
-	 *
-	 * @return bool
-	 */
-	protected function isDelayedExcludeQueryOffers($context, $direction)
-	{
-		return $direction !== 'OFFER' && $this->isCatalogTypeCompatibility($context);
-	}
-
-	/**
-	 * Фильтры запросов по фильтру источников
-	 *
-	 * @param $sourceFilterList array
-	 * @param $sourceSelectList array
-	 * @param $queryContext array
-	 * @param $changesFilter array|null
-	 *
-	 * @return array[]
-	 */
-	protected function makeQueryFilters($sourceFilterList, $sourceSelectList, $queryContext, $changesFilter = null)
-	{
-		$queryFilter = $this->convertSourceFilterToQuery($sourceFilterList, $sourceSelectList);
-
-		if ($this->isNeedSplitQueryFilter($queryFilter, $queryContext))
-		{
-			$result = [
-				$this->buildQueryFilter($queryFilter, $queryContext, $changesFilter, 'ELEMENT'),
-				$this->buildQueryFilter($queryFilter, $queryContext, $changesFilter, 'OFFERS'),
-			];
-		}
-		else
-		{
-			$result = [
-				$this->buildQueryFilter($queryFilter, $queryContext, $changesFilter),
-			];
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Нужно ли разбить запрос по товарам и предложениям отдельно
-	 *
-	 * @param $queryFilter array
-	 * @param $context array
-	 *
-	 * @return bool
-	 */
-	protected function isNeedSplitQueryFilter($queryFilter, $context)
-	{
-		return (
-			!empty($queryFilter['CATALOG'])
-			&& empty($queryFilter['OFFERS'])
-			&& $context['HAS_OFFER']
-			&& !$context['OFFER_ONLY']
-			&& !$this->canQueryCatalogFilterMerge($queryFilter['CATALOG'])
-			&& !$this->isCatalogTypeCompatibility($context)
-		);
-	}
-
-	/**
-	 * Формируем фильтры для запросов
-	 *
-	 * @param $queryFilter array
-	 * @param $queryContext array
-	 * @param $changesFilter array|null
-	 * @param $catalogBehavior string|null
-	 *
-	 * @return array
-	 */
-	protected function buildQueryFilter($queryFilter, $queryContext, $changesFilter = null, $catalogBehavior = null)
-	{
-		$isOfferSubQueryInitialized = false;
-		$result = $queryFilter + [
-			'ELEMENT' => [],
-			'OFFERS' => [],
-		];
-
-		// catalog filter
-
-		if (!empty($result['CATALOG']))
-		{
-			if (!$queryContext['HAS_OFFER']) // hasn't offers
-			{
-				$result['ELEMENT'][] = $result['CATALOG'];
-			}
-			else if (!empty($result['OFFERS'])) // has required offers
-			{
-				$result['OFFERS'][] = $result['CATALOG'];
-			}
-			else if (!empty($queryContext['OFFER_ONLY']))
-			{
-				$result['OFFERS'][] = $result['CATALOG'];
-			}
-			else if ($this->canQueryCatalogFilterMerge($result['CATALOG']))
-			{
-				$isOfferSubQueryInitialized = true;
-				$result['ELEMENT'][] = $result['CATALOG'];
-				$result['OFFERS'][] = $result['CATALOG'];
-			}
-			else if ($catalogBehavior === 'ELEMENT')
-			{
-				$typeField = Market\Export\Entity\Catalog\Provider::useCatalogShortFields() ? 'TYPE' : 'CATALOG_TYPE';
-
-				$result['ELEMENT']['!=' . $typeField] = static::ELEMENT_TYPE_SKU;
-				$result['ELEMENT'][] = $result['CATALOG'];
-			}
-			else if ($catalogBehavior === 'OFFERS')
-			{
-				$result['OFFERS'][] = $result['CATALOG'];
-			}
-			else
-			{
-				// element match catalog condition or has offers match condition
-
-				$isOfferSubQueryInitialized = true;
-				$catalogOfferFilter = $this->getFilterDefaults('OFFERS', $queryContext['OFFER_IBLOCK_ID'], $queryContext);
-				$catalogOfferFilter[] = $result['CATALOG'];
-
-				$result['ELEMENT'][] = [
-					'LOGIC' => 'OR',
-					$result['CATALOG'],
-					[
-						'ID' => \CIBlockElement::SubQuery(
-							'PROPERTY_' . $queryContext['OFFER_PROPERTY_ID'],
-							$catalogOfferFilter
-						),
-					]
-				];
-
-				// filter offers by catalog rules
-
-				$result['OFFERS'][] = $result['CATALOG'];
-			}
-		}
-
-		// offer subquery for elements
-
-		if ($queryContext['HAS_OFFER'] && !empty($result['OFFERS']) && empty($result['DISTINCT']) && empty($result['ELEMENT']))
-		{
-			$result['DIRECTION'] = 'OFFER';
-		}
-		else
-		{
-			$result['DIRECTION'] = 'ELEMENT';
-		}
-
-		// extend by changes filter
-
-		if (!empty($changesFilter))
-		{
-			$result = $this->appendQueryFilterChanges($result, $changesFilter, $queryContext);
-		}
-
-		// init defaults
-
-		$result['ELEMENT'] = array_merge(
-			$this->getFilterDefaults('ELEMENT', $queryContext['IBLOCK_ID'], $queryContext),
-			$result['ELEMENT']
-		);
-
-		if ($queryContext['HAS_OFFER'])
-		{
-			$hasOfferUserFilter = !empty($result['OFFERS']);
-
-			$result['OFFERS'] = array_merge(
-				$this->getFilterDefaults('OFFERS', $queryContext['OFFER_IBLOCK_ID'], $queryContext),
-				$result['OFFERS']
-			);
-
-			if (
-				$hasOfferUserFilter
-				&& !$isOfferSubQueryInitialized
-				&& $result['DIRECTION'] !== 'OFFER'
-				&& !$this->isIgnoreOfferSubQuery($queryContext)
-			)
-			{
-				$result['ELEMENT'][] = [
-					'ID' => \CIBlockElement::SubQuery(
-						'PROPERTY_' . $queryContext['OFFER_PROPERTY_ID'],
-						$result['OFFERS']
-					),
-				];
-			}
-		}
-
-		// distinct
-
-		if (!empty($result['DISTINCT']))
-		{
-			$result['DISTINCT'] = call_user_func_array('array_merge', $result['DISTINCT']);
-		}
-
-		$result = $this->applyQueryFilterModifications($result, $queryContext);
-
-		return $result;
-	}
-
-	protected function convertSourceFilterToQuery($sourceFilterList, $sourceSelectList, $isChild = false)
-	{
-		$result = [];
-		$logic = null;
-
-		foreach ($sourceFilterList as $sourceName => $sourceFilter)
-		{
-			$queryFilter = null;
-
-			if ($sourceName === 'LOGIC')
-			{
-				$logic = (string)$sourceFilter;
-			}
-			else if (is_numeric($sourceName))
-			{
-				$queryFilter = $this->convertSourceFilterToQuery($sourceFilter, $sourceSelectList, true);
-			}
-			else
-			{
-				$source = $this->getSource($sourceName);
-
-				if ($source->isFilterable())
-				{
-					$sourceSelect = isset($sourceSelectList[$sourceName]) ? $sourceSelectList[$sourceName] : [];
-
-					$queryFilter = $source->getQueryFilter($sourceFilter, $sourceSelect);
-				}
-			}
-
-			if ($queryFilter !== null)
-			{
-				foreach ($queryFilter as $chainType => $filter)
-				{
-					if (!empty($filter))
-					{
-						if (isset($result[$chainType]))
-						{
-							// nothing
-						}
-						else if ($isChild)
-						{
-							$result[$chainType] = ($logic !== null ? [ 'LOGIC' => $logic ] : []);
-						}
-						else
-						{
-							$result[$chainType] = [];
-						}
-
-						$result[$chainType][] = $filter;
-					}
-				}
-			}
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Добавляем фильтр по изменениям
-	 *
-	 * @param $resultFilter array<string, array>
-	 * @param $changesFilter array<string, array>
-	 * @param $queryContext array
-	 *
-	 * @return array<string, array>
-	 */
-	protected function appendQueryFilterChanges($resultFilter, $changesFilter, $queryContext)
-	{
-		foreach ($changesFilter as $entityType => $entityFilter)
-		{
-			// modify by direction
-
-			if ($entityType === 'ELEMENT' && $resultFilter['DIRECTION'] === 'OFFER')
-			{
-				$entityOperations = $this->extractFilterOperations($entityFilter);
-
-				if (count($entityOperations) === 1 && $entityOperations[0]['FIELD'] === 'ID')
-				{
-					$skuPropertyCompare = ($entityOperations[0]['PREFIX'] !== '' ? $entityOperations[0]['PREFIX'] : '=');
-					$skuPropertyKey = 'PROPERTY_' . $queryContext['OFFER_PROPERTY_ID'];
-
-					$entityType = 'OFFERS';
-					$entityFilter = [
-						$skuPropertyCompare . $skuPropertyKey => $entityOperations[0]['VALUE'],
-					];
-				}
-				else
-				{
-					$resultFilter['DIRECTION'] = 'ELEMENT';
-				}
-			}
-
-			// push filter
-
-			if (!isset($resultFilter[$entityType]))
-			{
-				$resultFilter[$entityType] = [];
-			}
-
-			$resultFilter[$entityType][] = $entityFilter;
-		}
-
-		return $resultFilter;
-	}
-
-	/**
-	 * Список операций, которые используются в фильтре
-	 *
-	 * @param $filter array
-	 *
-	 * @return array{FIELD: string, PREFIX: string, OPERATION: string, VALUE: mixed}[]
-	 */
-	protected function extractFilterOperations($filter)
-	{
-		$result = [];
-
-		if (is_array($filter))
-		{
-			foreach ($filter as $fieldName => $filterValue)
-			{
-				if (is_numeric($fieldName))
-				{
-					$operations = $this->extractFilterOperations($filterValue);
-
-					foreach ($operations as $operation)
-					{
-						$result[] = $operation;
-					}
-				}
-				else
-				{
-					$operation = \CIBlock::MkOperationFilter($fieldName);
-					$operation['VALUE'] = $filterValue;
-
-					if (!isset($operation['PREFIX']))
-					{
-						$fieldNameLength = Market\Data\TextString::getLength($fieldName);
-						$operationFieldLength = Market\Data\TextString::getLength($operation['FIELD']);
-						$operationPrefixLength = $fieldNameLength - $operationFieldLength;
-
-						$operation['PREFIX'] = Market\Data\TextString::getSubstring($fieldName, 0, $operationPrefixLength);
-					}
-
-					$result[] = $operation;
-				}
-			}
-		}
-
-		return $result;
+		return $queryFilters;
 	}
 
 	/**
@@ -1967,7 +986,6 @@ class Offer extends Base
 	{
 		$result = $queryFilter;
 		$result = $this->modifyQueryFilterBySectionActive($result, $queryContext);
-		$result = $this->prioritizeQueryFilters($result, $queryContext);
 
 		return $result;
 	}
@@ -2085,198 +1103,6 @@ class Offer extends Base
 	}
 
 	/**
-	 * Приоритизация для группы запросов
-	 *
-	 * @param $filter
-	 * @param $context
-	 *
-	 * @return array
-	 */
-	protected function prioritizeQueryFilters($filter, $context)
-	{
-		$keys = [
-			'ELEMENT',
-			'OFFERS',
-		];
-
-		foreach ($keys as $key)
-		{
-			if (!isset($filter[$key])) { continue; }
-
-			$filter[$key] = $this->prioritizeFilter($filter[$key], $context);
-		}
-
-		return $filter;
-	}
-
-	/**
-	 * Переносим базовые параметры запроса в корень для упрощения запроса
-	 *
-	 * @param $filter
-	 * @param $context
-	 *
-	 * @return array
-	 */
-	protected function prioritizeFilter($filter, $context)
-	{
-		$priorityMap = [
-			'IBLOCK_ID' => 0,
-			'ACTIVE' => 1,
-			'ACTIVE_DATE' => 1,
-			'SUBSECTION' => 2,
-			'SECTION_ID' => 2,
-			'SECTION_ACTIVE' => 2,
-			'SECTION_GLOBAL_ACTIVE' => 2,
-			'SECTION_SCOPE' => 2,
-			'IBLOCK_SECTION_ID' => 2,
-			'INCLUDE_SUBSECTIONS' => 2,
-		];
-		$priorityChain = [];
-		$hasConflicts = false;
-		$result = $filter;
-
-		foreach ($filter as $firstKey => $firstLevel)
-		{
-			$isLevelVirtual = false;
-
-			if (!is_numeric($firstKey))
-			{
-				$isLevelVirtual = true;
-				$firstLevel = [
-					$firstKey => $firstLevel,
-				];
-			}
-
-			if (!is_array($firstLevel) || (isset($firstLevel['LOGIC']) && $firstLevel['LOGIC'] !== 'AND')) { continue; }
-
-			foreach ($firstLevel as $secondKey => $secondLevel)
-			{
-				$operation = \CIBlock::MkOperationFilter($secondKey);
-
-				if (!isset($priorityMap[$operation['FIELD']])) { continue; }
-
-				$priority = $priorityMap[$operation['FIELD']];
-
-				if (isset($priorityChain[$priority][$secondKey]))
-				{
-					$hasConflicts = true;
-					break;
-				}
-
-				if (!isset($priorityChain[$priority])) { $priorityChain[$priority] = []; }
-
-				$priorityChain[$priority][$secondKey] = $secondLevel;
-
-				if (!$isLevelVirtual)
-				{
-					unset($result[$firstKey][$secondKey]);
-
-					if (empty($result[$firstKey]))
-					{
-						unset($result[$firstKey]);
-					}
-				}
-			}
-
-			if ($hasConflicts) { break; }
-		}
-
-		if ($hasConflicts)
-		{
-			$result = $filter;
-		}
-		else if (!empty($priorityChain))
-		{
-			ksort($priorityChain);
-
-			$priorityFilter = array_merge(...$priorityChain);
-
-			$result = array_merge($priorityFilter, $result);
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Можно ли фильтровать по данным каталога без subfilter (пример, =AVAILABLE => Y).
-	 *
-	 * @param $catalogFilter
-	 *
-	 * @return bool
-	 */
-	protected function canQueryCatalogFilterMerge($catalogFilter)
-	{
-		$result = false;
-
-		if (is_array($catalogFilter) && Market\Export\Entity\Catalog\Provider::useSkuAvailableCalculation())
-		{
-			$result = true;
-			$availableFieldName = Market\Export\Entity\Catalog\Provider::useCatalogShortFields()
-				? '=AVAILABLE'
-				: '=CATALOG_AVAILABLE';
-
-			foreach ($catalogFilter as $partName => $part)
-			{
-				$canMerge = false;
-
-				if (!is_array($part))
-				{
-					$canMerge = ($partName === $availableFieldName && $part === 'Y');
-				}
-				else if (count($part) === 1)
-				{
-					$canMerge = (isset($part[$availableFieldName]) && $part[$availableFieldName] === 'Y');
-				}
-
-				if (!$canMerge)
-				{
-					$result = false;
-					break;
-				}
-			}
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Исключаем уже выгруженные элементы
-	 *
-	 * @param $queryContext
-	 * @param $field
-	 *
-	 * @return Market\Export\Run\Helper\ExcludeFilter
-	 */
-	protected function getQueryExcludeFilter($queryContext, $field = 'ELEMENT_ID')
-	{
-		$primary = $this->getQueryExcludeFilterPrimary($queryContext);
-		$cacheKey = $primary . ':' . $field;
-
-		if (!isset($this->queryExcludeFilterList[$cacheKey]))
-		{
-			$this->queryExcludeFilterList[$cacheKey] = new Market\Export\Run\Helper\ExcludeFilter(
-				$this->getStorageDataClass(),
-				$field,
-				$this->getStorageReadyFilter($queryContext)
-			);
-		}
-
-		return $this->queryExcludeFilterList[$cacheKey];
-	}
-
-	/**
-	 * Ключ для фильтра исключения
-	 *
-	 * @param $queryContext
-	 *
-	 * @return int
-	 */
-	protected function getQueryExcludeFilterPrimary($queryContext)
-	{
-		return (int)$queryContext['IBLOCK_LINK_ID'];
-	}
-
-	/**
 	 * Фильтр по готовым элементам
 	 *
 	 * @param $queryContext array
@@ -2301,105 +1127,12 @@ class Offer extends Base
 			{
 				case 'change':
 				case 'refresh':
-					$filter['>=TIMESTAMP_X'] = $this->getParameter('initTime');
+					$filter['>=TIMESTAMP_X'] = $this->getParameter('initTimeUTC');
 				break;
 			}
 		}
 
 		return $filter;
-	}
-
-	/**
-	 * Формируем select для запросов
-	 *
-	 * @param $sourceSelect
-	 * @param $context
-	 *
-	 * @return array
-	 * @throws \Bitrix\Main\ObjectNotFoundException
-	 */
-	protected function makeQuerySelect($sourceSelect, $context)
-	{
-		$result = [
-			'ELEMENT' => $this->getSelectDefaults('ELEMENT', $context),
-			'OFFERS' => $this->getSelectDefaults('OFFERS', $context)
-		];
-
-		foreach ($sourceSelect as $sourceType => $sourceFields)
-		{
-			$source = $this->getSource($sourceType);
-			$querySelect = $source->getQuerySelect($sourceFields);
-
-			foreach ($querySelect as $chainType => $fields)
-			{
-				if (!empty($fields))
-				{
-					if (!isset($result[$chainType]))
-					{
-						$result[$chainType] = [];
-					}
-
-					foreach ($fields as $field)
-					{
-						if (!in_array($field, $result[$chainType]))
-						{
-							$result[$chainType][] = $field;
-						}
-					}
-				}
-			}
-		}
-
-		if (empty($result['CATALOG']))
-		{
-			// nothing
-		}
-		else if (!empty($context['OFFER_ONLY']))
-		{
-			$result['OFFERS'] = array_merge($result['OFFERS'], $result['CATALOG']);
-		}
-		else
-		{
-			$result['ELEMENT'] = array_merge($result['ELEMENT'], $result['CATALOG']);
-			$result['OFFERS'] = array_merge($result['OFFERS'], $result['CATALOG']);
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Определяем тип элемента инфоблока для инфоблока
-	 *
-	 * @param $element
-	 * @param $context
-	 *
-	 * @return int
-	 */
-	protected function getElementCatalogType($element, $context)
-	{
-		$result = static::ELEMENT_TYPE_PRODUCT;
-
-		if (!empty($context['OFFER_ONLY']))
-		{
-			$result = static::ELEMENT_TYPE_SKU;
-		}
-		else if (isset($element['TYPE']))
-		{
-			$result = (int)$element['TYPE'];
-		}
-		else if (isset($element['CATALOG_TYPE']))
-		{
-			$result = (int)$element['CATALOG_TYPE'];
-		}
-		else if (
-			(array_key_exists('CATALOG_TYPE', $element) || array_key_exists('TYPE', $element))
-			&& !empty($context['OFFER_IBLOCK_ID'])
-		)
-		{
-			$result = static::ELEMENT_TYPE_SKU;
-		}
-
-		return $result;
 	}
 
 	/**
@@ -2417,19 +1150,21 @@ class Offer extends Base
 			'SETTINGS'
 		];
 
-		foreach ($tagDescriptionList as $tagName => $tagSourceValue)
+		foreach ($tagDescriptionList as $tagSourceValue)
 		{
-			if (isset($tagSourceValue['VALUE']['TYPE']) && isset($tagSourceValue['VALUE']['FIELD']))
+			if (isset($tagSourceValue['VALUE']['TYPE'], $tagSourceValue['VALUE']['FIELD']))
 			{
 				$sourceType = $tagSourceValue['VALUE']['TYPE'];
 				$sourceField = $tagSourceValue['VALUE']['FIELD'];
+
+				if ($this->isSourceVirtual($sourceType)) { continue; }
 
 				if (!isset($result[$sourceType]))
 				{
 					$result[$sourceType] = [];
 				}
 
-				if (!in_array($sourceField, $result[$sourceType]))
+				if (!in_array($sourceField, $result[$sourceType], true))
 				{
 					$result[$sourceType][] = $sourceField;
 				}
@@ -2450,16 +1185,39 @@ class Offer extends Base
 							$sourceType = $attributeValueSource['TYPE'];
 							$sourceField = $attributeValueSource['FIELD'];
 
+							if ($this->isSourceVirtual($sourceType)) { continue; }
+
 							if (!isset($result[$sourceType]))
 							{
 								$result[$sourceType] = [];
 							}
 
-							if (!in_array($sourceField, $result[$sourceType]))
+							if (!in_array($sourceField, $result[$sourceType], true))
 							{
 								$result[$sourceType][] = $sourceField;
 							}
 						}
+					}
+				}
+			}
+
+			if (!empty($tagSourceValue['CHILDREN']))
+			{
+				$childrenSelect = $this->getSourceSelect($tagSourceValue['CHILDREN']);
+
+				foreach ($childrenSelect as $sourceType => $sourceFields)
+				{
+					if (!isset($result[$sourceType]))
+					{
+						$result[$sourceType] = $sourceFields;
+						continue;
+					}
+
+					foreach ($sourceFields as $sourceField)
+					{
+						if (in_array($sourceField, $result[$sourceType], true)) { continue; }
+
+						$result[$sourceType][] = $sourceField;
 					}
 				}
 			}
@@ -2468,40 +1226,27 @@ class Offer extends Base
 		return $result;
 	}
 
-	protected function sortSourceSelect(&$sourceSelect)
+	protected function isSourceVirtual($type)
 	{
-		$order = [];
-
-		foreach ($sourceSelect as $sourceType => $sourceFields)
-		{
-			$source = $this->getSource($sourceType);
-			$order[$sourceType] = $source->getOrder();
-		}
-
-		uksort($sourceSelect, function($aType, $bType) use ($order) {
-			$aOrder = $order[$aType];
-			$bOrder = $order[$bType];
-
-			if ($aOrder === $bOrder) { return 0; }
-
-			return ($aOrder < $bOrder ? -1 : 1);
-		});
+		return mb_strpos($type, 'VIRTUAL_') === 0;
 	}
 
 	/**
 	 * Генерируем список "Фильтров по источникам" на основании настроек
 	 *
 	 * @param \Yandex\Market\Export\IblockLink\Model $iblockLink
-	 * @param $iblockContext array
 	 * @param $isNeedAll bool|null
 	 *
 	 * @return array
 	 */
-	protected function getSourceFilterList(Market\Export\IblockLink\Model $iblockLink, $iblockContext, $isNeedAll = null)
+	protected function getSourceFilterList(Market\Export\IblockLink\Model $iblockLink, $isNeedAll = null)
 	{
 		$result = [];
 		$filterCollection = $iblockLink->getFilterCollection();
 		$isFirstFilter = true;
+		$commonContext = [
+			'CAN_IGNORE_OFFER_SUBQUERY' => ($this->getName() === Market\Export\Run\Manager::STEP_OFFER),
+		];
 
 		/** @var \Yandex\Market\Export\Filter\Model $filterModel */
 		foreach ($filterCollection as $filterModel)
@@ -2510,7 +1255,10 @@ class Offer extends Base
 			$result[] = [
 				'ID' => $filterModel->getInternalId(),
 				'FILTER' => $sourceFilter,
-				'CONTEXT' => $filterModel->getContext(true) + [ 'IGNORE_EXCLUDE' => $isFirstFilter ]
+				'CONTEXT' =>
+					$filterModel->getContext(true)
+					+ [ 'IGNORE_EXCLUDE' => $isFirstFilter ]
+					+ $commonContext,
 			];
 
 			$isFirstFilter = false;
@@ -2526,83 +1274,10 @@ class Offer extends Base
 			$result[] = [
 				'ID' => null,
 				'FILTER' => [],
-				'CONTEXT' => [ 'IGNORE_EXCLUDE' => $isFirstFilter ]
+				'CONTEXT' =>
+					[ 'IGNORE_EXCLUDE' => $isFirstFilter ]
+					+ $commonContext
 			];
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Поля для запроса по умолчанию
-	 *
-	 * @param $entityType
-	 * @param $context
-	 *
-	 * @return array
-	 */
-	protected function getSelectDefaults($entityType, $context)
-	{
-		switch ($entityType)
-		{
-			case 'ELEMENT':
-				$result = [ 'IBLOCK_ID',  'ID' ];
-
-				if (
-					isset($context['OFFER_IBLOCK_ID']) // has offers
-					&& empty($context['OFFER_ONLY']) // has not only offers
-					&& !$this->isCatalogTypeCompatibility($context) // is valid catalog_type
-				)
-				{
-					$result[] = Market\Export\Entity\Catalog\Provider::useCatalogShortFields()
-						? 'TYPE'
-						: 'CATALOG_TYPE';
-				}
-			break;
-
-			case 'OFFERS':
-				$result = [ 'IBLOCK_ID', 'ID' ];
-			break;
-
-			default:
-				$result = [];
-			break;
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Фильтр для запроса по умолчанию
-	 *
-	 * @param $entityType string
-	 * @param $iblockId int
-	 * @param $context array|null
-	 *
-	 * @return array
-	 */
-	protected function getFilterDefaults($entityType, $iblockId, array $context = null)
-	{
-		switch ($entityType)
-		{
-			case 'ELEMENT':
-			case 'OFFERS':
-				$result = [
-					'IBLOCK_ID' => $iblockId,
-				];
-
-				if (empty($context['FILTER_MANUAL'][$entityType]['ACTIVE']))
-				{
-					$result += [
-						'ACTIVE' => 'Y',
-						'ACTIVE_DATE' => 'Y',
-					];
-				}
-			break;
-
-			default:
-				$result = [];
-			break;
 		}
 
 		return $result;
@@ -2616,6 +1291,7 @@ class Offer extends Base
 	 * @param $useDistinct
 	 *
 	 * @return array
+	 * @noinspection DuplicatedCode
 	 */
 	protected function chunkElementList($elementList, $limit, $useDistinct)
 	{
@@ -2734,40 +1410,28 @@ class Offer extends Base
 	 * @param $queryContext
 	 *
 	 * @return array
-	 * @throws \Bitrix\Main\ObjectNotFoundException
 	 */
 	protected function extractElementListValues($sourceSelect, $elementList, $parentList, $queryContext)
 	{
-		$result = [];
+		$sourceFetcher = new Market\Export\Routine\QueryBuilder\SourceFetcher();
+		$result = $sourceFetcher->load($sourceSelect, $elementList, $parentList, $queryContext);
+
 		$conflictList = $this->getProcessor()->getConflicts();
 
-		foreach ($sourceSelect as $sourceType => $sourceFields)
+		foreach ($result as &$elementValues)
 		{
-			$source = $this->getSource($sourceType);
-			$sourceValues = $source->getElementListValues($elementList, $parentList, $sourceFields, $queryContext, $result);
-			$sourceConflicts = (isset($conflictList[$sourceType]) ? $conflictList[$sourceType] : null);
-
-			foreach ($sourceValues as $elementId => $elementValues)
+			foreach ($conflictList as $sourceConflicts)
 			{
-				if (!isset($result[$elementId]))
+				foreach ($sourceConflicts as $fieldName => $conflictAction)
 				{
-					$result[$elementId] = [];
-				}
-
-				if ($sourceConflicts !== null)
-				{
-					foreach ($sourceConflicts as $fieldName => $conflictAction)
+					if (isset($elementValues[$fieldName]))
 					{
-						if (isset($elementValues[$fieldName]))
-						{
-							$elementValues[$fieldName] = $this->applyValueConflict($elementValues[$fieldName], $conflictAction);
-						}
+						$elementValues[$fieldName] = $this->applyValueConflict($elementValues[$fieldName], $conflictAction);
 					}
 				}
-
-				$result[$elementId][$sourceType] = $elementValues;
 			}
 		}
+		unset($elementValues);
 
 		return $result;
 	}
@@ -2787,51 +1451,10 @@ class Offer extends Base
 
 	/**
 	 * Поле CATALOG_TYPE содержит неверную информацию "Имеет ли товар торговые предложения"
-	 *
-	 * @param $context
-	 *
-	 * @return bool
-	 * @throws \Bitrix\Main\ArgumentNullException
-	 * @throws \Bitrix\Main\ArgumentOutOfRangeException
 	 */
 	protected function isCatalogTypeCompatibility($context)
 	{
-		$result = false;
-
-		if (!isset($context['OFFER_IBLOCK_ID'])) // hasn't offers
-		{
-			$result = false;
-		}
-		else if (!empty($context['OFFER_ONLY'])) // has only offers
-		{
-			$result = false;
-		}
-		else if ($this->isCatalogTypeCompatibility !== null) // already fetched
-		{
-			$result = $this->isCatalogTypeCompatibility;
-		}
-		else
-		{
-			$this->isCatalogTypeCompatibility = Market\Export\Entity\Catalog\Provider::useCatalogTypeCompatibility();
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Обрабатывать все элементы, вне зависимости от фильтра по торговым предложениям
-	 *
-	 * @param $context
-	 *
-	 * @return bool
-	 */
-	protected function isIgnoreOfferSubQuery($context)
-	{
-		return (
-			$this->getName() === Market\Export\Run\Manager::STEP_OFFER
-			&& Market\Config::getOption('export_offer_process_all_elements', 'N') === 'Y'
-			&& !$this->isCatalogTypeCompatibility($context)
-		);
+		return Market\Export\Entity\Catalog\Provider::isCatalogTypeCompatibility($context);
 	}
 
 	/**
@@ -2926,7 +1549,7 @@ class Offer extends Base
 	 * @param Market\Result\XmlValue[] $tagValuesList
 	 * @param array $context
 	 *
-	 * @return mixed[][]
+	 * @return array[]
 	 */
 	protected function getDistinctValues($elementIds, $rules, $sourceValuesList, $tagValuesList, $context)
 	{
@@ -3003,7 +1626,7 @@ class Offer extends Base
 	 * Сортиворка групп
 	 *
 	 * @param int[][] $groups
-	 * @param mixed[][] $elementValues
+	 * @param array[] $elementValues
 	 * @param array $rules
 	 *
 	 * @return int[][]

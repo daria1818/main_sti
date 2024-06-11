@@ -2,8 +2,6 @@
 
 namespace Yandex\Market\Export\Xml\Attribute;
 
-use Yandex\Market;
-
 class Type extends Base
 {
 	public function getDefaultParameters()

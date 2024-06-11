@@ -107,7 +107,7 @@ class CBPAskaron_Settings_SetVariableActivity
 
 		foreach ($arProperties["VariableValueFrom"] as $key => $value)
 		{
-			if (strlen($value) <= 0)
+			if (mb_strlen($value) <= 0)
 			{
 				unset($arProperties["VariableValueFrom"][$key]);
 			}

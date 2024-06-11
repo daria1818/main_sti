@@ -49,6 +49,24 @@ class PropertyFeature extends Market\Reference\Event\Regular
 		return new Main\EventResult(Main\EventResult::SUCCESS, $features);
 	}
 
+	public static function getFeatureId($exportService)
+	{
+		$matchedType = Market\Ui\Service\Manager::TYPE_COMMON;
+
+		foreach (Market\Ui\Service\Manager::getTypes() as $type)
+		{
+			$uiService = Market\Ui\Service\Manager::getInstance($type);
+
+			if (in_array($exportService, $uiService->getExportServices(), true) !== $uiService->isInverted())
+			{
+				$matchedType = $type;
+				break;
+			}
+		}
+
+		return static::FEATURE_ID_PREFIX . Market\Data\TextString::toUpper($matchedType);
+	}
+
 	protected static function getExportServiceTypes()
 	{
 		$result = [

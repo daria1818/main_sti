@@ -13,6 +13,13 @@ use Yandex\Market;
 $context = (array)$arParams['CONTEXT'];
 $settings = $tag->getSettingsDescription($context);
 
+if (is_array($settings))
+{
+	$settings = array_filter($settings, static function($setting, $name) use ($tagValue) {
+		return empty($setting['DEPRECATED']) || !empty($tagValue['SETTINGS'][$name]);
+	}, ARRAY_FILTER_USE_BOTH);
+}
+
 if (!empty($settings))
 {
 	$settingsLayout = 'default';
@@ -64,7 +71,7 @@ if (!empty($settings))
 			<tr>
 				<td class="b-param-table__cell width--param-label"></td>
 				<td class="b-param-table__cell" colspan="3">
-					<table>
+					<table width="100%">
 			<?
 		break;
 	}
@@ -87,14 +94,14 @@ if (!empty($settings))
 		{
 			case 'utm':
 				?>
-				<tr <?= $setting['TYPE'] === 'param' ? 'class="js-param-tag__child" data-plugin="Field.Param.Node" data-name="' . $settingFullName . '"' : ''; ?>>
+				<tr <?= $setting['TYPE'] === 'param' ? 'class="js-param-tag__child" data-plugin="Field.Param.Node" data-name="' . $settingFullName . '" data-tag="' . $tagId . '"' : ''; ?>>
 					<td class="b-param-table__cell for--label"><?= $setting['TITLE']; ?>:</td>
-					<?
+					<?php
 					if ($setting['TYPE'] !== 'param')
 					{
 						?>
 						<td class="b-param-table__cell" colspan="2">
-						<?
+						<?php
 					}
 			break;
 
@@ -124,17 +131,23 @@ if (!empty($settings))
 		{
 			case 'enumeration':
 				?>
-				<select class="js-param-tag__input" type="text" <?= ($inputName !== null ? 'name="' . $inputName . '"' : ''); ?> data-name="<?= $settingFullName; ?>">
-					<?
+				<select
+					class="js-param-tag__input"
+					<?= $inputName !== null ? 'name="' . $inputName . '"' : '' ?>
+					style="max-width: 220px;"
+					data-name="<?= $settingFullName ?>"
+					data-tag="<?= $tagId ?>"
+				>
+					<?php
 					foreach ($setting['VALUES'] as $option)
 					{
 						?>
-						<option value="<?= $option['ID'] ?>" <?= $option['ID'] == $inputValue ? 'selected' : ''; ?>><?= Market\Utils::htmlEscape($option['VALUE']); ?></option>
-						<?
+						<option value="<?= $option['ID'] ?>" <?= (string)$option['ID'] === (string)$inputValue ? 'selected' : ''; ?>><?= Market\Utils::htmlEscape($option['VALUE']); ?></option>
+						<?php
 					}
 					?>
 				</select>
-				<?
+				<?php
 			break;
 
 			case 'param':
@@ -161,16 +174,17 @@ if (!empty($settings))
 				{
 					?>
 					<td class="b-param-table__cell width--param-source-cell">
-					<?
+					<?php
 				}
 				else
 				{
 					?>
-					<div class="js-param-tag__child" data-plugin="Field.Param.Node" data-name="<?= $settingFullName; ?>">
-					<?
+					<div class="b-param-setting-source js-param-tag__child" data-plugin="Field.Param.Node" data-name="<?= $settingFullName; ?>" data-tag="<?= $tagId ?>">
+						<div class="b-param-setting-source__cell">
+					<?php
 				}
 				?>
-					<select class="b-param-table__input js-param-node__source js-param-node__input" data-name="TYPE" <?
+					<select class="b-param-table__input js-param-node__source js-param-node__input" data-name="TYPE" <?php
 
 						if ($inputName !== null)
 						{
@@ -178,7 +192,7 @@ if (!empty($settings))
 						}
 
 					?>>
-						<?
+						<?php
 						foreach ($arResult['SOURCE_TYPE_ENUM'] as $typeEnum)
 						{
 							if (isset($disabledTypes[$typeEnum['ID']])) { continue; }
@@ -204,7 +218,14 @@ if (!empty($settings))
 					?>
 					</td>
 					<td class="b-param-table__cell width--param-field-cell">
-					<?
+					<?php
+				}
+				else
+				{
+					?>
+					</div>
+					<div class="b-param-setting-source__cell">
+					<?php
 				}
 
 				include __DIR__ . '/field-control.php';
@@ -213,13 +234,14 @@ if (!empty($settings))
 				{
 					?>
 					</td>
-					<?
+					<?php
 				}
 				else
 				{
 					?>
+						</div>
 					</div>
-					<?
+					<?php
 				}
 
 			break;
@@ -227,7 +249,15 @@ if (!empty($settings))
 			case 'boolean':
 				?>
 				<label>
-					<input class="adm-designed-checkbox js-param-tag__input" type="checkbox" value="1" <?= ($inputName !== null ? 'name="' . $inputName . '"' : ''); ?> <?= (string)$inputValue === '1' ? 'checked' : ''; ?> data-name="<?= $settingFullName; ?>" />
+					<input
+						class="adm-designed-checkbox js-param-tag__input"
+						type="checkbox"
+						value="1"
+						<?= $inputName !== null ? 'name="' . $inputName . '"' : '' ?>
+						<?= (string)$inputValue === '1' ? 'checked' : '' ?>
+						data-name="<?= $settingFullName ?>"
+						data-tag="<?= $tagId ?>"
+					/>
 					<span class="adm-designed-checkbox-label"></span>
 				</label>
 				<?php
@@ -235,8 +265,15 @@ if (!empty($settings))
 
 			default:
 				?>
-				<input class="js-param-tag__input" type="text" <?= ($inputName !== null ? 'name="' . $inputName . '"' : ''); ?> value="<?= htmlspecialcharsbx($inputValue); ?>" data-name="<?= $settingFullName; ?>" />
-				<?
+				<input
+					class="js-param-tag__input"
+					type="text"
+					<?= $inputName !== null ? 'name="' . $inputName . '"' : '' ?>
+					value="<?= htmlspecialcharsbx($inputValue) ?>"
+					data-name="<?= $settingFullName ?>"
+					data-tag="<?= $tagId ?>"
+				/>
+				<?php
 			break;
 		}
 

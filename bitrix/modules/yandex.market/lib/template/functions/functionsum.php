@@ -31,10 +31,11 @@ class FunctionSum extends Iblock\Template\Functions\FunctionBase
 	public function calculate(array $parameters)
 	{
 		$result = null;
+		$isFirst = true;
 
 		foreach ($parameters as $parameter)
 		{
-			if ($parameter === null || !is_numeric($parameter))
+			if (!is_numeric($parameter))
 			{
 				// nothing
 			}
@@ -46,6 +47,10 @@ class FunctionSum extends Iblock\Template\Functions\FunctionBase
 			{
 				$result += (float)$parameter;
 			}
+
+			if ($isFirst && $result <= 0) { break; }
+
+			$isFirst = false;
 		}
 
 		return $result;

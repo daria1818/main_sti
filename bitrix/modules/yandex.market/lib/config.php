@@ -19,7 +19,7 @@ class Config
 	{
 		$prefix = static::getLangPrefix();
 
-		$result = Loc::getMessage($prefix . $code, $replaces) ?: $fallback;
+		$result = Loc::getMessage($prefix . $code, $replaces, 'ru') ?: $fallback;
 
 		if ($result === null)
 		{

@@ -109,11 +109,7 @@ class Event extends Market\Export\Entity\Reference\ElementEvent
 
 	protected function registerCurrencyChange($currency)
 	{
-		Market\Export\Track\Manager::registerElementChange(
-			Market\Export\Run\Manager::ENTITY_TYPE_CURRENCY,
-			$currency,
-			$this->getType()
-		);
+		Market\Watcher\Track\ElementChange::add(Market\Export\Glossary::ENTITY_CURRENCY, $currency);
 	}
 
 	protected static function getPriceProductId($priceId)

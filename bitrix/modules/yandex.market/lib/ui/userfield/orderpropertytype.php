@@ -19,6 +19,11 @@ class OrderPropertyType extends EnumerationType
 		$variants = static::markDefaultVariant($arUserField, $variants);
 		$variants = static::applyVariantsDefaultGroup($arUserField, $variants);
 
+		if (!empty($arUserField['VALUES']))
+		{
+			$variants = array_merge($arUserField['VALUES'], $variants);
+		}
+
 		$result = new \CDBResult();
 		$result->InitFromArray($variants);
 

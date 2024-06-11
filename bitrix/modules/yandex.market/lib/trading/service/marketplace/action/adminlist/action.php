@@ -134,10 +134,9 @@ class Action extends TradingService\Reference\Action\DataAction
 		else
 		{
 			$options = $this->provider->getOptions();
-			$logger = $this->provider->getLogger();
 			$facadeClassName = $this->provider->getModelFactory()->getOrderFacadeClassName();
 
-			$result = $facadeClassName::load($options, $primary, $logger);
+			$result = $facadeClassName::load($options, $primary);
 		}
 
 		return $result;
@@ -146,7 +145,6 @@ class Action extends TradingService\Reference\Action\DataAction
 	protected function loadExternalOrdersByList()
 	{
 		$options = $this->provider->getOptions();
-		$logger = $this->provider->getLogger();
 		$parameters = $this->request->getParameters();
 		$parameters = $this->convertExternalOrderParameters($parameters);
 		$facadeClassName = $this->provider->getModelFactory()->getOrderFacadeClassName();
@@ -156,7 +154,7 @@ class Action extends TradingService\Reference\Action\DataAction
 			$parameters['status'] = TradingService\Marketplace\Status::STATUS_PROCESSING;
 		}
 
-		$this->externalOrders = $facadeClassName::loadList($options, $parameters, $logger);
+		$this->externalOrders = $facadeClassName::loadList($options, $parameters);
 	}
 
 	protected function flushCache()
@@ -356,11 +354,13 @@ class Action extends TradingService\Reference\Action\DataAction
 
 	protected function getOrderRow(Market\Api\Model\Order $order, TradingEntity\Reference\Order $bitrixOrder = null)
 	{
+		/** @var \Yandex\Market\Trading\Service\Marketplace\Model\Order $order */
 		/** @var \Yandex\Market\Trading\Service\Marketplace\Status $serviceStatuses */
 		$tradingOptions = $this->provider->getOptions();
 		$serviceStatuses = $this->provider->getStatus();
 		$orderStatus = $order->getStatus();
 		$orderSubStatus = $order->getSubStatus();
+		$buyer = $order->getBuyer();
 
 		$result = [
 			'ID' => $order->getId(),
@@ -371,13 +371,17 @@ class Action extends TradingService\Reference\Action\DataAction
 			'DATE_CREATE' => $order->getCreationDate(),
 			'DATE_SHIPMENT' => $this->getOrderShipmentDates($order),
 			'DATE_DELIVERY' => $this->getOrderDeliveryDates($order),
+			'EXPIRY_DATE' => $order->getExpiryDate(),
+			'BUYER_TYPE' => $buyer !== null ? $buyer->getType() : null,
+			'EAC_TYPE' => $order->getDelivery()->getEacType(),
+			'EAC_CODE' => $order->getDelivery()->getEacCode(),
 			'TOTAL' => null,
 			'SUBSIDY' => null,
 			'CURRENCY' => Market\Data\Currency::getCurrency($order->getCurrency()),
 			'STATUS' => $orderStatus,
 			'STATUS_LANG' =>
 				$this->getOrderStatusLang($orderStatus, $orderSubStatus)
-				. ($order->isCancelRequested() ? self::getMessage('CANCEL_REQUESTED_STATUS_SUFFIX') : ''),
+				. ($order->isCancelRequested() && !$serviceStatuses->isCanceled($orderStatus) ? self::getMessage('CANCEL_REQUESTED_STATUS_SUFFIX') : ''),
 			'SUBSTATUS' => $orderSubStatus,
 			'SUBSTATUS_LANG' => $this->getOrderSubStatusLang($orderStatus, $orderSubStatus),
 			'FAKE' => $order->isFake(),
@@ -394,8 +398,8 @@ class Action extends TradingService\Reference\Action\DataAction
 
 		if ($serviceStatuses->isConfirmed($orderStatus))
 		{
-			$result['TOTAL'] = $order->getItemsTotal();
-			$result['SUBSIDY'] = $order->getSubsidyTotal();
+			$result['TOTAL'] = $order->getItemsTotal() + $order->getSubsidies()->getSum();
+			$result['SUBSIDY'] = $order->getSubsidies()->getSum();
 		}
 
 		if ($bitrixOrder !== null)
@@ -404,7 +408,9 @@ class Action extends TradingService\Reference\Action\DataAction
 			$needCheckAccess = $this->request->needCheckAccess();
 
 			$result['ORDER_ID'] = $bitrixOrder->getId();
-			$result['ACCOUNT_NUMBER'] = $bitrixOrder->getAccountNumber();
+			$result['ACCOUNT_NUMBER'] = $this->provider->getOptions()->useAccountNumberTemplate()
+				? $bitrixOrder->getId()
+				: $bitrixOrder->getAccountNumber();
 			$result['EDIT_URL'] = $bitrixOrder->getAdminEditUrl();
 			$result['VIEW_ACCESS'] = $needCheckAccess
 				? $bitrixOrder->hasAccess($userId, TradingEntity\Operation\Order::VIEW)
@@ -481,7 +487,10 @@ class Action extends TradingService\Reference\Action\DataAction
 
 			if ($bitrixOrder !== null && $productId !== null)
 			{
-				$basketCode = $bitrixOrder->getBasketItemCode($productId);
+				$xmlId = $this->provider->getDictionary()->getOrderItemXmlId($item);
+				$basketCode =
+					$bitrixOrder->getBasketItemCode($xmlId, 'XML_ID')
+					?: $bitrixOrder->getBasketItemCode($productId);
 
 				if ($basketCode !== null)
 				{
@@ -506,12 +515,10 @@ class Action extends TradingService\Reference\Action\DataAction
 		{
 			foreach ($order->getDelivery()->getShipments() as $shipment)
 			{
-				$shipment = [
+				$result[] = [
 					'ID' => $shipment->getId(),
 					'BOX' => $this->getShipmentBoxesData($shipment),
 				];
-
-				$result[] = $shipment;
 			}
 		}
 
@@ -525,45 +532,8 @@ class Action extends TradingService\Reference\Action\DataAction
 		/** @var Market\Api\Model\Order\Box $box*/
 		foreach ($shipment->getBoxes() as $box)
 		{
-			$result[] =
-				[
-					'ID' => $box->getId(),
-					'FULFILMENT_ID' => $box->getFulfilmentId(),
-					'VIRTUAL' => !$shipment->hasSavedBoxes(),
-				]
-				+ $this->getShipmentBoxDimensions($box);
-		}
-
-		return $result;
-	}
-
-	protected function getShipmentBoxDimensions(Market\Api\Model\Order\Box $box)
-	{
-		$result = [];
-
-		// weight
-
-		$weightUnit = $box->getWeightUnit();
-
-		$result['WEIGHT'] = [
-			'VALUE' => $box->getWeight(),
-			'UNIT' => $weightUnit,
-		];
-
-		// sizes
-
-		$sizes = [
-			'WIDTH' => $box->getWidth(),
-			'HEIGHT' => $box->getHeight(),
-			'DEPTH' => $box->getDepth(),
-		];
-		$sizeUnit = $box->getSizeUnit();
-
-		foreach ($sizes as $sizeName => $sizeValue)
-		{
-			$result[$sizeName] = [
-				'VALUE' => $sizeValue,
-				'UNIT' => $sizeUnit,
+			$result[] = [
+				'ID' => $box->getId(),
 			];
 		}
 
@@ -593,7 +563,7 @@ class Action extends TradingService\Reference\Action\DataAction
 
 	protected function isStatusReady(Market\Api\Model\Order $order)
 	{
-		return $this->isOrderProcessing($order) && $this->hasSavedBoxes($order);
+		return $this->isOrderProcessing($order);
 	}
 
 	protected function makeAllowedStatuses(Market\Api\Model\Order $order)
@@ -640,7 +610,7 @@ class Action extends TradingService\Reference\Action\DataAction
 
 	protected function isPrintReady(Market\Api\Model\Order $order)
 	{
-		return $this->isOrderProcessing($order) && $this->hasSavedBoxes($order);
+		return $this->isOrderProcessing($order);
 	}
 
 	protected function isOrderProcessing(Market\Api\Model\Order $order)
@@ -648,26 +618,6 @@ class Action extends TradingService\Reference\Action\DataAction
 		$status = $order->getStatus();
 
 		return $this->provider->getStatus()->isProcessing($status);
-	}
-
-	protected function hasSavedBoxes(Market\Api\Model\Order $order)
-	{
-		$result = false;
-
-		if ($order->hasDelivery())
-		{
-			/** @var Market\Api\Model\Order\Shipment $shipment */
-			foreach ($order->getDelivery()->getShipments() as $shipment)
-			{
-				if ($shipment->hasSavedBoxes())
-				{
-					$result = true;
-					break;
-				}
-			}
-		}
-
-		return $result;
 	}
 
 	protected function collectPager()

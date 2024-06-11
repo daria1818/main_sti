@@ -27,17 +27,17 @@ try
 
 	$enum = Market\Ui\UserField\BuyerProfileType::getVariants($userId, $personTypeId);
 
-	echo Main\Web\Json::encode([
+	$response = [
 		'status' => 'ok',
 		'enum' => $enum
-	]);
+	];
 }
 catch (Main\SystemException $exception)
 {
-	echo Main\Web\Json::encode([
+	$response = [
 		'status' => 'error',
 		'message' => $exception->getMessage()
-	]);
+	];
 }
 
-require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/epilog_admin_after.php';
+Market\Utils\HttpResponse::sendJson($response);

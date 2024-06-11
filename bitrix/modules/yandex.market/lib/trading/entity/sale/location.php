@@ -31,7 +31,7 @@ class Location extends Market\Trading\Entity\Reference\Location
 				'field' => 'id',
 			],
 			'Name' => [
-				'field' => 'name',
+				'field' => [ 'name', 'type' ],
 			],
 			'City' => [
 				'field' => 'name',
@@ -78,7 +78,9 @@ class Location extends Market\Trading\Entity\Reference\Location
 				continue;
 			}
 
-			$result[$region['id']] = $region[$field];
+			$result[$region['id']] = is_array($field)
+				? array_intersect_key($region, array_flip($field))
+				: $region[$field];
 		}
 
 		return $result;
@@ -133,16 +135,19 @@ class Location extends Market\Trading\Entity\Reference\Location
 			$parentLocation,
 		];
 
-		foreach (array_reverse($names, true) as $nameKey => $name)
+		foreach (array_reverse($names, true) as $nameKey => $row)
 		{
+			$name = $row['name'];
+			$type = $row['type'];
 			$levelMatches = [];
 			$parentFilter = $this->getFewParentsLocationFilter($levelParents);
 
 			foreach ($this->splitMergedName($name) as $namePart)
 			{
-				$locationId = $this->queryLocationByName($namePart, $parentFilter);
+				$nameVariants = $this->synonymLocationName($namePart, $type);
+				$locationId = $this->queryLocationByName($nameVariants, $parentFilter);
 
-				if ($locationId === null && $this->hasNameVariableSymbols($namePart))
+				if ($locationId === null && $type !== 'COUNTRY_DISTRICT' && $this->hasNameVariableSymbols($namePart))
 				{
 					$locationId = $this->queryLocationByName(
 						$this->makeNameVariableLike($namePart),
@@ -240,6 +245,34 @@ class Location extends Market\Trading\Entity\Reference\Location
 		return Market\Data\TextString::getPositionCaseInsensitive($name, $typeName) !== false;
 	}
 
+	protected function synonymLocationName($name, $type)
+	{
+		if ($type !== 'COUNTRY_DISTRICT') { return $name; }
+
+		$mapEncoded = trim(self::getMessage('SYNONYM_' . $type));
+
+		if ($mapEncoded === '') { return $name; }
+
+		$mapParts = explode(PHP_EOL, $mapEncoded);
+		$result = $name;
+
+		foreach ($mapParts as $mapPart)
+		{
+			list($origin, $target) = explode(',', $mapPart);
+
+			if ($origin === $name)
+			{
+				$result = [
+					$name,
+					$target,
+				];
+				break;
+			}
+		}
+
+		return $result;
+	}
+
 	protected function queryLocationByName($names, array $filter = [], $compare = '=')
 	{
 		$result = null;
@@ -247,7 +280,9 @@ class Location extends Market\Trading\Entity\Reference\Location
 		$query = Sale\Location\LocationTable::getList(array(
 			'filter' => $filter + [
 				'=NAME.LANGUAGE_ID' => 'ru',
-				$compare . 'NAME.NAME' => $names,
+				$compare . 'NAME.NAME_UPPER' => is_array($names)
+					? array_map(static function($name) { return Market\Data\TextString::toUpper($name); }, $names)
+					: Market\Data\TextString::toUpper($names),
 			],
 			'select' => array_merge(
 				[ 'ID', 'NAME' ],
@@ -400,30 +435,54 @@ class Location extends Market\Trading\Entity\Reference\Location
 	protected function fetchLocationExternalData($locationId, $serviceCodeMap)
 	{
 		$result = [];
+		$nextLocationId = (int)$locationId;
+		$needServiceKeys = array_unique($serviceCodeMap);
+		$usedLocationIds = [];
 
-		$query = Sale\Location\ExternalTable::getList([
-			'filter' => [
-				'=LOCATION.ID' => $locationId,
-				'=SERVICE.CODE' => array_keys($serviceCodeMap),
-			],
-			'select' => [
-				'XML_ID',
-				'SERVICE_CODE' => 'SERVICE.CODE'
-			],
-		]);
-
-		while ($row = $query->fetch())
+		do
 		{
-			if (!isset($serviceCodeMap[$row['SERVICE_CODE']])) { continue; }
+			// fetch services
 
-			$dataKey = $serviceCodeMap[$row['SERVICE_CODE']];
-			$xmlId = (string)$row['XML_ID'];
+			$queryServices = Sale\Location\ExternalTable::getList([
+				'filter' => [
+					'=LOCATION_ID' => $nextLocationId,
+					'=SERVICE.CODE' => array_keys($serviceCodeMap),
+				],
+				'select' => [
+					'XML_ID',
+					'SERVICE_CODE' => 'SERVICE.CODE'
+				],
+			]);
 
-			if ($xmlId !== '' && !isset($result[$dataKey]))
+			while ($service = $queryServices->fetch())
 			{
-				$result[$dataKey] = $xmlId;
+				if (!isset($serviceCodeMap[$service['SERVICE_CODE']])) { continue; }
+
+				$dataKey = $serviceCodeMap[$service['SERVICE_CODE']];
+				$xmlId = (string)$service['XML_ID'];
+
+				if ($xmlId !== '' && !isset($result[$dataKey]))
+				{
+					$result[$dataKey] = $xmlId;
+				}
 			}
+
+			if (count($result) === count($needServiceKeys)) { break; }
+
+			// set parent as next
+
+			$queryLocation = Sale\Location\LocationTable::getList([
+				'filter' => [ '=ID' => $nextLocationId ],
+				'select' => [ 'PARENT_ID' ],
+			]);
+			$location = $queryLocation->fetch();
+
+			if (!$location) { break; }
+
+			$usedLocationIds[$nextLocationId] = true;
+			$nextLocationId = (int)$location['PARENT_ID'];
 		}
+		while ($nextLocationId > 0 && !isset($usedLocationIds[$nextLocationId]));
 
 		return $result;
 	}

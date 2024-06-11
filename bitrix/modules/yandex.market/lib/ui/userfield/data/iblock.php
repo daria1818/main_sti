@@ -2,32 +2,41 @@
 
 namespace Yandex\Market\Ui\UserField\Data;
 
-use Yandex\Market;
 use Bitrix\Main;
 use Bitrix\Iblock as IblockModule;
 
 class Iblock
 {
-	public static function getEnum()
+	public static function getEnum($siteId = null)
 	{
+		if (!Main\Loader::includeModule('iblock')) { return []; }
+
 		$result = [];
+		$parameters = [
+			'filter' => [ '=ACTIVE' => 'Y' ],
+			'select' => [ 'ID', 'NAME' ],
+		];
 
-		if (Main\Loader::includeModule('iblock'))
+		if ($siteId !== null)
 		{
-			$query = IblockModule\IblockTable::getList([
-				'filter' => [ '=ACTIVE' => 'Y' ],
-				'select' => [ 'ID', 'NAME' ],
-			]);
+			$parameters['filter']['=YM_IBLOCK_SITE.SITE_ID'] = $siteId;
+			$parameters['runtime'] = [
+				new Main\Entity\ReferenceField(
+					'YM_IBLOCK_SITE',
+					IblockModule\IblockSiteTable::class,
+					[ '=this.ID' => 'ref.IBLOCK_ID' ]
+				),
+			];
+		}
 
-			while ($row = $query->fetch())
-			{
-				$title = '[' . $row['ID'] . '] ' . $row['NAME'];
+		$query = IblockModule\IblockTable::getList($parameters);
 
-				$result[] = [
-					'ID' => $row['ID'],
-					'VALUE' => $title,
-				];
-			}
+		while ($row = $query->fetch())
+		{
+			$result[] = [
+				'ID' => $row['ID'],
+				'VALUE' => sprintf('[%s] %s', $row['ID'], $row['NAME']),
+			];
 		}
 
 		return $result;

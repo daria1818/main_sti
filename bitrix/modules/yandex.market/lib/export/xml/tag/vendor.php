@@ -2,48 +2,27 @@
 
 namespace Yandex\Market\Export\Xml\Tag;
 
-use Bitrix\Main;
-use Yandex\Market;
-use Bitrix\Iblock;
+use Yandex\Market\Export\Xml\Routine\Recommendation;
+use Yandex\Market\Reference\Concerns;
 
 class Vendor extends Base
 {
+	use Concerns\HasMessage;
+
 	public function getDefaultParameters()
 	{
 		return [
-			'name' => 'vendor'
+			'name' => 'vendor',
 		];
 	}
 
+	/** @noinspection SpellCheckingInspection */
 	public function getSourceRecommendation(array $context = [])
 	{
-		$returnList = [];
-
-		if (!empty($context['IBLOCK_ID']) && Main\Loader::includeModule('iblock'))
-		{
-			$query = Iblock\PropertyTable::getList([
-				'filter' => [
-					'=IBLOCK_ID' => $context['IBLOCK_ID'],
-					'@CODE' => [
-						'MANUFACTURER',
-						'VENDOR',
-						'BRAND'
-					]
-				],
-				'select' => [
-					'ID'
-				]
-			]);
-
-			while ($prop = $query->fetch())
-			{
-				$returnList[] = [
-					'TYPE' => Market\Export\Entity\Manager::TYPE_IBLOCK_ELEMENT_PROPERTY,
-					'FIELD' => $prop['ID']
-				];
-			}
-		}
-
-		return $returnList;
+		return Recommendation\Property::filter([
+			'LOGIC' => 'OR',
+			[ '%CODE' => [ 'MANUFACTURER', 'VENDOR', 'BRAND', 'BREND' ] ],
+			[ '%NAME' => explode(',', self::getMessage('FILTER_TITLE')) ],
+		], $context);
 	}
 }

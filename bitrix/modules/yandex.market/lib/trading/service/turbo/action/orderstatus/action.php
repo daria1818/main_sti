@@ -24,18 +24,17 @@ class Action extends TradingService\Common\Action\OrderStatus\Action
 		return new Request($request, $server);
 	}
 
-	protected function getStatusInSearchVariants()
+	protected function makeStatusInSearchVariants($status)
 	{
-		$externalStatus = $this->request->getOrder()->getStatus();
 		$paymentType = $this->request->getOrder()->getPaymentType();
 		$servicePaySystem = $this->provider->getPaySystem();
 		$result = [
-			$externalStatus,
+			$status,
 		];
 
 		if ($servicePaySystem->isPrepaid($paymentType))
 		{
-			array_unshift($result, $externalStatus . '_PREPAID');
+			array_unshift($result, $status . '_PREPAID');
 		}
 
 		return $result;

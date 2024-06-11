@@ -22,12 +22,4 @@ trait HasRegionHandler
 		$this->order->resetLocation();
 		$this->provider->getLogger()->warning($error);
 	}
-
-	protected function handleRegionSetLocationResult(Main\Result $result)
-	{
-		foreach ($result->getErrors() as $error)
-		{
-			$this->provider->getLogger()->warning($error);
-		}
-	}
 }

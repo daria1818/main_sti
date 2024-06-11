@@ -9,6 +9,10 @@ use Yandex\Market\Trading\Service as TradingService;
 
 class Action extends TradingService\Marketplace\Action\SendStatus\Action
 {
+	use TradingService\Common\Concerns\Action\HasChangesTrait;
+	use TradingService\Common\Concerns\Action\HasMeaningfulProperties;
+	use TradingService\MarketplaceDbs\Concerns\Action\HasDeliveryDates;
+
 	/** @var TradingService\MarketplaceDbs\Provider */
 	protected $provider;
 	/** @var Request */
@@ -24,18 +28,27 @@ class Action extends TradingService\Marketplace\Action\SendStatus\Action
 		return new Request($data);
 	}
 
+	public function getActivity()
+	{
+		return new Activity($this->provider, $this->environment);
+	}
+
 	protected function checkHasStatus($orderId, $state)
 	{
 		try
 		{
 			/** @var Market\Trading\Service\MarketplaceDbs\Status $serviceStatuses */
 			$serviceStatuses = $this->provider->getStatus();
-			$externalOrder = $this->loadExternalOrder($orderId);
+			$externalOrder = $this->getExternalOrder();
 			$currentStatus = $externalOrder->getStatus();
 
 			if ($state === TradingService\MarketplaceDbs\Status::STATUS_CANCELLED)
 			{
 				$result = $externalOrder->isCancelRequested() || $serviceStatuses->isCanceled($currentStatus);
+			}
+			else if ($serviceStatuses->isCanceled($currentStatus))
+			{
+				$result = false;
 			}
 			else
 			{
@@ -67,6 +80,163 @@ class Action extends TradingService\Marketplace\Action\SendStatus\Action
 		}
 
 		return [ $status, $subStatus ];
+	}
+
+	protected function getExternalPayload($status, $subStatus)
+	{
+		$result = [];
+
+		if (
+			$status === TradingService\MarketplaceDbs\Status::STATUS_PICKUP
+			|| $this->request->hasRealDeliveryDate()
+			|| (
+				$status === TradingService\MarketplaceDbs\Status::STATUS_DELIVERED
+				&& $this->getCurrentStatus() !== TradingService\MarketplaceDbs\Status::STATUS_PICKUP
+			)
+		)
+		{
+			$result['realDeliveryDate'] = $this->getRealDeliveryDate();
+		}
+
+		return $result;
+	}
+
+	protected function getCurrentStatus()
+	{
+		$result = $this->getStoredOrderStatus();
+
+		if ($result === null)
+		{
+			$result = $this->getExternalOrderStatus();
+		}
+
+		return $result;
+	}
+
+	protected function getStoredOrderStatus()
+	{
+		$orderId = $this->request->getOrderId();
+		$stored = (string)$this->provider->getStatus()->getStored($orderId);
+		$result = null;
+
+		if ($stored !== '')
+		{
+			list($result) = explode(':', $stored, 2);
+		}
+
+		return $result;
+	}
+
+	protected function getExternalOrderStatus()
+	{
+		return $this->getExternalOrder()->getStatus();
+	}
+
+	protected function getRealDeliveryDate()
+	{
+		$fixed = $this->getRealDeliveryDateFromRequest();
+
+		if ($fixed) { return $fixed; }
+
+		$predicted =
+			$this->getRealDeliveryDateFromTargetProperty()
+			?: $this->getRealDeliveryDateFromStored()
+			?: $this->getRealDeliveryDateFromPeriodProperty()
+			?: $this->getRealDeliveryDateFromExternalOrder()
+			?: new Main\Type\Date();
+
+		$marketDate = new Main\Type\DateTime();
+		$marketDate->setTimeZone(new \DateTimeZone('Europe/Moscow'));
+
+		return Market\Data\Date::min($predicted, $marketDate);
+	}
+
+	protected function getRealDeliveryDateFromRequest()
+	{
+		return $this->request->getRealDeliveryDate();
+	}
+
+	protected function getRealDeliveryDateFromTargetProperty()
+	{
+		return $this->getDateFromProperties([
+			'DELIVERY_REAL_DATE',
+		]);
+	}
+
+	protected function getRealDeliveryDateFromStored()
+	{
+		return $this->getDateFromStored([
+			'REAL_DELIVERY_DATE',
+			'DELIVERY_DATE',
+		]);
+	}
+
+	protected function getRealDeliveryDateFromPeriodProperty()
+	{
+		return $this->getDateFromProperties([
+			'DELIVERY_DATE_FROM',
+			'DELIVERY_DATE_TO',
+		]);
+	}
+
+	protected function getRealDeliveryDateFromExternalOrder()
+	{
+		$order = $this->getExternalOrder();
+
+		if (!$order->hasDelivery()) { return null; }
+
+		$dates = $order->getDelivery()->getDates();
+
+		if ($dates === null) { return null; }
+
+		return $dates->getRealDeliveryDate() ?: $dates->getFromDate();
+	}
+
+	protected function getDateFromProperties(array $types)
+	{
+		$result = null;
+
+		foreach ($types as $type)
+		{
+			$propertyId = (string)$this->provider->getOptions()->getProperty($type);
+
+			if ($propertyId === '') { continue; }
+
+			$order = $this->getOrder();
+			$siteId = $order->getSiteId();
+			$propertyValue = $order->getPropertyValue($propertyId);
+			$propertyValue = is_array($propertyValue) ? reset($propertyValue) : $propertyValue;
+
+			$date = Market\Data\Date::parse($propertyValue, $siteId);
+
+			if ($date !== null)
+			{
+				$result = $date;
+				break;
+			}
+		}
+
+		return $result;
+	}
+
+	protected function getDateFromStored(array $types)
+	{
+		$orderId = $this->request->getOrderId();
+		$uniqueKey = $this->provider->getUniqueKey();
+		$result = null;
+
+		foreach ($types as $type)
+		{
+			$value = Market\Trading\State\OrderData::getValue($uniqueKey, $orderId, $type);
+			$value = trim($value);
+
+			if ($value === '') { continue; }
+
+			$result = new Main\Type\Date($value, Market\Data\Date::FORMAT_DEFAULT_SHORT);
+			break;
+		}
+
+		return $result;
 	}
 
 	protected function getCancelReason()
@@ -197,5 +367,34 @@ class Action extends TradingService\Marketplace\Action\SendStatus\Action
 		}
 
 		return $result;
+	}
+
+	protected function finalize($orderId, $state)
+	{
+		$this->resetChanges();
+		$this->fillDeliveryDatesProperties($this->externalOrder);
+		$this->finalizePhone($state);
+
+		if ($this->hasChanges())
+		{
+			$this->updateOrder();
+		}
+	}
+
+	protected function finalizePhone($state)
+	{
+		$statusService = $this->provider->getStatus();
+		$isFinal = ($statusService->isCanceled($state) || $statusService->isOrderDelivered($state));
+
+		if (!$isFinal) { return; }
+
+		$this->setMeaningfulPropertyValues([
+			'PHONE' => '',
+		]);
+	}
+
+	protected function makeData()
+	{
+		return $this->makeDeliveryDatesData($this->externalOrder);
 	}
 }

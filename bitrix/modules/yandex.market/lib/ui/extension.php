@@ -87,7 +87,12 @@ class Extension
 	{
 		$assets = \CJSCore::getExtInfo($extension);
 		$loadJs = static::getConditionLoad($assets);
-		$script = sprintf('<script data-bxrunfirst>if (!window.%s && !top.%s) { %s }</script>', $varName, $varName, $loadJs);
+		$script = sprintf(
+			'<script data-bxrunfirst>if (!window.%s && (!top.%s || (window.frameElement && /side-panel-iframe/.test(window.frameElement.className)))) { %s }</script>',
+			$varName,
+			$varName,
+			$loadJs
+		);
 
 		$assets = Main\Page\Asset::getInstance();
 		$assets->addString($script, true, $location);

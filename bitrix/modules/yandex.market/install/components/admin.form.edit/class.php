@@ -9,7 +9,7 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
 class AdminFormEdit extends \CBitrixComponent
 {
-    protected static $langPrefix = 'YANDER_MARKET_FORM_EDIT_';
+    protected static $langPrefix = 'YANDEX_MARKET_FORM_EDIT_';
 
     /** @var \Yandex\Market\Component\Base\EditForm */
     protected $provider;
@@ -367,9 +367,7 @@ class AdminFormEdit extends \CBitrixComponent
             ];
         }
 
-        $APPLICATION->RestartBuffer();
-        echo Market\Utils::jsonEncode($response, JSON_UNESCAPED_UNICODE);
-        die();
+		Market\Utils\HttpResponse::sendJson($response);
     }
 
 	protected function hasPostAction()
@@ -500,27 +498,60 @@ class AdminFormEdit extends \CBitrixComponent
 
 	    if (count($keyChain) > 1)
 	    {
-	    	throw new Main\NotImplementedException();
+		    $files = $this->normalizeFileUploadChain($files, $keyChain);
 	    }
 
-        $requestKey = reset($keyChain);
-        $deleteRequestKey = $requestKey . '_del';
-        $oldIdRequestKey = $requestKey . '_old_id';
+		$firstKey = reset($keyChain);
+        $lastKey = end($keyChain);
+	    $deleteRequest = $this->getValueByChain($post, [ $firstKey . '_del' ] + $keyChain);
+		$oldIdRequest = $this->getValueByChain($post, [ $firstKey . '_old_id' ] + $keyChain);
 
-        $request = isset($files[$requestKey]) && is_array($files[$requestKey]) ? $files[$requestKey] : [];
+        $request = isset($files[$lastKey]) && is_array($files[$lastKey]) ? $files[$lastKey] : [];
 
-        if (isset($post[$deleteRequestKey]))
+        if ($deleteRequest !== null)
 	    {
-		    $request['del'] = ($post[$deleteRequestKey] === 'Y');
+		    $request['del'] = ($deleteRequest === 'Y');
 	    }
 
-        if (isset($post[$oldIdRequestKey]))
+        if ($oldIdRequest !== null)
 	    {
-		    $request['old_id'] = (int)$post[$oldIdRequestKey];
+		    $request['old_id'] = (int)$oldIdRequest;
 	    }
 
-        $result[$requestKey] = $request;
+	    if (
+			(!isset($request['error']) || $request['error'] === UPLOAD_ERR_NO_FILE)
+	        && empty($request['del'])
+	    )
+	    {
+		    $request = isset($request['old_id']) ? $request['old_id'] : null;
+	    }
+
+	    $this->setValueByChain($result, $keyChain, $request);
     }
+
+	protected function normalizeFileUploadChain($files, array $keyChain)
+	{
+		array_pop($keyChain);
+		$files = $this->getValueByChain($files, $keyChain);
+
+		if (!is_array($files)) { return []; }
+
+		$result = [];
+
+		foreach ($files as $name => $values)
+		{
+			if (!is_array($values)) { continue; }
+
+			foreach ($values as $key => $value)
+			{
+				if (!isset($result[$key])) { $result[$key] = []; }
+
+				$result[$key][$name] = $value;
+			}
+		}
+
+		return $result;
+	}
 
 	protected function resolveDependency(&$fields)
 	{
@@ -712,7 +743,6 @@ class AdminFormEdit extends \CBitrixComponent
     protected function redirectCancel()
     {
         LocalRedirect($this->arParams['LIST_URL']);
-        die();
     }
 
     protected function redirectAfterSave($primary = null)
@@ -742,6 +772,11 @@ class AdminFormEdit extends \CBitrixComponent
 
         if ($redirectUrl !== '')
         {
+	        $redirectUrlCurrentPagePosition = Market\Data\TextString::getPositionCaseInsensitive(
+		        $redirectUrl,
+		        $APPLICATION->GetCurPage(false)
+	        );
+	        $isSamePage = ($redirectUrlCurrentPagePosition === 0);
         	$leftParameters = [];
 
         	foreach ($parameters as $name => $value)
@@ -759,7 +794,7 @@ class AdminFormEdit extends \CBitrixComponent
 		        }
 	        }
 
-        	if (!empty($leftParameters))
+        	if (!empty($leftParameters) && $isSamePage)
 	        {
 	        	$redirectUrl .=
 			        (Market\Data\TextString::getPosition($redirectUrl, '?') === false ? '?' : '&')
@@ -775,7 +810,6 @@ class AdminFormEdit extends \CBitrixComponent
         }
 
         LocalRedirect($redirectUrl);
-        die();
     }
 
     protected function loadItem()
@@ -968,7 +1002,7 @@ class AdminFormEdit extends \CBitrixComponent
 	    	$result = $value;
 	    }
 
-    	return $result;
+    	return Market\Ui\UserField\Helper\Field::unifyValue($result);
     }
 
     public function getOriginalValue($field)

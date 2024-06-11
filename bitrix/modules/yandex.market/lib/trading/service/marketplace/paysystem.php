@@ -13,10 +13,18 @@ class PaySystem
 	const TYPE_POSTPAID = 'POSTPAID';
 
 	const METHOD_YANDEX = 'YANDEX';
+	const METHOD_SBP = 'SBP';
 	const METHOD_APPLE_PAY = 'APPLE_PAY';
 	const METHOD_GOOGLE_PAY = 'GOOGLE_PAY';
+	const METHOD_TINKOFF_CREDIT = 'TINKOFF_CREDIT';
+	const METHOD_TINKOFF_INSTALLMENTS = 'TINKOFF_INSTALLMENTS';
 	const METHOD_CARD_ON_DELIVERY = 'CARD_ON_DELIVERY';
 	const METHOD_CASH_ON_DELIVERY = 'CASH_ON_DELIVERY';
+	const METHOD_B2B_ACCOUNT_PREPAYMENT = 'B2B_ACCOUNT_PREPAYMENT';
+
+	const CASHBOX_CHECK_MANUAL = 'MANUAL';
+	const CASHBOX_CHECK_ENABLED = 'ENABLED';
+	const CASHBOX_CHECK_DISABLED = 'DISABLED';
 
 	protected $provider;
 
@@ -35,6 +43,14 @@ class PaySystem
 		return [
 			static::TYPE_PREPAID,
 			static::TYPE_POSTPAID,
+		];
+	}
+
+	public function getTypeMeaningfulMap()
+	{
+		return [
+			static::TYPE_PREPAID => Market\Data\Trading\PaySystem::TYPE_PREPAID,
+			static::TYPE_POSTPAID => Market\Data\Trading\PaySystem::TYPE_POSTPAID,
 		];
 	}
 
@@ -70,8 +86,12 @@ class PaySystem
 	{
 		return [
 			static::METHOD_YANDEX,
+			static::METHOD_SBP,
 			static::METHOD_APPLE_PAY,
 			static::METHOD_GOOGLE_PAY,
+			static::METHOD_TINKOFF_CREDIT,
+			static::METHOD_TINKOFF_INSTALLMENTS,
+			static::METHOD_B2B_ACCOUNT_PREPAYMENT,
 			static::METHOD_CARD_ON_DELIVERY,
 			static::METHOD_CASH_ON_DELIVERY,
 		];
@@ -81,8 +101,11 @@ class PaySystem
 	{
 		return [
 			static::METHOD_YANDEX => Market\Data\Trading\PaySystem::METHOD_YANDEX,
+			static::METHOD_SBP => Market\Data\Trading\PaySystem::METHOD_YANDEX,
 			static::METHOD_APPLE_PAY => Market\Data\Trading\PaySystem::METHOD_APPLE_PAY,
 			static::METHOD_GOOGLE_PAY => Market\Data\Trading\PaySystem::METHOD_GOOGLE_PAY,
+			static::METHOD_TINKOFF_CREDIT => Market\Data\Trading\PaySystem::METHOD_CREDIT,
+			static::METHOD_TINKOFF_INSTALLMENTS => Market\Data\Trading\PaySystem::METHOD_CREDIT,
 			static::METHOD_CARD_ON_DELIVERY => Market\Data\Trading\PaySystem::METHOD_CARD_ON_DELIVERY,
 			static::METHOD_CASH_ON_DELIVERY => Market\Data\Trading\PaySystem::METHOD_CASH_ON_DELIVERY,
 		];
@@ -122,13 +145,48 @@ class PaySystem
 		return [
 			static::TYPE_PREPAID => [
 				static::METHOD_YANDEX,
+				static::METHOD_SBP,
 				static::METHOD_APPLE_PAY,
 				static::METHOD_GOOGLE_PAY,
+				static::METHOD_TINKOFF_CREDIT,
+				static::METHOD_TINKOFF_INSTALLMENTS,
+				static::METHOD_B2B_ACCOUNT_PREPAYMENT,
 			],
 			static::TYPE_POSTPAID => [
 				static::METHOD_CARD_ON_DELIVERY,
 				static::METHOD_CASH_ON_DELIVERY,
 			],
 		];
+	}
+
+	public function getCashboxChecks()
+	{
+		return [
+			static::CASHBOX_CHECK_ENABLED,
+			static::CASHBOX_CHECK_DISABLED,
+			static::CASHBOX_CHECK_MANUAL,
+		];
+	}
+
+	public function getCashboxCheckTitle($type)
+	{
+		$typeKey = Market\Data\TextString::toUpper($type);
+
+		return static::getLang('TRADING_SERVICE_MARKETPLACE_PAY_SYSTEM_CASHBOX_CHECK_' . $typeKey, null, $type);
+	}
+
+	public function getCashboxCheckEnum()
+	{
+		$result = [];
+
+		foreach ($this->getCashboxChecks() as $type)
+		{
+			$result[] = [
+				'ID' => $type,
+				'VALUE' => $this->getCashboxCheckTitle($type),
+			];
+		}
+
+		return $result;
 	}
 }

@@ -9,9 +9,8 @@ $context = $arParams['CONTEXT'];
 $tagRecommendationList = [];
 
 /** @var Market\Export\Xml\Tag\Base $tag */
-foreach ($arResult['TAGS'] as $tag)
+foreach ($arResult['TAGS'] as $tagId => $tag)
 {
-	$tagId = $tag->getId();
 	$nodeList = [ $tag ];
 
 	if ($tag->hasAttributes())

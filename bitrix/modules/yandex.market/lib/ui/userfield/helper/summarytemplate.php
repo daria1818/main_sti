@@ -44,7 +44,7 @@ class SummaryTemplate
 
 	public static function getUsedKeys($template)
 	{
-		if (preg_match_all('/#([A-Z0-9_]+?)#/', $template, $matches))
+		if (preg_match_all('/#([A-Z0-9_.]+?)#/', $template, $matches))
 		{
 			$result = $matches[1];
 		}
@@ -54,6 +54,38 @@ class SummaryTemplate
 		}
 
 		return $result;
+	}
+
+	public static function normalizeNames($fields)
+	{
+		$result = [];
+
+		foreach ($fields as $name => $field)
+		{
+			$normalized = static::normalizeFieldName($name);
+
+			$result[$normalized] = $field;
+		}
+
+		return $result;
+	}
+
+	protected static function normalizeFieldName($name)
+	{
+		if (Market\Data\TextString::getPosition($name, '[') === false) { return $name; }
+
+		$parts = [];
+
+		foreach (explode('[', $name) as $part)
+		{
+			$part = rtrim($part, ']');
+
+			if ($part === '') { continue; }
+
+			$parts[] = $part;
+		}
+
+		return implode('.', $parts);
 	}
 
 	protected static function splitValidVariables($vars, $keys)
@@ -89,13 +121,39 @@ class SummaryTemplate
 		while (($searchPosition = Market\Data\TextString::getPosition($result, $search)) !== false)
 		{
 			$before = Market\Data\TextString::getSubstring($result, 0, $searchPosition);
-			$before = static::trimRightPart($before);
 			$after = Market\Data\TextString::getSubstring($result, $searchPosition + strlen($search));
-			$after = static::trimLeftPart($after);
+			$beforeParentheses = Market\Data\TextString::getPosition($before, '(');
+			$afterParentheses = Market\Data\TextString::getPosition($after, ')');
 
-			if (isset($after[0]) && $after[0] === ',' && Market\Data\TextString::getSubstring($before, -1) === '.')
+			if ($beforeParentheses !== false && $afterParentheses !== false) // inside parentheses
 			{
-				$after = Market\Data\TextString::getSubstring($after, 1);
+				$beforeOuter = Market\Data\TextString::getSubstring($before, 0, $beforeParentheses + 1);
+				$beforeInner = Market\Data\TextString::getSubstring($before, $beforeParentheses + 1);
+				$afterOuter = Market\Data\TextString::getSubstring($after, $afterParentheses);
+				$afterInner = Market\Data\TextString::getSubstring($after, 0, $afterParentheses);
+				$beforeInner = static::trimRightPart($beforeInner);
+				$afterInner = static::trimLeftPart($afterInner, $beforeInner);
+
+				if ($beforeInner === '' && $afterInner === '') // then remove parentheses
+				{
+					$before = Market\Data\TextString::getSubstring($beforeOuter, 0, $beforeParentheses);
+					$after = Market\Data\TextString::getSubstring($afterOuter, 1);
+				}
+				else
+				{
+					$before = $beforeOuter . $beforeInner;
+					$after = $afterInner . $afterOuter;
+				}
+			}
+			else
+			{
+				$before = static::trimRightPart($before);
+				$after = static::trimLeftPart($after, $before);
+			}
+
+			if (isset($after[0]) && $after[0] === '(')
+			{
+				$after = ' ' . $after;
 			}
 
 			$result = $before . $after;
@@ -106,12 +164,24 @@ class SummaryTemplate
 
 	protected static function trimRightPart($part)
 	{
-		return preg_replace('/,?[^#.,]+$/', '', $part);
+		return preg_replace('/,?[^#.,()]*$/', '', $part);
 	}
 
-	protected static function trimLeftPart($part)
+	protected static function trimLeftPart($part, $before = '')
 	{
-		return preg_replace('/^[^#.,]+/', '', $part);
+		$part = preg_replace('/^[^#.,()]+/', '', $part);
+
+		if (isset($part[0]) && $part[0] === ',' && ($before === '' || Market\Data\TextString::getSubstring($before, -1) === '.'))
+		{
+			$part = Market\Data\TextString::getSubstring($part, 1);
+
+			if ($before === '')
+			{
+				$part = ltrim($part);
+			}
+		}
+
+		return $part;
 	}
 
 	protected static function replaceVariable($template, $key, $value)

@@ -2,21 +2,27 @@
 
 namespace Yandex\Market\Ui\UserField\Autocomplete;
 
+use Bitrix\Main;
 use Yandex\Market;
 
 abstract class Property
 {
-	abstract public static function GetUserTypeDescription();
+	public static function GetUserTypeDescription()
+	{
+		throw new Main\NotImplementedException();
+	}
 
-	/**
-	 * @return \Yandex\Market\Ui\UserField\Autocomplete\Provider
-	 */
-	abstract public static function getDataProvider();
+	/** @return Market\Ui\UserField\Autocomplete\Provider */
+	public static function getDataProvider()
+	{
+		throw new Main\NotImplementedException();
+	}
 
-	/**
-	 * @return string
-	 */
-	abstract public static function getLangKey();
+	/** @return string */
+	public static function getLangKey()
+	{
+		throw new Main\NotImplementedException();
+	}
 
 	public static function PrepareSettings($property)
 	{
@@ -37,7 +43,6 @@ abstract class Property
 		global $APPLICATION;
 
 		$controlId = preg_replace('/[^a-zA-Z0-9_]/i', 'x', $controlName['VALUE'] . '_' . mt_rand(0, 10000));
-		$autoCompleteValue = null;
 		$dataProvider = static::getDataProvider();
 		$langKey = static::getLangKey();
 		$isGridMode = ($controlName['MODE'] === 'iblock_element_admin');
@@ -100,7 +105,7 @@ abstract class Property
 
 		$dataProvider = static::getDataProvider();
 		$langKey = static::getLangKey();
-		$isMainUiFilter = (isset($controlName['FORM_NAME']) && $controlName['FORM_NAME'] == 'main-ui-filter');
+		$isMainUiFilter = (isset($controlName['FORM_NAME']) && $controlName['FORM_NAME'] === 'main-ui-filter');
 		$inputName = $controlName['VALUE'] . ($isMainUiFilter ? '' : '[]');
 		$requestValueList = static::getFilterRequestValue($controlName);
 		$extractedValueList = static::extractPropertyValueList($requestValueList);
@@ -134,10 +139,10 @@ abstract class Property
 			if (!!arClearHiddenFields)
 			{
 				indClearHiddenFields = arClearHiddenFields.length;
-				arClearHiddenFields[indClearHiddenFields] = 'jsMLI_<? echo $control_id; ?>';
+				arClearHiddenFields[indClearHiddenFields] = 'jsMLI_<?= $control_id; ?>';
 			}
 		</script>
-		<?
+		<?php
 
 		return ob_get_clean();
 	}

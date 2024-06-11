@@ -118,7 +118,7 @@ if(isset($_REQUEST['ID']) || !empty($_REQUEST['ID'])) {
 
 <tr>
 
-    <td width="40%">Email:</td>
+    <td width="40%"><?= Loc::getMessage("DELLINDEV_PERSON_EMAIL") ?></td>
     <td width="60%" id="b_sale_hndl_dlv_add_loc_count">
         <input type="text" name="CONFIG[PERSON][EMAIL]"
                value='<? echo $dataValuePerson['EMAIL'] ?>'

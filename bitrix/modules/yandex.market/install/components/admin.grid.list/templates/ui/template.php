@@ -7,6 +7,7 @@ use Yandex\Market;
 /** @var Yandex\Market\Components\AdminGridList $component */
 
 Market\Ui\Assets::loadPlugin('admin', 'css');
+Market\Ui\Assets::loadPlugin('grain', 'css');
 Market\Ui\Assets::loadPlugin('lib.dialog');
 
 $adminList = $component->getViewList();

@@ -22,6 +22,11 @@ class Request extends TradingService\Common\Action\Cart\Request
 		return $this->getOrder();
 	}
 
+	public function isDownload()
+	{
+		return (bool)$this->getField('download');
+	}
+
 	protected function getChildModelReference()
 	{
 		return [

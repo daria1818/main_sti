@@ -8,10 +8,8 @@ $arResult['DEFAULT_SOURCES'] = [];
 $context = $arParams['CONTEXT'];
 
 /** @var Market\Export\Xml\Tag\Base $tag */
-foreach ($arResult['TAGS'] as $tag)
+foreach ($arResult['TAGS'] as $tagId => $tag)
 {
-	$tagId = $tag->getId();
-
 	$arResult['DEFAULT_SOURCES'][$tagId] = (
 		isset($arResult['NODE_AVAILABLE_SOURCES'][$tagId][$arResult['RECOMMENDATION_TYPE']])
 			? $arResult['RECOMMENDATION_TYPE']

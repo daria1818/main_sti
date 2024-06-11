@@ -1,6 +1,6 @@
 <?php
 
-$MESS['YANDEX_MARKET_EXPORT_PROMO_PROVIDER_CATALOG_PRICE_TITLE'] = 'Тип цены из раздела &laquo;Магазин&raquo;';
+$MESS['YANDEX_MARKET_EXPORT_PROMO_PROVIDER_CATALOG_PRICE_TITLE'] = 'Тип цены из раздела Магазин';
 $MESS['YANDEX_MARKET_EXPORT_PROMO_PROVIDER_CATALOG_PRICE_DESCRIPTION'] = '
 <p>Вы&nbsp;можете выгрузить на&nbsp;Маркет данные о&nbsp;<strong>Цене по программе лояльности</strong>, которая доступна авторизованным пользователям.</p>
 ';

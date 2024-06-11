@@ -27,4 +27,5 @@ $MESS["DELLINDEV_INN_SENDER"] = "ИНН отправителя";
 $MESS["DELLINDEV_CONTACT_PERSON_BLOCK"] = "Введите данные контактного лица ";
 $MESS["DELLINDEV_PERSON_FIO"] = "ФИО";
 $MESS["DELLINDEV_PERSON_PHONE"] = "Телефон";
+$MESS["DELLINDEV_PERSON_EMAIL"] = "Адрес электронной почты";
 ?>

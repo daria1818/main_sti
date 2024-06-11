@@ -15,7 +15,7 @@ class CASDModuleVersion {
 		if (!isset(self::$moduleVersion[$module])) {
 			self::loadModuleVersion($module);
 		}
-		if (self::$moduleVersion[$module] == '0.0.0') {
+		if (!isset(self::$moduleVersion[$module]) || self::$moduleVersion[$module] == '0.0.0') {
 			return false;
 		}
 

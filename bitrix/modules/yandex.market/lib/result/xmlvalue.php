@@ -61,6 +61,58 @@ class XmlValue extends Base
 	}
 
 	/**
+	 * Содержит множественные теги
+	 *
+	 * @return bool
+	 */
+	public function hasMultipleTags()
+	{
+		return !empty($this->multipleTags);
+	}
+
+	public function getMultipleKeys()
+	{
+		$allKeys = [];
+
+		foreach ($this->tagData as $tagName => $tag)
+		{
+			if (isset($this->multipleTags[$tagName]))
+			{
+				$keys = array_keys($tag);
+			}
+			else
+			{
+				$keys = [ 0 ];
+			}
+
+			$allKeys += array_flip($keys);
+		}
+
+		return array_keys($allKeys);
+	}
+
+	public function getMultipleData($index)
+	{
+		$result = [];
+
+		foreach ($this->tagData as $tagName => $tag)
+		{
+			if (isset($this->multipleTags[$tagName]))
+			{
+				$value = isset($tag[$index]) ? $tag[$index] : null;
+			}
+			else
+			{
+				$value = $tag;
+			}
+
+			$result[$tagName] = $value;
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Выгружен ли тег с идентичными значениями
 	 *
 	 * @param       $tagName
@@ -69,7 +121,7 @@ class XmlValue extends Base
 	 *
 	 * @return bool
 	 */
-	public function hasTag($tagName, $value, array $attributeList = [])
+	public function hasTag($tagName, $value, array $attributeList = [], array $children = null)
 	{
 		$result = false;
 
@@ -81,16 +133,23 @@ class XmlValue extends Base
 		{
 			$tag = $this->tagData[$tagName];
 
+			/** @noinspection TypeUnsafeComparisonInspection */
 			$result = (
 				$tag['VALUE'] === $value
 				&& $tag['ATTRIBUTES'] == $attributeList
+				&& $tag['CHILDREN'] == $children
 			);
 		}
 		else
 		{
 			foreach ($this->tagData[$tagName] as $tag)
 			{
-				if ($tag['VALUE'] === $value && $tag['ATTRIBUTES'] == $attributeList)
+				/** @noinspection TypeUnsafeComparisonInspection */
+				if (
+					$tag['VALUE'] === $value
+					&& $tag['ATTRIBUTES'] == $attributeList
+					&& $tag['CHILDREN'] == $children
+				)
 				{
 					$result = true;
 					break;
@@ -104,17 +163,19 @@ class XmlValue extends Base
 	/**
 	 * Добавить тег.
 	 *
-	 * @param       $tagName
+	 * @param string $tagName
 	 * @param mixed $value
 	 * @param array $attributeList Ассоциативный массив, где ключ массива - название атрибута, значение массива - значение атрибута.
-	 * @param array|null $tagSettings дополнительные настройки для генерации тега
+	 * @param array|null $tagSettings Дополнительные настройки для генерации тега
+	 * @param array|null $children Дочерние теги
 	 */
-	public function addTag($tagName, $value, array $attributeList = [], $tagSettings = null)
+	public function addTag($tagName, $value, array $attributeList = [], $tagSettings = null, array $children = null)
 	{
 		$tag = [
 			'VALUE' => $value,
 			'ATTRIBUTES' => $attributeList,
-			'SETTINGS' => $tagSettings
+			'SETTINGS' => $tagSettings,
+			'CHILDREN' => $children,
 		];
 
 		if (!isset($this->tagData[$tagName]))
@@ -387,8 +448,6 @@ class XmlValue extends Base
 		}
 		else
 		{
-			$attributeValue = null;
-
 			if ($isMultiple)
 			{
 				$attributeValue = is_array($value) ? reset($value) : null;

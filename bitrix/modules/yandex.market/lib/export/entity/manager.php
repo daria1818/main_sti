@@ -16,6 +16,7 @@ class Manager
 	const TYPE_IBLOCK_PROPERTY_FEATURE = 'iblock_property_feature';
 	const TYPE_IBLOCK_SECTION = 'iblock_section';
 	const TYPE_CATALOG_PRICE = 'catalog_price';
+	const TYPE_CATALOG_PRICE_MATRIX = 'catalog_priceMatrix';
 	const TYPE_CATALOG_PRODUCT = 'catalog_product';
 	const TYPE_CATALOG_STORE = 'catalog_store';
 	const TYPE_PROMO_PRICE = 'promo_price';
@@ -181,6 +182,7 @@ class Manager
 			static::TYPE_IBLOCK_PROPERTY_FEATURE,
 			static::TYPE_IBLOCK_SECTION,
 			static::TYPE_CATALOG_PRICE,
+			static::TYPE_CATALOG_PRICE_MATRIX,
 			static::TYPE_CATALOG_PRODUCT,
 			static::TYPE_CATALOG_STORE,
 			static::TYPE_CURRENCY,

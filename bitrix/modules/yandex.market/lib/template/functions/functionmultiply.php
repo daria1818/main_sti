@@ -34,12 +34,15 @@ class FunctionMultiply extends Iblock\Template\Functions\FunctionBase
 
 		foreach ($parameters as $parameter)
 		{
-			if ($parameter === null || !is_numeric($parameter))
+			if (!is_numeric($parameter))
 			{
+				if ($result !== null) { continue; }
+
 				$result = null;
 				break;
 			}
-			else if ($result === null)
+
+			if ($result === null)
 			{
 				$result = (float)$parameter;
 			}

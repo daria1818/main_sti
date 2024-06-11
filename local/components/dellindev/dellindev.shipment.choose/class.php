@@ -19,21 +19,7 @@ class CDellinShippingChooseComponent extends CBitrixComponent
 	 */
 	public function checkParams($params)
 	{
-
-
-	//    if()
-//		if(!isset($params["INDEX"]))
-//			throw new ArgumentNullException('params["INDEX"]');
-//
-//		if(!isset($params["STORES_LIST"]) || !is_array($params["STORES_LIST"]) || count($params["STORES_LIST"]) <= 0 )
-//			throw new ArgumentNullException('params["STORES_LIST"]');
-//
-//		if(isset($params["MAP_TYPE"])
-//			&& !in_array($params["MAP_TYPE"], array(self::MAP_TYPE_GOOGLE, self::MAP_TYPE_YANDEX, self::MAP_TYPE_NONE)
-//		))
-//		{
-//			$params["MAP_TYPE"] = self::MAP_TYPE_YANDEX;
-//		}
+		
 
 		return true;
 	}
@@ -44,25 +30,43 @@ class CDellinShippingChooseComponent extends CBitrixComponent
 	 */
 	public function onPrepareComponentParams($params)
 	{
-		$params = parent::onPrepareComponentParams($params);
+		if(CModule::IncludeModule("dellindev.shipment")){//fix TypeError... maybe
 
-		$userType = $params['USER_RESULT']['PERSON_TYPE_ID'];
+			$params = parent::onPrepareComponentParams($params);
 
-		$terminalList = \Sale\Handlers\Delivery\Dellin\AjaxService::getTerminalsForAjaxOfSession();
+			// if(!$params['DELIVERY_LOCATION'])
+			// {
+			// 	unset($_SESSION['current_terminals']);
+			// }	
 
-		$currentTerminalField = $this->getFieldIdOnCODE($userType, 'TERMINAL_ID');
-        $currentDeliveryTimeStartField  = $this->getFieldIdOnCODE($userType, 'DELLIN_DELIVERYTIME_START');
-        $currentDeliveryTimeEndField = $this->getFieldIdOnCODE($userType, 'DELLIN_DELIVERYTIME_END');
+			$userType = $params['USER_RESULT']['PERSON_TYPE_ID'];
+
+			$terminalList = \Sale\Handlers\Delivery\Dellin\AjaxService::getTerminalsForAjaxOfSession();
+
+			$widgetParams = $this->getWidgetParams($terminalList);
+
+			$currentTerminalField = $this->getFieldIdOnCODE($userType, 'TERMINAL_ID');
+			$currentDeliveryTimeStartField  = $this->getFieldIdOnCODE($userType, 'DELLIN_DELIVERYTIME_START');
+			$currentDeliveryTimeEndField = $this->getFieldIdOnCODE($userType, 'DELLIN_DELIVERYTIME_END');
+			//clear teminals block
+			
+			// echo '<pre>';
+			// var_dump($params);
+			// echo '</pre>';
+			// die();
 
 
-        $params['dellin']['terminalList'] = $terminalList['terminals'];
-        $params['dellin']['currentTerminalField'] = $currentTerminalField;
-        $params['dellin']['currentDeliveryTimeStartField'] = $currentDeliveryTimeStartField;
-        $params['dellin']['currentDeliveryTimeEndField'] = $currentDeliveryTimeEndField;
-        $params['dellin']['terminalsMethod'] = $terminalList['terminals_method_id'];
+			$params['dellin']['terminalList'] = $terminalList['terminals'];
+			$params['dellin']['currentTerminalField'] = $currentTerminalField;
+			$params['dellin']['currentDeliveryTimeStartField'] = $currentDeliveryTimeStartField;
+			$params['dellin']['currentDeliveryTimeEndField'] = $currentDeliveryTimeEndField;
+			$params['dellin']['terminalsMethod'] = $terminalList['terminals_method_id'];
+			$params['dellin']['widget'] = $widgetParams;
+		//	$params['dellin']['city'] = $terminalList
 
 
-		return $params;
+			return $params;
+		}
 	}
 
 	private function getFieldIdOnCODE($userType, $code){
@@ -78,6 +82,49 @@ class CDellinShippingChooseComponent extends CBitrixComponent
         return $idField;
     }
 
+	private function getWidgetParams($terminalList)
+	{
+		$result = [
+			'hasShowDellinMap' => false,
+			'isOldViewComponent' => true,//default - is old value
+		];
+
+		if(is_array($terminalList['terminals_method_id']) &&
+		   count($terminalList['terminals_method_id']) > 0 )
+		{
+			
+			$config = \Bitrix\Sale\Delivery\Services\Manager::getById($terminalList['terminals_method_id'][0]);
+			$stateField = $config['CONFIG']['WIDGET']; 
+		}
+
+		$key = COption::GetOptionString("fileman", "yandex_map_api_key");
+
+		if($stateField['VIEW_TYPE'] == 0)
+		{
+		   $result['hasShowDellinMap'] = false;
+		   $result['isOldViewComponent'] = true;
+		}
+
+		if($stateField['VIEW_TYPE'] == 1)
+		{
+			if(isset($key) && !empty($key)){
+				$result['hasShowDellinMap'] = true;
+			}
+			
+			$result['isOldViewComponent'] = false;
+		}
+
+		if($stateField['VIEW_TYPE'] == 2)
+		{
+			$result['hasShowDellinMap'] = false;
+			$result['isOldViewComponent'] = false;
+		}
+
+
+		return $result;
+	}
+
+	
 	/**
 	 * void
 	 */

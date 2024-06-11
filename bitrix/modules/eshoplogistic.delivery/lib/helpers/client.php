@@ -18,6 +18,7 @@ class Client
     private $url;
     private $apiKey;
     private $log;
+    private $partnerKey = '264a7a5d5882787.70413622';
 
     function __construct($apiObject)
     {
@@ -48,6 +49,12 @@ class Client
     {
         global $APPLICATION;
         $apiParams['key'] = $this->apiKey;
+
+        $configClass = new Config();
+        $apiV = $configClass->apiV;
+        if($apiV)
+            $apiParams['partner_key'] = $this->partnerKey;
+
         if (strtolower(SITE_CHARSET) != 'utf-8') {
             $apiParams = $APPLICATION->ConvertCharsetArray($apiParams, SITE_CHARSET, 'utf-8');
         }

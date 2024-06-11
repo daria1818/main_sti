@@ -87,16 +87,6 @@ class TradingOutletType extends EnumerationType
 		return $result;
 	}
 
-	protected static function loadLangMessages()
-	{
-		static::loadMessages();
-
-		Market\Ui\Assets::loadMessages([
-			'CHOSEN_SEARCHING',
-			'CHOSEN_PLACEHOLDER',
-		]);
-	}
-
 	protected static function loadEditAssets()
 	{
 		Market\Ui\Plugin\TradingOutlet::load();

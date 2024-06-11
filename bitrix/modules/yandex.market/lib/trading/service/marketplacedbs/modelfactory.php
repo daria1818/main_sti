@@ -2,9 +2,6 @@
 
 namespace Yandex\Market\Trading\Service\MarketplaceDbs;
 
-use Yandex\Market;
-use Bitrix\Main;
-use Yandex\Market\Trading\Entity as TradingEntity;
 use Yandex\Market\Trading\Service as TradingService;
 
 class ModelFactory extends TradingService\Marketplace\ModelFactory
@@ -22,5 +19,10 @@ class ModelFactory extends TradingService\Marketplace\ModelFactory
 	public function getOrderClassName()
 	{
 		return Model\Order::class;
+	}
+
+	public function getBuyerClassName()
+	{
+		return Model\Order\Buyer::class;
 	}
 }

@@ -1,15 +1,12 @@
 <?php
-
 namespace Yandex\Market\Export\Entity\Reference;
 
-use Yandex\Market;
-use Bitrix\Main;
-use Bitrix\Iblock;
+use Yandex\Market\Watcher;
+use Yandex\Market\Data;
+use Yandex\Market\Glossary;
 
 abstract class ElementEvent extends Event
 {
-	protected static $elementIblockIdCache = [];
-
 	public function getSourceParams($context)
     {
         return [
@@ -18,24 +15,20 @@ abstract class ElementEvent extends Event
         ];
     }
 
-    protected static function isElementChangeRegistered($elementId, $sourceType, $sourceParams = null)
+	/** @noinspection PhpUnusedParameterInspection */
+	protected static function isElementChangeRegistered($elementId, $sourceType = null, $sourceParams = null)
 	{
-		return Market\Export\Track\Manager::isElementChangeRegistered(
-            Market\Export\Run\Manager::ENTITY_TYPE_OFFER,
-            $elementId,
-            $sourceType,
-            $sourceParams
-		);
+		return Watcher\Track\ElementChange::has(Glossary::ENTITY_OFFER, $elementId);
 	}
 
-	protected static function registerElementChange($elementId, $sourceType, $sourceParams = null)
+	/** @noinspection PhpUnusedParameterInspection */
+	protected static function registerElementChange($elementId, $sourceType = null, $sourceParams = null)
 	{
-		Market\Export\Track\Manager::registerElementChange(
-            Market\Export\Run\Manager::ENTITY_TYPE_OFFER,
-            $elementId,
-            $sourceType,
-            $sourceParams
-		);
+		if (empty($elementId)) { return; }
+
+		$iblockId = isset($sourceParams['IBLOCK_ID']) ? (int)$sourceParams['IBLOCK_ID'] : null;
+
+		Watcher\Track\ElementChange::add(Glossary::ENTITY_OFFER, $elementId, $iblockId);
 	}
 
 	protected static function isTargetElement($iblockId, $offerIblockId, $elementId, $elementIblockId = null)
@@ -49,42 +42,12 @@ abstract class ElementEvent extends Event
 			$elementIblockId = (int)$elementIblockId;
 		}
 
-		return (
-			$elementIblockId !== null
-			&& ($elementIblockId === (int)$iblockId || $elementIblockId === (int)$offerIblockId)
-		);
+		return $elementIblockId === (int)$iblockId || $elementIblockId === (int)$offerIblockId;
 	}
 
 	protected static function getElementIblockId($elementId)
 	{
-		$result = null;
-		$elementId = (int)$elementId;
-
-		if ($elementId <= 0)
-		{
-			// nothing
-		}
-		else if (isset(static::$elementIblockIdCache[$elementId]))
-		{
-			$result = static::$elementIblockIdCache[$elementId] ?: null;
-		}
-		else if (Main\Loader::includeModule('iblock'))
-		{
-			$query = Iblock\ElementTable::getList([
-				'filter' => [ '=ID' => $elementId ],
-				'select' => [ 'IBLOCK_ID' ],
-				'limit' => 1
-			]);
-
-			if ($row = $query->fetch())
-			{
-				$result = (int)$row['IBLOCK_ID'];
-			}
-
-			static::$elementIblockIdCache[$elementId] = $result ?: false;
-		}
-
-		return $result;
+		return Data\Iblock\Element::iblockId($elementId);
 	}
 
 	protected function getEvents($params)

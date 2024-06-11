@@ -15,8 +15,15 @@ class Request extends TradingService\Marketplace\Action\AdminList\Request
 
 	public function getParameters()
 	{
-		return parent::getParameters() + array_intersect_key($this->getFields(), [
+		$result = parent::getParameters();
+		$result = array_diff_key($result, [
+			'hasCis' => true,
+		]);
+		$result += array_intersect_key($this->getFields(), [
+			'dispatchType' => true,
 			'onlyWaitingForCancellationApprove' => true,
 		]);
+
+		return $result;
 	}
 }

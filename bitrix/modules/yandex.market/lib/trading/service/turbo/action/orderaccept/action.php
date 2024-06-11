@@ -33,9 +33,10 @@ class Action extends TradingService\Common\Action\OrderAccept\Action
 		{
 			$requestUser = $this->request->getOrder()->getUser();
 			$requestUserData = $requestUser->getMeaningfulValues();
-			$filteredUserData = $this->filterUserData($requestUserData);
 			$userRegistry = $this->environment->getUserRegistry();
-			$user = $userRegistry->getUser($filteredUserData);
+			$user = $userRegistry->getUser($requestUserData);
+
+			$this->configureUserRule($user);
 
 			if ($user->isInstalled())
 			{

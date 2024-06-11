@@ -119,6 +119,7 @@ class ScheduleOption extends IntervalOption
 		return parent::getFieldDescription($environment, $siteId) + [
 			'SETTINGS' => [
 				'SUMMARY' => '#FROM_WEEKDAY#-#TO_WEEKDAY# (#FROM_TIME#-#TO_TIME#)',
+				'VALIGN_PUSH' => true,
 			],
 		];
 	}
@@ -131,12 +132,18 @@ class ScheduleOption extends IntervalOption
 				'MANDATORY' => 'Y',
 				'NAME' => static::getMessage('FROM_WEEKDAY'),
 				'VALUES' => $this->getWeekdayEnum(),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => static::WEEKDAY_FIRST,
+				],
 			],
 			'TO_WEEKDAY' => [
 				'TYPE' => 'enumeration',
 				'MANDATORY' => 'Y',
 				'NAME' => static::getMessage('TO_WEEKDAY'),
 				'VALUES' => $this->getWeekdayEnum(),
+				'SETTINGS' => [
+					'DEFAULT_VALUE' => static::WEEKDAY_LAST - 2,
+				],
 			],
 		];
 
@@ -149,9 +156,11 @@ class ScheduleOption extends IntervalOption
 
 		for ($day = static::WEEKDAY_FIRST; $day <= static::WEEKDAY_LAST; ++$day)
 		{
+			$langKey = 'DOW_' . ($day % 7);
+
 			$result[] = [
 				'ID' => (string)$day,
-				'VALUE' => Loc::getMessage('DOW_' . ($day % 7)),
+				'VALUE' => self::getMessage($langKey, null, Loc::getMessage($langKey)),
 			];
 		}
 

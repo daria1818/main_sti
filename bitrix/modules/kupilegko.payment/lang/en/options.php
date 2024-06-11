@@ -27,3 +27,6 @@ $MESS['SBERBANK_TAX_DEFAULT_VALUE_6'] = 'VAT check at rate 20%';
 $MESS['SBERBANK_TAX_DEFAULT_VALUE_7'] = 'VAT check at rate 20/120';
 
 $MESS['CALLBACK_REDIRECT_BROADCAST_DESCRIPTION'] = 'URL from callback-notification';
+
+$MESS['ALFABANK_CANCEL_ORDER_BY_TIMEOUT_DESCRIPTION'] = 'Cancel the order in the store, when receiving a callback with the operation "rejected by timeout"';
+$MESS['ALFABANK_CANCEL_ORDER_BY_TIMEOUT_LABEL'] = 'Cancel order feature enabled';

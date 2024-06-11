@@ -22,6 +22,11 @@ abstract class Environment extends Market\Trading\Entity\Reference\Environment
 		return new Product($this);
 	}
 
+	protected function createPack()
+	{
+		return new Pack($this);
+	}
+
 	protected function createStore()
 	{
 		return new Store($this);
@@ -35,6 +40,11 @@ abstract class Environment extends Market\Trading\Entity\Reference\Environment
 	protected function createUserGroupRegistry()
 	{
 		return new UserGroupRegistry($this);
+	}
+
+	protected function createDigitalRegistry()
+	{
+		return new DigitalRegistry($this);
 	}
 
 	protected function getRequiredModules()

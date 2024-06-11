@@ -39,6 +39,7 @@ class Status extends TradingService\Marketplace\Status
 			static::STATUS_CANCELLED,
 			static::STATUS_PROCESSING,
 			static::COMPLEX_PROCESSING_PREPAID,
+			static::VIRTUAL_RETURN,
 		];
 	}
 
@@ -94,10 +95,14 @@ class Status extends TradingService\Marketplace\Status
 		];
 	}
 
+	public function getSubStatusProcessOrder()
+	{
+		return [];
+	}
+
 	public function isChanged($orderId, $status, $substatus = null)
 	{
-		$serviceKey = $this->provider->getUniqueKey();
-		$storedStatusEncoded = Market\Trading\State\OrderStatus::getValue($serviceKey, $orderId);
+		$storedStatusEncoded = $this->getStored($orderId);
 		$result = false;
 
 		if ($storedStatusEncoded === null)

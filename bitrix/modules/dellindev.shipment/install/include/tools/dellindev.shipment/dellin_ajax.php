@@ -67,10 +67,31 @@ else
 
 
 
-    if ($result["ERROR"] <> '')
-        $result["RESULT"] = "ERROR";
-    else
+if(is_string($result)){
+    $result = [
+            'ERROR' => $result,
+            'status' => 'error',
+            'message'=> $result,
+            'typeErrors' => 'network',
+            'errors' => [$result]
+        ];
+}
+
+if(is_array($result) && $result['status'] == 'error'){
+    $result['ERROR'] = $result['message'];
+}
+
+if(is_array($result) && $result['status'] == 'success'){
         $result["RESULT"] = "OK";
+}
+
+if(is_array($result) && $result['status'] == 'price_changed'){
+        $result["RESULT"] = "OK";
+}
+
+if(is_array($result) && $result['status'] == 'price_update'){
+        $result["RESULT"] = "OK";
+}
 
 if(mb_strtolower(SITE_CHARSET) != 'utf-8')
     $result = \Bitrix\Main\Text\Encoding::convertEncoding($result, SITE_CHARSET, 'utf-8');

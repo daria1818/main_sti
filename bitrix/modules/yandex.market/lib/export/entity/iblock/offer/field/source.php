@@ -14,7 +14,11 @@ class Source extends Market\Export\Entity\Iblock\Element\Field\Source
 		$entityType = $this->getQueryEntityType();
 		$parentSelect = $select;
 
-		if (in_array('CANONICAL_PAGE_URL', $select, true)) // request PRODUCT_URL template
+		// request PRODUCT_URL template
+		if (
+			in_array('CANONICAL_PAGE_URL', $select, true)
+			|| in_array('DETAIL_PAGE_URL', $select, true)
+		)
 		{
 			$parentSelect[] = 'DETAIL_PAGE_URL';
 		}

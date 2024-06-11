@@ -159,4 +159,5 @@ if ($arResult['LOAD_MORE'])
 	die();
 }
 
+include __DIR__ . '/partials/settings.php';
 include __DIR__ . '/partials/form-epilog.php';

@@ -28,7 +28,7 @@ class Environment
 		Market\Config::setOption('environment_timezone', date_default_timezone_get());
 	}
 
-	protected static function getTimezone()
+	public static function getTimezone()
 	{
 		return (string)Market\Config::getOption('environment_timezone');
 	}
@@ -41,6 +41,23 @@ class Environment
 		static::restoreDefaultTimezone();
 		static::restoreMissingIniTimezone();
 		static::restoreValidGlobalUser();
+	}
+
+	/**
+	 * Пустой объект пользователя
+	 */
+	public static function makeUserPlaceholder()
+	{
+		$globalUser = isset($GLOBALS['USER']) ? $GLOBALS['USER'] : null;
+
+		if ($globalUser instanceof \CUser) { return; }
+
+		$GLOBALS['USER'] = new Utils\DummyUser();
+
+		if (!isset(static::$globalVariablesOriginal['USER']))
+		{
+			static::$globalVariablesOriginal['USER'] = $globalUser;
+		}
 	}
 
 	/**

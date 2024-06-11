@@ -45,14 +45,12 @@ class Root extends Base
 		}
 		else if ($action === 'refresh')
 		{
-			$publicWriter = $this->getPublicWriter();
+			$publicPath = $this->getProcessor()->getPublicFilePath();
+			$writer = $this->getWriter();
 
-			if ($publicWriter)
+			if ($publicPath !== null)
 			{
-				$writer = $this->getWriter();
-
-				$writer->copy($publicWriter->getPath());
-				$publicWriter->refresh();
+				$writer->copy($publicPath);
 			}
 		}
 
@@ -66,16 +64,78 @@ class Root extends Base
 
 		if ($tag === null || $attribute === null) { return; }
 
+		$updated = $this->resolveUpdated();
 		$dateType = Market\Type\Manager::getType($attribute->getValueType());
-		$writer = $this->getPublicWriter() ?: $this->getWriter();
+		$writer = $this->getWriter();
 
 		$writer->setPointer(0);
 		$writer->updateAttribute(
 			$tag->getName(),
 			0,
-			[ $attribute->getName() => $dateType->format(new Main\Type\DateTime(), $this->getContext(), $attribute) ],
+			[ $attribute->getName() => $dateType->format($updated, $this->getContext(), $attribute) ],
 			''
 		);
+
+		$this->commitUpdated($updated);
+	}
+
+	protected function resolveUpdated()
+	{
+		$initTime = $this->getParameter('initTime');
+
+		if (!($initTime instanceof Main\Type\DateTime))
+		{
+			$initTime = new Main\Type\DateTime();
+		}
+
+		if ($initTime instanceof Market\Data\Type\CanonicalDateTime)
+		{
+			if (!Market\Utils::isCli() && $this->getRunAction() === 'full')
+			{
+				$timezone = date_default_timezone_get();
+			}
+			else
+			{
+				$timezone = Market\Environment::getTimezone() ?: date_default_timezone_get();
+			}
+
+			$initTime = clone $initTime;
+			$initTime->setTimeZone(new \DateTimeZone($timezone));
+		}
+
+		$lastUpdated = $this->lastUpdated();
+
+		if ($lastUpdated !== null && Market\Data\DateTime::compare($lastUpdated, $initTime) === 1)
+		{
+			$lastUpdated->add('PT1S'); // add one second for last updated
+
+			return $lastUpdated;
+		}
+
+		return $initTime;
+	}
+
+	protected function lastUpdated()
+	{
+		$stateName = $this->updatedStateName();
+		$dateString = (string)Market\State::get($stateName);
+
+		if ($dateString === '') { return null; }
+
+		return new Main\Type\DateTime($dateString, \DateTime::ATOM);
+	}
+
+	protected function commitUpdated(Main\Type\DateTime $date)
+	{
+		$stateName = $this->updatedStateName();
+		$value = $date->format(\DateTime::ATOM);
+
+		Market\State::set($stateName, $value);
+	}
+
+	protected function updatedStateName()
+	{
+		return 'feed_updated_' . $this->getSetup()->getId();
 	}
 
 	protected function writeDataFile($storageResultList, $context)

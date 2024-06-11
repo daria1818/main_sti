@@ -1,7 +1,7 @@
 <?php
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) { die(); }
 
-use Bitrix\Main\Web\Json;
+use Yandex\Market;
 
 global $APPLICATION;
 
@@ -18,13 +18,7 @@ foreach ($adminList->aRows as $row)
 
 $rows = ob_get_clean();
 
-$APPLICATION->RestartBuffer();
-
-echo Json::encode([
+Market\Utils\HttpResponse::sendJson([
 	'rows' => $rows,
 	'navigation' => $adminList->sNavText,
 ]);
-
-define('ADMIN_AJAX_MODE', true);
-require $_SERVER['DOCUMENT_ROOT'] . BX_ROOT . '/modules/main/include/epilog_admin_after.php';
-die();

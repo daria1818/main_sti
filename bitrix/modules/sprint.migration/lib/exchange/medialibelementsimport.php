@@ -3,7 +3,8 @@
 namespace Sprint\Migration\Exchange;
 
 use Sprint\Migration\AbstractExchange;
-use Sprint\Migration\Exceptions\ExchangeException;
+use Sprint\Migration\Exceptions\HelperException;
+use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RestartException;
 use Sprint\Migration\Locale;
 use XMLReader;
@@ -15,8 +16,9 @@ class MedialibElementsImport extends AbstractExchange
     /**
      * @param callable $converter
      *
-     * @throws ExchangeException
+     * @throws MigrationException
      * @throws RestartException
+     * @throws HelperException
      */
     public function execute(callable $converter)
     {
@@ -24,10 +26,11 @@ class MedialibElementsImport extends AbstractExchange
         $params = $this->exchangeEntity->getRestartParams();
 
         if (!isset($params['total'])) {
-            $this->exchangeEntity->exitIf(
-                !is_file($this->file),
-                Locale::getMessage('ERR_EXCHANGE_FILE_NOT_FOUND')
-            );
+            if (!is_file($this->file)) {
+                throw new HelperException(
+                    Locale::getMessage('ERR_EXCHANGE_FILE_NOT_FOUND', ['#FILE#' => $this->file])
+                );
+            }
 
             $reader = new XMLReader();
             $reader->open($this->getExchangeFile());
@@ -45,7 +48,7 @@ class MedialibElementsImport extends AbstractExchange
             $reader->close();
 
             if (!$exchangeVersion || $exchangeVersion < self::EXCHANGE_VERSION) {
-                $this->exchangeEntity->exitWithMessage(
+                throw new HelperException(
                     Locale::getMessage('ERR_EXCHANGE_VERSION', ['#NAME#' => $this->getExchangeFile()])
                 );
             }

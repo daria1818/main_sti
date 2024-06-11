@@ -24,6 +24,7 @@ class Request extends Market\Api\Partner\Reference\Request
 		$uri = new Main\Web\Uri($path);
 		$host = (string)$uri->getHost();
 		$path = (string)$uri->getPath();
+		$query = (string)$uri->getQuery();
 
 		if ($host !== '' && $host !== $this->getHost())
 		{
@@ -33,6 +34,11 @@ class Request extends Market\Api\Partner\Reference\Request
 		if (!preg_match('/\.json$/', $path))
 		{
 			$path .= '.json';
+		}
+
+		if ($query !== '')
+		{
+			$path .= '?' . $query;
 		}
 
 		$this->path = $path;

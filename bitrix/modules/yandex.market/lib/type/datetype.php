@@ -73,7 +73,7 @@ class DateType extends AbstractType
 		}
 		else if (is_numeric($value)) // is timestamp
 		{
-			$result = Main\Type\DateTime::createFromTimestamp($value);
+			$result = $value > 1000000 ? Main\Type\DateTime::createFromTimestamp($value) : null;
 		}
 		else if (is_string($value))
 		{

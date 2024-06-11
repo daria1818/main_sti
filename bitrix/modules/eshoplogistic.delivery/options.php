@@ -244,6 +244,24 @@ if ($LOG_ELEMUPD_RIGHT>="R") :
                     array("text")
                 ),
                 array(
+                    "sender-terminal-kit",
+                    Loc::getMessage("ESHOP_LOGISTIC_OPTIONS_S_KIT"),
+                    "",
+                    array("text")
+                ),
+                array(
+                    "sender-uid-kit",
+                    Loc::getMessage("ESHOP_LOGISTIC_OPTIONS_S_UID_KIT"),
+                    "",
+                    array("text")
+                ),
+                array(
+                    "sender-terminal-postrf",
+                    Loc::getMessage("ESHOP_LOGISTIC_OPTIONS_S_POSTRF"),
+                    "",
+                    array("text")
+                ),
+                array(
                     "sender-uid-delline",
                     Loc::getMessage("ESHOP_LOGISTIC_OPTIONS_S_UID_DELLINE"),
                     "",

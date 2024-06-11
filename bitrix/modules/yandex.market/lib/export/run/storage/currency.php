@@ -41,7 +41,7 @@ class CurrencyTable extends Market\Reference\Storage\Table
 				'size' => 1,
 				'validation' => [__CLASS__, 'validateStatus'],
 			]),
-			new Main\Entity\DatetimeField('TIMESTAMP_X', [
+			new Market\Reference\Storage\Field\CanonicalDateTime('TIMESTAMP_X', [
 				'required' => true
 			])
 		];

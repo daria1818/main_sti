@@ -10,6 +10,7 @@ use Yandex\Market\Trading\Service as TradingService;
 /** @property TradingService\Marketplace\Provider $provider */
 class Action extends TradingService\Common\Action\OrderAccept\Action
 {
+	use TradingService\Marketplace\Concerns\Action\HasBasketStoreData;
 	use TradingService\Marketplace\Concerns\Action\HasBasketWarehouses;
 
 	/** @var Request */
@@ -18,6 +19,37 @@ class Action extends TradingService\Common\Action\OrderAccept\Action
 	protected function createRequest(Main\HttpRequest $request, Main\Server $server)
 	{
 		return new Request($request, $server);
+	}
+
+	protected function getOrderNum()
+	{
+		if ($this->provider->getOptions()->useAccountNumberTemplate())
+		{
+			return $this->order->getId();
+		}
+
+		return parent::getOrderNum();
+	}
+
+	protected function fillOrder()
+	{
+		parent::fillOrder();
+		$this->fillContact();
+	}
+
+	protected function fillProperties()
+	{
+		parent::fillProperties();
+		$this->fillBuyerProperties();
+	}
+
+	protected function fillBuyerProperties()
+	{
+		$buyer = $this->request->getOrder()->getBuyer();
+
+		if ($buyer === null) { return null; }
+
+		$this->setMeaningfulPropertyValues($buyer->getMeaningfulValues());
 	}
 
 	protected function fillDelivery()
@@ -34,18 +66,23 @@ class Action extends TradingService\Common\Action\OrderAccept\Action
 	{
 		$options = $this->provider->getOptions();
 
-		if (!$options->useWarehouses()) { return; }
-
-		$items = $this->request->getOrder()->getItems();
-		$basketMap = $this->getBasketItemsMap($items);
-		$itemWarehouseMap = $this->makeBasketWarehouseMap($items);
-		$warehouseIds = array_unique(array_values($itemWarehouseMap));
-		$warehouseStoreMap = $this->mapWarehouseStores($warehouseIds);
-		$basketStoreMap = $this->combineBasketStoreMap($basketMap, $itemWarehouseMap, $warehouseStoreMap);
-
-		foreach ($basketStoreMap as $basketCode => $storeId)
+		if ($options->useWarehouses())
 		{
-			$this->order->setBasketItemStore($basketCode, $storeId);
+			$items = $this->request->getOrder()->getItems();
+			$basketMap = $this->getBasketItemsMap($items);
+			$itemWarehouseMap = $this->makeBasketWarehouseMap($items);
+			$warehouseIds = array_unique(array_values($itemWarehouseMap));
+			$warehouseStoreMap = $this->mapWarehouseStores($warehouseIds);
+			$basketStoreMap = $this->combineBasketStoreMap($basketMap, $itemWarehouseMap, $warehouseStoreMap);
+
+			foreach ($basketStoreMap as $basketCode => $storeId)
+			{
+				$this->order->setBasketItemStore($basketCode, $storeId);
+			}
+		}
+		else
+		{
+			$this->order->setBasketStore($this->provider->getOptions()->getProductSelfStores());
 		}
 	}
 
@@ -112,8 +149,7 @@ class Action extends TradingService\Common\Action\OrderAccept\Action
 
 		if ($subsidySystemId !== '' && $options->includeBasketSubsidy())
 		{
-			$items = $this->request->getOrder()->getItems();
-			$subsidySum = $items->getSubsidySum();
+			$subsidySum = $this->calculateSubsidySum();
 
 			if ($subsidySum > 0)
 			{
@@ -123,6 +159,11 @@ class Action extends TradingService\Common\Action\OrderAccept\Action
 				]);
 			}
 		}
+	}
+
+	protected function calculateSubsidySum()
+	{
+		return $this->request->getOrder()->getItems()->getSubsidySum();
 	}
 
 	protected function fillPaySystemCommon()
@@ -137,7 +178,9 @@ class Action extends TradingService\Common\Action\OrderAccept\Action
 
 	protected function resolvePaySystem()
 	{
-		return $this->provider->getOptions()->getPaySystemId();
+		$paymentType = $this->request->getOrder()->getPaymentType();
+
+		return $this->provider->getOptions()->getPaySystemId($paymentType);
 	}
 
 	protected function getItemPrice(Market\Api\Model\Order\Item $item)
@@ -152,5 +195,62 @@ class Action extends TradingService\Common\Action\OrderAccept\Action
 		}
 
 		return $result;
+	}
+
+	protected function fillContact()
+	{
+		try
+		{
+			$command = new TradingService\Common\Command\AnonymousContact($this->provider, $this->environment);
+			$contacts = $command->execute();
+
+			$this->order->fillContacts($contacts);
+		}
+		catch (Main\SystemException $exception)
+		{
+			$this->provider->getLogger()->warning($exception);
+		}
+	}
+
+	protected function isAllowModifyBasket()
+	{
+		return (
+			parent::isAllowModifyBasket()
+			|| (
+				$this->request->isDownload()
+				&& $this->provider->getOptions()->getYandexMode() === TradingService\Marketplace\Options::YANDEX_MODE_PULL
+			)
+		);
+	}
+
+	protected function makeData()
+	{
+		return
+			$this->makeFakeData()
+			+ $this->makeShipmentData();
+	}
+
+	protected function makeFakeData()
+	{
+		if (!$this->request->getOrder()->isFake()) { return []; }
+
+		return [
+			'FAKE' => 'Y',
+		];
+	}
+
+	protected function makeShipmentData()
+	{
+		$shipmentDates = $this->request->getOrder()->getMeaningfulShipmentDates();
+
+		if (empty($shipmentDates)) { return []; }
+
+		$shipmentDate = reset($shipmentDates);
+
+		if (!($shipmentDate instanceof Main\Type\DateTime)) { return []; }
+
+		return [
+			'SHIPMENT_DATE' => $shipmentDate->format(Market\Data\DateTime::FORMAT_DEFAULT_FULL),
+		];
 	}
 }

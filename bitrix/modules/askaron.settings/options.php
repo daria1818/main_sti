@@ -1,7 +1,7 @@
 <?
 ###################################################
 # askaron.settings module
-# Copyright (c) 2011-2019 Askaron Systems ltd.
+# Copyright (c) 2011-2022 Askaron Systems ltd.
 # http://askaron.ru
 # mailto:mail@askaron.ru
 ###################################################
@@ -10,6 +10,7 @@
 IncludeModuleLangFile(__FILE__);
 IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/options.php");
 require_once( "prolog.php" );
+global $APPLICATION;
 
 $module_id = "askaron.settings";
 $install_status = CModule::IncludeModuleEx($module_id);
@@ -76,8 +77,8 @@ else
 		$arSettings = array();
 
 		if (
-			$REQUEST_METHOD == "POST"
-			&& strlen($Update) > 0
+            $_SERVER["REQUEST_METHOD"] == "POST"
+			&& mb_strlen( $_REQUEST["Update"] ) > 0
 			&& $RIGHT_W
 			&& check_bitrix_sessid()
 		)
@@ -110,12 +111,12 @@ else
 					{
 						if (isset($_REQUEST["arrOptions"][$key]))
 						{
-							if (strlen($_REQUEST["arrOptions"][$key]) > 0)
+							if (mb_strlen($_REQUEST["arrOptions"][$key]) > 0)
 							{
 								$val = intval($_REQUEST["arrOptions"][$key]);
 								$min = $arOption["MIN"];
 
-								if (strlen($min) > 0 && $val < $min)
+								if (mb_strlen($min) > 0 && $val < $min)
 								{
 									$val = $min;
 								}
@@ -131,9 +132,9 @@ else
 
 
 		if (
-			$REQUEST_METHOD == "POST"
+            $_SERVER["REQUEST_METHOD"] == "POST"
 			&& $RIGHT_W
-			&& strlen($RestoreDefaults) > 0
+			&& mb_strlen( $_REQUEST["RestoreDefaults"] ) > 0
 			&& check_bitrix_sessid()
 		)
 		{
@@ -214,7 +215,7 @@ else
 
 
 		<form method="post"
-			  action="<?echo $APPLICATION->GetCurPage()?>?mid=<?=htmlspecialchars($mid)?>&lang=<?=LANGUAGE_ID?>&mid_menu=<?=urlencode($_REQUEST["mid_menu"])?>"
+			  action="<?echo $APPLICATION->GetCurPage()?>?mid=<?=htmlspecialchars( $_REQUEST["mid"] )?>&lang=<?=LANGUAGE_ID?>&mid_menu=<?=urlencode($_REQUEST["mid_menu"])?>"
 			<?= bitrix_sessid_post() ?>
 
 <?/*
@@ -284,7 +285,7 @@ else
 
 									<?endif ?>
 
-									<? if (strlen($arInput["HELP"]) > 0):?>
+									<? if (mb_strlen($arInput["HELP"]) > 0):?>
 										<?= BeginNote(); ?>
 										<?= $arInput["HELP"]; ?>
 										<?= EndNote(); ?>

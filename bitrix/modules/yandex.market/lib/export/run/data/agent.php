@@ -7,7 +7,7 @@ use Yandex\Market;
 
 class Agent
 {
-	use Market\Reference\Concerns\HasLang;
+	use Market\Reference\Concerns\HasMessage;
 
 	protected static function includeMessages()
 	{
@@ -29,9 +29,9 @@ class Agent
 			$classKey = static::getAgentClassLangKey($parsed['class']);
 			$methodKey = static::getAgentMethodLangKey($parsed['method']);
 			$argumentReplaces = static::getAgentArgumentLangReplaces($parsed['arguments']);
-			$langKey = 'EXPORT_RUN_DATA_AGENT_NAME_' . $classKey . '_' . $methodKey;
+			$langKey = 'NAME_' . $classKey . '_' . $methodKey;
 
-			$result = static::getLang($langKey, $argumentReplaces, '');
+			$result = static::getMessage($langKey, $argumentReplaces, '');
 		}
 
 		return $result;

@@ -4,6 +4,8 @@ use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 use Yandex\Market;
 
+/** @var CMain $APPLICATION */
+
 require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_before.php';
 
 $isPopup = (isset($_REQUEST['popup']) && $_REQUEST['popup'] === 'Y');
@@ -21,14 +23,14 @@ Loc::loadMessages(__FILE__);
 
 if (!Main\Loader::includeModule('yandex.market'))
 {
-	\CAdminMessage::ShowMessage([
+	CAdminMessage::ShowMessage([
         'TYPE' => 'ERROR',
         'MESSAGE' => Loc::getMessage('YANDEX_MARKET_ADMIN_LOG_REQUIRE_MODULE')
     ]);
 }
 else if (!Market\Ui\Access::isProcessExportAllowed())
 {
-	\CAdminMessage::ShowMessage([
+	CAdminMessage::ShowMessage([
 		'TYPE' => 'ERROR',
 		'MESSAGE' => Loc::getMessage('YANDEX_MARKET_ADMIN_LOG_ACCESS_DENIED')
 	]);
@@ -54,6 +56,16 @@ else
 			'OFFER_ID',
 			'GIFT_ID',
 			'PROMO_ID',
+			'COLLECTION_ID',
+			'TRACE',
+		],
+		'DEFAULT_LIST_FIELDS' => [
+			'TIMESTAMP_X',
+			'LEVEL',
+			'MESSAGE',
+			'ENTITY_TYPE',
+			'SETUP',
+			'OFFER_ID',
 			'TRACE',
 		],
 		'CONTEXT_MENU_EXCEL' => 'Y',

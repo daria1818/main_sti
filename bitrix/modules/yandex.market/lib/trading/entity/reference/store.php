@@ -69,6 +69,18 @@ abstract class Store
 	}
 
 	/**
+	 * Все коды складов
+	 *
+	 * @param string $field
+	 *
+	 * @return array<int, string>
+	 */
+	public function existsStores($field)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'existsStores');
+	}
+
+	/**
 	 * Коды складов по идентификатору
 	 *
 	 * @param string $field
@@ -110,6 +122,21 @@ abstract class Store
 	}
 
 	/**
+	 * Список измененных товаров
+	 *
+	 * @param string[] $stores
+	 * @param Main\Type\DateTime|null $date
+	 * @param int|null $offset
+	 * @param int $limit
+	 *
+	 * @return int[]
+	 */
+	public function getChanged($stores, Main\Type\DateTime $date = null, $offset = null, $limit = 500)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getChanged');
+	}
+
+	/**
 	 * Наличие товара на выбранных складах
 	 *
 	 * @param string[] $stores
@@ -117,7 +144,6 @@ abstract class Store
 	 *
 	 * @return array{
 	 *  ID: int,
-	 *  TIMESTAMP_X: Main\Type\DateTime,
 	 *  QUANTITY: float|null,
 	 *  QUANTITY_LIST: array<string, float>|null
 	 * }[]
@@ -125,6 +151,32 @@ abstract class Store
 	public function getAmounts($stores, $productIds)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getAmounts');
+	}
+
+	/**
+	 * Максимальное ограничение доступного количества
+	 *
+	 * @param string[] $stores
+	 * @param int[] $productIds
+	 *
+	 * @return array<int, array{AVAILABLE: float, TOTAL: ?float}>
+	 */
+	public function getTotal($stores, $productIds)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getAmounts');
+	}
+
+	/**
+	 * @deprecated
+	 *
+	 * @param string[] $stores
+	 * @param int[] $productIds
+	 *
+	 * @return array<int, float>
+	 */
+	public function getLimits($stores, $productIds)
+	{
+		return Market\Utils\ArrayHelper::column($this->getTotal($stores, $productIds), 'AVAILABLE');
 	}
 
 	/**

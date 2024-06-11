@@ -85,4 +85,12 @@ class BooleanType
 			$color
 		);
 	}
+
+	/** @noinspection PhpUnused */
+	public static function ymExportValue(array $userField, $value, array $row = null)
+	{
+		$value = (string)$value !== '' ? (int)$value : (int)$userField['SETTINGS']['DEFAULT_VALUE'];
+
+		return $value > 0;
+	}
 }

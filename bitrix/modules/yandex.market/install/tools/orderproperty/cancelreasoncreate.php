@@ -23,17 +23,17 @@ try
 
 	$option = $controller->processRequest();
 
-	echo Main\Web\Json::encode([
+	$response = [
 		'status' => 'ok',
 		'option' => $option,
-	]);
+	];
 }
 catch (Main\SystemException $exception)
 {
-	echo Main\Web\Json::encode([
+	$response = [
 		'status' => 'error',
 		'message' => $exception->getMessage()
-	]);
+	];
 }
 
-require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/epilog_admin_after.php';
+Market\Utils\HttpResponse::sendJson($response);

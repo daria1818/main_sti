@@ -8,7 +8,7 @@ class Simple extends VendorModel
 {
 	public function getDocumentationLink()
 	{
-		return 'https://yandex.ru/support/partnermarket/offers.html';
+		return 'https://yandex.ru/support/marketplace/assortment/fields/index.html';
 	}
 
 	public function getType()
@@ -26,9 +26,9 @@ class Simple extends VendorModel
 			'required' => true,
 			'attributes' => [
 				new Xml\Attribute\Id(['required' => true]),
-				new Xml\Attribute\Available(['visible' => true]),
+				new Xml\Attribute\Available(['visible' => true, 'preselect' => true]),
 				new Xml\Attribute\Base(['name' => 'bid', 'value_type' => 'number']),
-				new Xml\Attribute\Base(['name' => 'group_id', 'value_type' => 'number']),
+				new Xml\Attribute\GroupId(['preselect' => true]),
 			],
 			'children' => array_merge(
 				$this->getOfferDefaultChildren('prolog'),

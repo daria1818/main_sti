@@ -12,6 +12,7 @@ class PaySystemOptions extends TradingService\Reference\Options\FieldsetCollecti
 		return PaySystemOption::class;
 	}
 
+	/** @return int[] */
 	public function getPaySystemIds()
 	{
 		$result = [];
@@ -25,6 +26,7 @@ class PaySystemOptions extends TradingService\Reference\Options\FieldsetCollecti
 		return $result;
 	}
 
+	/** @return PaySystemOption[] */
 	public function getItemsByPaySystemId($paySystemId)
 	{
 		$paySystemId = (int)$paySystemId;

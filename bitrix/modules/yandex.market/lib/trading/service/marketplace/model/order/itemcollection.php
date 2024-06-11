@@ -16,4 +16,19 @@ class ItemCollection extends Market\Api\Model\Order\ItemCollection
 	{
 		return Item::class;
 	}
+
+	public function positiveCount()
+	{
+		$result = 0;
+
+		foreach ($this->collection as $item)
+		{
+			if ($item->getCount() > 0)
+			{
+				++$result;
+			}
+		}
+
+		return $result;
+	}
 }

@@ -7,6 +7,7 @@ use DellinShipping\Kernel;
 use DellinShipping\NetworkService;
 use Bitrix\Main\Localization\Loc;
 use BiaTech\Base\Log\Logger;
+use Bitrix\ImBot\Bot\Network;
 use Exception;
 use Sale\Handlers\Delivery\DellinBlockAdmin;
 use Bitrix\Main\Loader;
@@ -34,7 +35,7 @@ class AjaxService {
     public static function getTerminalsForAjax($kladr, $appkey){
 
         try {
-            //РџРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ РїРѕР»СЏ С‚РµСЂРјРёРЅР°Р»Р°
+            //Первоначальное состояние поля терминала
          //   $arTerminalIdValues[''] = Loc::getMessage('TERMINAL_NOT_SELECTED');
 
             if(!empty($kladr)){
@@ -66,7 +67,7 @@ class AjaxService {
                 }
 
             } else {
-               //TODO РќР°РїРёСЃР°С‚СЊ Р·РґРµСЃСЊ СЃС†РµРЅР°СЂРёР№ РїСЂРё РІРѕР·РЅРёРєРЅРѕРІРµРЅРёСЏ РѕС€РёР±РєРё
+               //TODO Написать здесь сценарий при возникновения ошибки
             }
 
 
@@ -91,11 +92,15 @@ class AjaxService {
             $result = [];
 
             $dataManager = \Bitrix\Sale\Delivery\Services\Manager::getActive();
+            
             foreach ($dataManager as $key => $value){
                 if($value['CLASS_NAME'] == '\Sale\Handlers\Delivery\DellinHandler' &&
+                    isset($value['CONFIG']['MAIN']['APIKEY'])&&
                    $value['CONFIG']['ARRIVAL']['GOODSLOADING'] == '0' ){
+
                         $result['terminals_method_id'][] = $key;
-                        $result['terminals'] = self::getTerminalList($_SESSION['terminals']);
+                        
+                        $result['terminals'] = self::getTerminalList($_SESSION['current_terminals'], $value['CONFIG']['MAIN']['APIKEY']) ;
                       //$result['propsData'] = Kernel::getTerminalProps($person_type_id);
                 }
             }
@@ -122,14 +127,19 @@ class AjaxService {
     }
 
 
-    protected static function getTerminalList($session_storage)
+    protected static function getTerminalList($session_storage, $api_key)
     {
 
         $result = [];
+
         if (isset($session_storage) && !empty($session_storage)) {
             foreach ($session_storage as $terminal) {
-
-                $result[] = ['terminal_id' => $terminal->id, 'address' => $terminal->address];
+                
+                $result[] = [
+                    'terminal_id' => $terminal->id,
+                    'address' => $terminal->address,
+                    'more' => NetworkService::GetTerminals($api_key, false, $terminal->id)
+                ];
 
 
             }
@@ -143,26 +153,17 @@ class AjaxService {
 
     }
 
-    public static function searchCityForAjax( $q ){
+    public static function searchCityForAjax( $q, $appkey ){
         try {
-            //РїСЂРµРѕР±СЂР°Р·СѓРµРј РЃ РІ Р•;
+            //преобразуем Ё в Е;
             $q = str_replace(Loc::getMessage('YO'), Loc::getMessage('YE'), $q);
-
-
             if(mb_strtolower(SITE_CHARSET) != 'utf-8')
                 $q = \Bitrix\Main\Text\Encoding::convertEncoding($q, SITE_CHARSET, 'utf-8');
-
-            $response = NetworkService::SearchCity($q);
-
+            $response = NetworkService::SearchCity($q, $appkey);
             return $response;
-
         } catch (Exception $exception){
 
-
-
         }
-
-
     }
 
     public static function createOrder($order_id, $shipment_id, $produce_date, $is_order, $price_change = false)

@@ -32,6 +32,12 @@ class PaySystem
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getEnum');
 	}
 
+	/** @return int */
+	public function getInnerPaySystemId()
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getInnerPaySystemId');
+	}
+
 	/**
 	 * @param Order $order
 	 * @param int|null $deliveryId
@@ -41,6 +47,16 @@ class PaySystem
 	public function getCompatible(Order $order, $deliveryId = null)
 	{
 		throw new Market\Exceptions\NotImplementedMethod(static::class, 'getCompatible');
+	}
+
+	/**
+	 * @param int $paySystemId
+	 *
+	 * @return string
+	 */
+	public function suggestPaymentType($paySystemId)
+	{
+		throw new Market\Exceptions\NotImplementedMethod(static::class, 'suggestPaymentType');
 	}
 
 	/**

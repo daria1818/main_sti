@@ -4,6 +4,7 @@ namespace Eshoplogistic\Delivery\Event;
 
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Sale\Delivery\Services\Manager;
 use CSaleOrder;
 use Eshoplogistic\Delivery\Api\Export;
 use Eshoplogistic\Delivery\Config;
@@ -75,6 +76,7 @@ class Unloading
     {
         $moduleId = Config::MODULE_ID;
         $elementId = $_REQUEST['ID'];
+        $currectDeliveryEsl = null;
 
         $arReports[] = array(
             "TEXT" => Loc::GetMessage("ESHOP_LOGISTIC_UNLOADING_ORDER"),
@@ -101,8 +103,21 @@ class Unloading
 			})).Show();",
         );
 
+        if ($_SERVER['REQUEST_METHOD'] == 'GET' && $GLOBALS['APPLICATION']->GetCurPage() == '/bitrix/admin/sale_order_edit.php' && $_REQUEST['ID'] > 0
+            || $_SERVER['REQUEST_METHOD'] == 'GET' && $GLOBALS['APPLICATION']->GetCurPage() == '/bitrix/admin/sale_order_view.php' && $_REQUEST['ID'] > 0) {
+            $order = Sale\Order::load($elementId);
+            $deliveryIds = $order->getDeliverySystemId();
+            $shippingHelper = new ShippingHelper();
+            foreach ($deliveryIds as $delivery) {
+                $deliveryService = Manager::getObjectById($delivery);
+                if ($deliveryService) {
+                    $deliveryCode = $deliveryService->getCode();
+                    $currectDeliveryEsl = $shippingHelper->getSlugMethod($deliveryCode);
+                }
+            }
+        }
 
-        if ($_SERVER['REQUEST_METHOD'] == 'GET' && $GLOBALS['APPLICATION']->GetCurPage() == '/bitrix/admin/sale_order_edit.php' && $_REQUEST['ID'] > 0) {
+        if ($_SERVER['REQUEST_METHOD'] == 'GET' && $GLOBALS['APPLICATION']->GetCurPage() == '/bitrix/admin/sale_order_edit.php' && $_REQUEST['ID'] > 0 && $currectDeliveryEsl) {
             $items[] = array(
                 "TEXT" => Loc::GetMessage("ESHOP_LOGISTIC_UNLOADING_ORDER_ASSEMBLY"),
                 "LINK" => "button.php",
@@ -111,7 +126,7 @@ class Unloading
                 "MENU" => $arReports
             );
         }
-        if ($_SERVER['REQUEST_METHOD'] == 'GET' && $GLOBALS['APPLICATION']->GetCurPage() == '/bitrix/admin/sale_order_view.php' && $_REQUEST['ID'] > 0) {
+        if ($_SERVER['REQUEST_METHOD'] == 'GET' && $GLOBALS['APPLICATION']->GetCurPage() == '/bitrix/admin/sale_order_view.php' && $_REQUEST['ID'] > 0 && $currectDeliveryEsl) {
             $items[] = array(
                 "TEXT" => Loc::GetMessage("ESHOP_LOGISTIC_UNLOADING_ORDER_2"),
                 "TITLE" => Loc::GetMessage("ESHOP_LOGISTIC_UNLOADING_ORDER_2"),
@@ -142,6 +157,23 @@ class Unloading
                     $shippingMethods['answer'] = $result['data'];
                     $propertyItem->setValue(json_encode($shippingMethods, JSON_UNESCAPED_UNICODE));
                     $order->save();
+                }
+            }
+
+            if ($data['delivery_id'] == 'sdek' && isset($shippingMethods['answer']['order']['id'])) {
+                sleep(3);
+
+                $apiKey = Option::get(Config::MODULE_ID, 'api_key');
+                $data = array(
+                    'key' => $apiKey,
+                    'action' => 'get',
+                    'order_id' => $shippingMethods['answer']['order']['id'],
+                    'service' => $data['delivery_id']
+                );
+                $resultGet = $export->sendExport($data);
+                if (isset($resultGet['errors']) || !isset($resultGet['data']['state']['number'])) {
+                    $resultGet['errors'] = $resultGet['data']['state']['errors'];
+                    return $resultGet;
                 }
             }
         }
@@ -205,17 +237,16 @@ class Unloading
 
         }
 
-        if ($data['delivery_type'] === 'door') {
-            $defaultFields['delivery']['location_to'] = array(
-                'address' => array(
-                    'region' => $data['receiver-region'],
-                    'city' => $data['receiver-city'],
-                    'street' => $data['receiver-street'],
-                    'house' => $data['receiver-house'],
-                    'room' => $data['receiver-room'],
-                ),
-            );
-        }
+        $defaultFields['delivery']['location_to'] = array(
+            'address' => array(
+                'region' => $data['receiver-region'],
+                'city' => $data['receiver-city'],
+                'street' => $data['receiver-street'],
+                'house' => $data['receiver-house'],
+                'room' => $data['receiver-room'],
+            ),
+        );
+
         if ($data['delivery_type'] === 'terminal') {
             $defaultFields['delivery']['location_to']['terminal'] = $data['terminal-code'];
         }
@@ -241,14 +272,14 @@ class Unloading
             foreach ($data['order'] as $key => $value)
                 $defaultFields['order'][$key] = $value;
         }
-        if (isset($data['delivery']['tariff']) && $data['delivery']['tariff'])
-            $defaultFields['delivery']['tariff'] = $data['delivery']['tariff'];
 
         $exportFields = new ExportFileds();
         $exportFields = $exportFields->sendExportFields($data['delivery_id']);
         foreach ($exportFields as $key => $value) {
-            if (isset($data[$key]))
-                $defaultFields[$key] = $defaultFields[$key] + $data[$key];
+            if (isset($data[$key])){
+                //$defaultFields[$key] = $defaultFields[$key] + $data[$key];
+                $defaultFields[$key] = array_merge_recursive($defaultFields[$key], $data[$key]);
+            }
         }
 
         if (isset($data['fulfillment']))

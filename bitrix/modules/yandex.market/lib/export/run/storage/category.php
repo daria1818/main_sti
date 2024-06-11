@@ -39,7 +39,7 @@ class CategoryTable extends Market\Reference\Storage\Table
 				'validation' => [__CLASS__, 'validateStatus'],
 				'size' => 1
 			]),
-			new Main\Entity\DatetimeField('TIMESTAMP_X', [
+			new Market\Reference\Storage\Field\CanonicalDateTime('TIMESTAMP_X', [
 				'required' => true
 			])
 		];

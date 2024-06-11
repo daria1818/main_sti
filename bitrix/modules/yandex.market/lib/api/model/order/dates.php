@@ -49,6 +49,13 @@ class Dates extends Market\Api\Reference\Model
 		return $this->getField('toTime');
 	}
 
+	public function getRealDeliveryDate()
+	{
+		$value = (string)$this->getField('realDeliveryDate');
+
+		return $value !== '' ? Market\Data\Date::convertFromService($value) : null;
+	}
+
 	protected function combineDateTime(Main\Type\Date $date = null, $time = null)
 	{
 		if ($date === null) { return null; }

@@ -18,5 +18,5 @@ abstract class AbstractExtension
 		return true;
 	}
 
-	abstract public function initialize();
+	abstract public function initialize(array $orderInfo);
 }

@@ -1,9 +1,6 @@
 <?php
-
 namespace Yandex\Market\Trading\Service\MarketplaceDbs;
 
-use Yandex\Market;
-use Bitrix\Main;
 use Yandex\Market\Trading\Service as TradingService;
 
 class Feature extends TradingService\Marketplace\Feature
@@ -21,5 +18,10 @@ class Feature extends TradingService\Marketplace\Feature
 	public function supportsWarehouses()
 	{
 		return false;
+	}
+
+	public function supportBoxesWithoutItems()
+	{
+		return true;
 	}
 }

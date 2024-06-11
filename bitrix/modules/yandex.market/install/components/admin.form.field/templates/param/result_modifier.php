@@ -12,6 +12,7 @@ include __DIR__ . '/modifier/source-field-enum.php';
 include __DIR__ . '/modifier/type-map.php';
 include __DIR__ . '/modifier/recommendation.php';
 include __DIR__ . '/modifier/default-sources.php';
+include __DIR__ . '/modifier/preselect.php';
 include __DIR__ . '/modifier/warning.php';
 
 $arResult['SOURCE_TYPE_ENUM_MAP'] = array_flip(array_keys($arResult['SOURCE_TYPE_ENUM']));

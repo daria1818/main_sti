@@ -2,17 +2,28 @@
 
 namespace Yandex\Market\Ui\UserField\Autocomplete;
 
+use Bitrix\Main;
+
 abstract class Provider
 {
-	abstract public static function searchByName($searchQuery);
+	public static function searchByName($searchQuery)
+	{
+		throw new Main\NotImplementedException();
+	}
 
-	abstract public static function getList();
+	public static function getList()
+	{
+		throw new Main\NotImplementedException();
+	}
 
-	abstract public static function getPropertyValue($property, $value);
+	public static function getPropertyValue($property, $value)
+	{
+		throw new Main\NotImplementedException();
+	}
 
 	public static function getClassName()
 	{
-		return '\\' . get_called_class();
+		return '\\' . static::class;
 	}
 
 	public static function getValueForAutoComplete($property, $value)
@@ -33,7 +44,7 @@ abstract class Provider
 		$result = [];
 		$valueList = (array)$valueList;
 
-		foreach ($valueList as $valueKey => $value)
+		foreach ($valueList as $value)
 		{
 			$valueText = static::getValueForAutoComplete($property, $value);
 

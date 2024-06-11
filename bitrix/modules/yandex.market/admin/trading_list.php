@@ -32,6 +32,9 @@ else
 	$baseQuery = [
 		'lang' => LANGUAGE_ID,
 	];
+	$postActionReinstall = [
+		'postAction' => 'reinstall',
+	];
 
 	if ($service !== '' && Market\Ui\Service\Manager::isExists($service))
 	{
@@ -55,6 +58,7 @@ else
 			'TRADING_SERVICE',
 			'TRADING_BEHAVIOR',
 			'CAMPAIGN_ID',
+			'BUSINESS_ID',
 			'SITE_ID',
 			'ACTIVE',
 			'YANDEX_INCOMING_URL',
@@ -62,6 +66,7 @@ else
 		'DEFAULT_LIST_FIELDS' => [
 			'TRADING_BEHAVIOR',
 			'CAMPAIGN_ID',
+			'BUSINESS_ID',
 			'SITE_ID',
 			'ACTIVE',
 			'YANDEX_INCOMING_URL',
@@ -71,7 +76,32 @@ else
 				'TEXT' => Market\Config::getLang('ADMIN_TRADING_LIST_BUTTON_ADD'),
 				'LINK' => Market\Ui\Admin\Path::getModuleUrl('trading_setup', $baseQuery),
 				'ICON' => 'btn_new',
-			]
+			],
+			[
+				'TEXT' => Market\Config::getLang('ADMIN_TRADING_LIST_BUTTON_IMPORT'),
+				'LINK' => Market\Ui\Admin\Path::getModuleUrl('trading_import', $baseQuery),
+			],
+			[
+				'TEXT' => Market\Config::getLang('ADMIN_TRADING_LIST_BUTTON_REINSTALL'),
+				'LINK' => $APPLICATION->GetCurPageParam(
+					http_build_query([ 'postAction' => 'reinstall' ]),
+					[ 'postAction' ]
+				),
+			],
+			[
+				'TEXT' => Market\Config::getLang('ADMIN_TRADING_LIST_BUTTON_ENABLE_PUSH_STOCKS'),
+				'LINK' => $APPLICATION->GetCurPageParam(
+					http_build_query([ 'postAction' => 'enablePushStocks' ]),
+					[ 'postAction' ]
+				),
+			],
+			[
+				'TEXT' => Market\Config::getLang('ADMIN_TRADING_LIST_BUTTON_DISABLE_PUSH_STOCKS'),
+				'LINK' => $APPLICATION->GetCurPageParam(
+					http_build_query([ 'postAction' => 'disablePushStocks' ]),
+					[ 'postAction' ]
+				),
+			],
 		],
 		'ROW_ACTIONS' => [
 			'SETUP' => [

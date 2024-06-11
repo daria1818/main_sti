@@ -60,12 +60,7 @@ class Request extends Market\Api\Partner\Reference\Request
 
 	public function getShipmentId()
 	{
-		if ($this->shipmentId === null)
-		{
-			throw new Main\SystemException('shipmentId not set');
-		}
-
-		return (string)$this->shipmentId;
+		return (string)($this->shipmentId ?: 1);
 	}
 
 	public function setBoxes($boxes)

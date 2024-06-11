@@ -56,4 +56,18 @@ class Info extends Market\Trading\Service\Reference\Info
 			'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_USER_GROUP'),
 		];
 	}
+
+	public function getCompanyData()
+	{
+		return [
+			'TITLE' => static::getLang('TRADING_SERVICE_MARKETPLACE_COMPANY'),
+		];
+	}
+
+	public function getContactData()
+	{
+		return [
+			'NAME' => static::getLang('TRADING_SERVICE_MARKETPLACE_USER'),
+		];
+	}
 }

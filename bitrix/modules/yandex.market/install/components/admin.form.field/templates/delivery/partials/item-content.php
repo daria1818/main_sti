@@ -31,7 +31,7 @@ use Yandex\Market;
 	?> />
 </td>
 <td class="b-delivery-table__cell">
-	<input class="adm-input control-box--delta b-reset-number js-delivery-item__input" type="number" min="0" max="99" step="1" data-name="ORDER_BEFORE" <?
+	<input class="adm-input control-box--delta b-reset-number js-delivery-item__input" type="number" min="0" max="23" step="1" data-name="ORDER_BEFORE" <?
 
 		if (!$isItemPlaceholder)
 		{

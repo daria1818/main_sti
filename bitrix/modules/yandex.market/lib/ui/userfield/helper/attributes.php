@@ -96,11 +96,11 @@ class Attributes
 		return $result;
 	}
 
-	public static function insert($html, $attributes, \Closure $filter = null)
+	public static function insert($html, $attributes, \Closure $filter = null, array $tags = [ 'input', 'textarea', 'select' ])
 	{
 		if (!empty($attributes))
 		{
-			$result = preg_replace_callback('/(<)(input|textarea|select)(.*?)(\/?>)/si', static function($matches) use ($attributes, $filter) {
+			$result = preg_replace_callback('/(<)(' . implode('|', $tags) . ')(.*?)(\/?>)/si', static function($matches) use ($attributes, $filter) {
 				list(, $opener, $tagName, $existsAttributesString, $closer) = $matches;
 
 				$existsAttributes = Attributes::parse($existsAttributesString);

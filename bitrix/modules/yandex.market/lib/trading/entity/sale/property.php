@@ -295,6 +295,7 @@ class Property extends Market\Trading\Entity\Reference\Property
 						?: ', ';
 			}
 
+			$value = array_filter($value, static function($one) { return !Market\Utils\Value::isEmpty($one); });
 			$result = implode($glue, $value);
 		}
 

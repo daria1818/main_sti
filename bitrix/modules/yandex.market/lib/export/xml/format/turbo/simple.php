@@ -12,6 +12,21 @@ class Simple extends Xml\Format\YandexMarket\Simple
 		return Data\Info::getPublishNote();
 	}
 
+	public function getCollectionParentName()
+	{
+		return null;
+	}
+
+	public function getCollection()
+	{
+		return null;
+	}
+
+	public function getCollectionId()
+	{
+		return null;
+	}
+
 	public function getSupportedFields()
 	{
 		return [];
@@ -27,6 +42,7 @@ class Simple extends Xml\Format\YandexMarket\Simple
 			$this->removeChildTags($shop, [
 				'cpa',
 				'enable_auto_discounts',
+				'collections',
 			]);
 		}
 
@@ -38,7 +54,8 @@ class Simple extends Xml\Format\YandexMarket\Simple
 		$result = parent::getOffer();
 
 		$this->overrideTags($result->getChildren(), [
-			'description' => [ 'required' => true ],
+			'url' => [ 'required' => true ],
+			'description' => [ 'required' => true, 'value_tags' => '<h3><br><ul><ol><li><p>' ],
 		]);
 
 		$this->removeChildTags($result, [

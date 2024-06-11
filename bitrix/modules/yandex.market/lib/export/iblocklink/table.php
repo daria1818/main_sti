@@ -83,8 +83,9 @@ class Table extends Market\Reference\Storage\Table
 				'TABLE' => Market\Export\Param\Table::getClassName(),
 				'LINK_FIELD' => 'IBLOCK_LINK_ID',
 				'LINK' => [
-					'IBLOCK_LINK_ID' => $primary
-				]
+					'IBLOCK_LINK_ID' => $primary,
+					'PARENT_ID' => 0,
+				],
 			],
 			'DELIVERY' => [
 				'TABLE' => Market\Export\Delivery\Table::getClassName(),
@@ -95,5 +96,185 @@ class Table extends Market\Reference\Storage\Table
 				]
 			]
 		];
+	}
+
+	public static function loadExternalReference($primaryList, $select = null, $isCopy = false)
+	{
+		$parts = [];
+
+		if (empty($select) || in_array('PARAM', $select, true))
+		{
+			$parts[] = static::loadParamReference($primaryList, $isCopy);
+
+			if (empty($select))
+			{
+				$references = static::getReference($primaryList);
+				$select = array_keys($references);
+			}
+
+			$select = array_diff($select, [ 'PARAM' ]);
+		}
+
+		$parts[] = parent::loadExternalReference($primaryList, $select, $isCopy);
+
+		return static::mergeReferenceParts($parts);
+	}
+
+	/* optimized load for reference PARAM */
+	protected static function loadParamReference($primaryList, $isCopy = false)
+	{
+		if (empty($primaryList)) { return []; }
+
+		// load rows
+
+		$query = Market\Export\Param\Table::getList([
+			'filter' => [ '=IBLOCK_LINK_ID' => $primaryList ],
+			'order' => [ 'PARENT_ID' => 'asc' ],
+		]);
+
+		$rows = $query->fetchAll();
+
+		if (empty($rows)) { return []; }
+
+		$ids = array_column($rows, 'ID');
+		$rows = array_combine($ids, $rows);
+
+		// load external
+
+		$externalDataList = Market\Export\Param\Table::loadExternalReference($ids, [ 'PARAM_VALUE' ], $isCopy);
+
+		foreach ($externalDataList as $id => $externalData)
+		{
+			$rows[$id] += $externalData;
+		}
+
+		// group by parent
+
+		$parentValues = [];
+
+		foreach ($rows as $row)
+		{
+			$parentId = $row['IBLOCK_LINK_ID'];
+
+			if (!isset($parentValues[$parentId]))
+			{
+				$parentValues[$parentId] = [
+					'PARAM' => [],
+				];
+			}
+
+			$parentValues[$parentId]['PARAM'][] = $row;
+		}
+
+		// convert to tree
+
+		foreach ($parentValues as &$parentValue)
+		{
+			$parentValue['PARAM'] = static::convertParamReferenceToTree($parentValue['PARAM']);
+
+			if ($isCopy)
+			{
+				$parentValue['PARAM'] = static::clearParamReferenceCopy($parentValue['PARAM']);
+			}
+		}
+		unset($parentValue);
+
+		return $parentValues;
+	}
+
+	protected static function convertParamReferenceToTree(array $paramRows)
+	{
+		$valueTreeMap = [];
+		$result = [];
+
+		foreach ($paramRows as $paramRow)
+		{
+			$valueId = (int)$paramRow['ID'];
+			$parentLevel = &$result;
+
+			if (empty($paramRow['PARENT_ID'])) // is root
+			{
+				$parentTree = [];
+			}
+			else
+			{
+				if (!isset($valueTreeMap[$paramRow['PARENT_ID']])) { continue; }
+
+				$parentTree = $valueTreeMap[$paramRow['PARENT_ID']];
+			}
+
+			foreach ($parentTree as $parentId)
+			{
+				if (!isset($parentLevel[$parentId]))
+				{
+					$parentLevel = null;
+					break;
+				}
+
+				if (!isset($parentLevel[$parentId]['CHILDREN']))
+				{
+					$parentLevel[$parentId]['CHILDREN'] = [];
+				}
+
+				$parentLevel = &$parentLevel[$parentId]['CHILDREN'];
+			}
+
+			if ($parentLevel === null) { continue; }
+
+			$parentLevel[$valueId] = $paramRow;
+
+			$selfTree = $parentTree;
+			$selfTree[] = $valueId;
+
+			$valueTreeMap[$valueId] = $selfTree;
+
+			unset($parentLevel);
+		}
+
+		return $result;
+	}
+
+	protected static function clearParamReferenceCopy(array $paramRows)
+	{
+		foreach ($paramRows as &$paramRow)
+		{
+			if (!empty($paramRow['CHILDREN']))
+			{
+				$paramRow['CHILDREN'] = static::clearParamReferenceCopy($paramRow['CHILDREN']);
+			}
+
+			$paramRow = array_diff_key($paramRow, [
+				'IBLOCK_LINK_ID' => true,
+				'ID' => true,
+				'PARENT_ID' => true,
+			]);
+		}
+		unset($paramRow);
+
+		return $paramRows;
+	}
+
+	protected static function mergeReferenceParts(array $parts)
+	{
+		if (count($parts) === 1) { return reset($parts); }
+
+		$result = array_pop($parts);
+
+		foreach ($parts as $part)
+		{
+			foreach ($part as $key => $values)
+			{
+				if (!isset($result[$key]))
+				{
+					$result[$key] = $values;
+				}
+				else
+				{
+					$result[$key] += $values;
+				}
+			}
+		}
+
+		return $result;
 	}
 }

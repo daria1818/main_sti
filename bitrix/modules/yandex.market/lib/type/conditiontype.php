@@ -7,6 +7,7 @@ use Bitrix\Main;
 
 Main\Localization\Loc::loadMessages(__FILE__);
 
+/** @deprecated */
 class ConditionType extends StringType
 {
 	const TYPE_NEW = 'new';

@@ -33,6 +33,16 @@ class Delivery
 	}
 
 	/**
+	 * @param int[] $deliveryIds
+	 *
+	 * @return int[]
+	 */
+	public function filterServicesWithoutPeriod(array $deliveryIds)
+	{
+		return $deliveryIds;
+	}
+
+	/**
 	 * @return int|null
 	 */
 	public function getEmptyDeliveryId()
@@ -74,6 +84,16 @@ class Delivery
 
 	/**
 	 * @param int $deliveryId
+	 *
+	 * @return array|null
+	 */
+	public function getStores($deliveryId)
+	{
+		return null;
+	}
+
+	/**
+	 * @param int $deliveryId
 	 * @param string[]|null $supportedTypes
 	 *
 	 * @return string|null
@@ -81,5 +101,15 @@ class Delivery
 	public function suggestDeliveryType($deliveryId, array $supportedTypes = null)
 	{
 		return null;
+	}
+
+	/**
+	 * @param int $deliveryId
+	 *
+	 * @return array
+	 */
+	public function debugData($deliveryId)
+	{
+		return [];
 	}
 }

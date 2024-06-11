@@ -31,7 +31,7 @@ abstract class Request extends Market\Api\Reference\RequestClientTokenized
 
 	protected function createLocker()
 	{
-		$key = $this->getHost() . '_' . $this->getCampaignId();
+		$key = $this->getHost() . '_' . $this->getOauthToken();
 		$limit = 2;
 
 		return new Market\Api\Locker($key, $limit);

@@ -47,7 +47,7 @@ class PromoProductTable extends Market\Reference\Storage\Table
                 'primary' => true
             ]),
 	        new Main\Entity\StringField('PRIMARY', [
-		        'size' => 30,
+		        'size' => 80,
 		        'validation' => [__CLASS__, 'getValidationForPrimary'],
 	        ]),
             new Main\Entity\StringField('HASH', [
@@ -59,7 +59,7 @@ class PromoProductTable extends Market\Reference\Storage\Table
                 'validation' => [__CLASS__, 'validateStatus'],
             ]),
             new Main\Entity\TextField('CONTENTS'),
-            new Main\Entity\DatetimeField('TIMESTAMP_X', [
+            new Market\Reference\Storage\Field\CanonicalDateTime('TIMESTAMP_X', [
                 'required' => true
             ]),
 
@@ -75,16 +75,13 @@ class PromoProductTable extends Market\Reference\Storage\Table
 		$tableName = static::getTableName();
 		$tableFields = $connection->getTableFields($tableName);
 
+		Market\Migration\StorageFacade::addNewFields($connection, static::getEntity());
+		Market\Migration\StorageFacade::updateFieldsLength($connection, static::getEntity(), [
+			'PRIMARY',
+		]);
+
 		if (!isset($tableFields['PRIMARY']))
 		{
-			// add column
-
-			$connection->queryExecute(sprintf(
-				'ALTER TABLE %s ADD COLUMN %s varchar(30) NOT NULL',
-				$sqlHelper->quote($tableName),
-				$sqlHelper->quote('PRIMARY')
-			));
-
 			// fill primary for success exported elements
 
 			$connection->queryExecute(sprintf(
@@ -100,21 +97,12 @@ class PromoProductTable extends Market\Reference\Storage\Table
 
 			$connection->createIndex($tableName, 'IX_' . $tableName . '_3', [ 'PRIMARY' ]);
 		}
-
-		if (!isset($tableFields['PARENT_ID']))
-		{
-			$connection->queryExecute(sprintf(
-				'ALTER TABLE %s ADD COLUMN %s int NOT NULL',
-				$sqlHelper->quote($tableName),
-				$sqlHelper->quote('PARENT_ID')
-			));
-		}
 	}
 
 	public static function getValidationForPrimary()
 	{
 		return [
-			new Main\Entity\Validator\Length(null, 30)
+			new Main\Entity\Validator\Length(null, 80)
 		];
 	}
 

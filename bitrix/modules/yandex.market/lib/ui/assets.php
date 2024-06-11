@@ -81,7 +81,25 @@ class Assets
 
 	public static function getPluginPath($pluginName, $resourceType = 'js')
 	{
-		return static::makePluginPath($pluginName, $resourceType) . '.' . $resourceType;
+		$base = static::makePluginPath($pluginName, $resourceType);
+		$baseAbsolute = Main\IO\Path::convertRelativeToAbsolute($base);
+
+		if (!is_dir($baseAbsolute)) { return $base . '.' . $resourceType; }
+
+		if ($resourceType === 'js')
+		{
+			$result = $base . '/script.js';
+		}
+		else if ($resourceType === 'css')
+		{
+			$result = $base . '/style.css';
+		}
+		else
+		{
+			throw new Main\ArgumentException(sprintf('unknown %s resource type', $resourceType));
+		}
+
+		return $result;
 	}
 
 	public static function getPluginDirectory($pluginName, $resourceType = 'js')

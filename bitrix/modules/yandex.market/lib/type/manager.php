@@ -10,6 +10,7 @@ class Manager
 	const TYPE_NUMBER = 'number';
 	const TYPE_HTML = 'html';
 	const TYPE_DATE = 'date';
+	const TYPE_PERIOD = 'period';
 	const TYPE_DATEPERIOD = 'dateperiod';
 	const TYPE_CURRENCY = 'currency';
 	const TYPE_URL = 'url';
@@ -21,6 +22,8 @@ class Manager
 	const TYPE_AGE = 'age';
 	const TYPE_DIMENSIONS = 'dimensions';
 	const TYPE_RECORDING_LENGTH = 'recordinglength';
+	const TYPE_ENUM = 'enum';
+	/** @deprecated */
 	const TYPE_CONDITION = 'condition';
 	const TYPE_DELIVERY_OPTIONS = 'deliveryoptions';
 	const TYPE_DAYS = 'days';

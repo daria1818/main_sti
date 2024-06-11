@@ -11,12 +11,15 @@ class Action extends TradingService\Common\Action\HttpAction
 {
 	use Market\Reference\Concerns\HasLang;
 	use TradingService\Common\Concerns\Action\HasMeaningfulProperties;
+	use TradingService\Common\Concerns\Action\HasChangesTrait;
+	use TradingService\Common\Concerns\Action\HasTasks;
 
 	/** @var Request */
 	protected $request;
 	/** @var TradingEntity\Reference\Order */
 	protected $order;
-	protected $changes = [];
+	/** @var array|null */
+	protected $previousState;
 
 	protected static function includeMessages()
 	{
@@ -42,10 +45,11 @@ class Action extends TradingService\Common\Action\HttpAction
 		if ($this->hasChanges())
 		{
 			$this->updateOrder();
-			$this->finalizeStatus();
 		}
 
+		$this->finalize();
 		$this->saveData();
+		$this->registerTasks();
 		$this->collectSuccess();
 	}
 
@@ -81,67 +85,259 @@ class Action extends TradingService\Common\Action\HttpAction
 	{
 		$this->fillStatus();
 		$this->fillProperties();
+		$this->fillNotes();
 	}
 
 	protected function fillStatus()
 	{
 		$statuses = $this->getStatusIn();
 
-		if (!empty($statuses) && $this->isStateChanged())
+		if ($this->isStateChanged())
 		{
 			$this->saveState();
-			$this->setStatus($statuses);
-			$this->pushChange('STATUS', $statuses);
 		}
+
+		$this->setStatus($statuses);
+	}
+
+	protected function finalize()
+	{
+		$this->finalizeStatus();
 	}
 
 	protected function finalizeStatus()
 	{
-		$statusChange = $this->getChange('STATUS');
+		$this->commitState();
 
-		if ($statusChange !== null)
+		if ($this->getChange('STATUS') !== null)
 		{
-			$this->commitState();
 			$this->logStatus();
 		}
 	}
 
 	protected function getStatusIn()
 	{
-		$result = [];
-		$options = $this->provider->getOptions();
+		$skippedMap = $this->getStatusSkippedSearchMap();
+		$skippedActions = $this->statusToEnvironmentAction($skippedMap);
+		$isChanged = $this->isStateChanged() || $this->request->isRepeat();
 
-		foreach ($this->getStatusInSearchVariants() as $variant)
+		if (!empty($skippedActions) || $isChanged)
 		{
-			$optionValue = (string)$options->getStatusIn($variant);
+			$currentVariants = $this->getStatusInSearchVariants();
+			$currentMap = array_fill_keys($currentVariants, $isChanged);
+			$currentActions = $this->statusToEnvironmentAction($currentMap);
 
-			if ($optionValue !== '')
+			$allActions = array_diff_key($skippedActions, $currentActions);
+			$allActions += $currentActions;
+
+			$result = array_values($allActions);
+		}
+		else
+		{
+			$result = [];
+		}
+
+		return $result;
+	}
+
+	protected function getStatusSkippedSearchMap()
+	{
+		$statusService = $this->provider->getStatus();
+		$current = $this->request->getOrder()->getStatus();
+		$currentSubstatus = $this->request->getOrder()->getSubStatus();
+		$currentOrder = $statusService->getStatusOrder($current);
+		list($stored, $storedSubstatus) = $this->getStoredStatus();
+
+		if (
+			$currentOrder === null // unknown state
+			|| $statusService->isCanceled($current, $currentSubstatus) // current status is cancel
+			|| $statusService->isCanceled($stored, $storedSubstatus) // already sent cancel
+		)
+		{
+			return [];
+		}
+
+		list($last, $lastSubstatus) = $this->getLastIncomingStatus();
+		$lastOrder = $statusService->getStatusOrder($last);
+		$storedOrder = $statusService->getStatusOrder($stored);
+		$result = [];
+
+		foreach ($statusService->getProcessOrder() as $intermediateStatus => $intermediateOrder)
+		{
+			if ($intermediateOrder < $lastOrder || $intermediateOrder > $currentOrder) { continue; }
+			if ($intermediateOrder === $currentOrder && $intermediateStatus !== $current) { continue; }
+
+			// status
+
+			if ($intermediateOrder !== $lastOrder)
 			{
-				$result[] = $optionValue;
+				foreach ($this->makeStatusInSearchVariants($intermediateStatus) as $variant)
+				{
+					$result[$variant] = ($intermediateOrder > $storedOrder);
+				}
+			}
+
+			// substatus
+
+			if ($statusService->hasSubstatus($intermediateStatus))
+			{
+				$fromSubstatusOrder = ($last === $intermediateStatus ? $statusService->getSubStatusOrder($lastSubstatus) : -1);
+				$toSubstatusOrder = ($current === $intermediateStatus ? $statusService->getSubStatusOrder($currentSubstatus) : INF);
+
+				if ($fromSubstatusOrder !== null && $toSubstatusOrder !== null)
+				{
+					foreach ($statusService->getSubStatusProcessOrder() as $intermediateSubstatus => $intermediateSubstatusOrder)
+					{
+						if ($intermediateSubstatusOrder <= $fromSubstatusOrder || $intermediateSubstatusOrder > $toSubstatusOrder) { continue; }
+						if ($intermediateSubstatusOrder === $toSubstatusOrder && $intermediateSubstatus !== $currentSubstatus) { continue; }
+						if ($statusService->isCanceled($intermediateStatus, $intermediateSubstatus)) { continue; }
+
+						foreach ($this->makeSubstatusInSearchVariants($intermediateStatus, $intermediateSubstatus) as $variant)
+						{
+							$result[$variant] = (
+								$intermediateOrder > $storedOrder
+								|| ($intermediateStatus === $stored && $intermediateSubstatusOrder > $statusService->getSubStatusOrder($storedSubstatus))
+							);
+						}
+					}
+				}
 			}
 		}
 
 		return $result;
 	}
 
+	protected function getLastIncomingStatus()
+	{
+		$serviceKey = $this->provider->getUniqueKey();
+		$orderId = $this->request->getOrder()->getId();
+		$stored = (string)Market\Trading\State\OrderData::getValue($serviceKey, $orderId, 'INCOMING_STATUS');
+
+		return explode(':', $stored, 2);
+	}
+
+	protected function getStoredStatus()
+	{
+		$statusService = $this->provider->getStatus();
+		$orderId = $this->request->getOrder()->getId();
+		$stored = (string)$statusService->getStored($orderId);
+
+		return explode(':', $stored, 2);
+	}
+
 	protected function getStatusInSearchVariants()
 	{
+		$status = $this->request->getOrder()->getStatus();
+		$substatus = $this->request->getOrder()->getSubStatus();
+		list($last) = $this->getLastIncomingStatus();
+
+		if ($last !== $status || $this->request->isRepeat())
+		{
+			$result = array_merge(
+				$this->makeStatusInSearchVariants($status),
+				$this->makeSubstatusInSearchVariants($status, $substatus)
+			);
+		}
+		else
+		{
+			$result = $this->makeSubstatusInSearchVariants($status, $substatus);
+		}
+
+		return $result;
+	}
+
+	protected function makeStatusInSearchVariants($status)
+	{
 		return [
-			$this->request->getOrder()->getStatus(),
+			$status,
 		];
+	}
+
+	protected function makeSubstatusInSearchVariants($status, $substatus)
+	{
+		return [
+			$status . '_' . $substatus,
+		];
+	}
+
+	protected function statusToEnvironmentAction($searchMap)
+	{
+		$environmentStatus = $this->environment->getStatus();
+		$index = 0;
+		$result = [];
+		$sort = [];
+
+		foreach ($searchMap as $variant => $needApply)
+		{
+			foreach ($this->statusConfiguredAction($variant) as $optionValue)
+			{
+				if (!$needApply && !$environmentStatus->isStandalone($optionValue)) { continue; }
+
+				$group = $environmentStatus->getGroup($optionValue);
+
+				$result[$group] = $optionValue;
+				$sort[$group] = ++$index;
+			}
+		}
+
+		uksort($result, static function($groupA, $groupB) use ($sort) {
+			$sortA = $sort[$groupA];
+			$sortB = $sort[$groupB];
+
+			if ($sortA === $sortB) { return 0; }
+
+			return ($sortA < $sortB ? -1 : 1);
+		});
+
+		return $result;
+	}
+
+	protected function statusConfiguredAction($status)
+	{
+		$options = $this->provider->getOptions();
+		$result = $options->getStatusIn($status);
+
+		if (empty($result) && ($options->useSyncStatusOut() || $this->request->isDownload()))
+		{
+			$result = $options->getStatusOutRaw($status);
+		}
+
+		return $result;
 	}
 
 	protected function setStatus($statuses)
 	{
 		$environmentStatus = $this->environment->getStatus();
+		$changesParts = [];
 
 		foreach ($statuses as $status)
 		{
 			$meaningfulStatus = $environmentStatus->getMeaningful($status);
 			$payload = $meaningfulStatus !== null ? $this->makeStatusPayload($meaningfulStatus) : null;
-			$statusResult = $this->order->setStatus($status, $payload);
+			$setResult = $this->order->setStatus($status, $payload);
 
-			Market\Result\Facade::handleException($statusResult);
+			if (!$setResult->isSuccess())
+			{
+				$this->order->addMarker(
+					implode(' ', $setResult->getErrorMessages()),
+					$this->provider->getDictionary()->getErrorCode('ORDER_STATUS_' . $status)
+				);
+				$this->pushChange('MARKER', true);
+
+				continue;
+			}
+
+			$setData = $setResult->getData();
+
+			if (!empty($setData['CHANGES']))
+			{
+				$changesParts[] = $setData['CHANGES'];
+			}
+		}
+
+		if (!empty($changesParts))
+		{
+			$this->pushChange('STATUS', array_merge(...$changesParts));
 		}
 	}
 
@@ -169,6 +365,16 @@ class Action extends TradingService\Common\Action\HttpAction
 		$meaningfulValues = $this->request->getOrder()->getMeaningfulValues();
 
 		$this->setMeaningfulPropertyValues($meaningfulValues);
+	}
+
+	protected function fillNotes()
+	{
+		$notes = $this->request->getOrder()->getNotes();
+
+		if ($notes !== '')
+		{
+			$this->order->setNotes($notes);
+		}
 	}
 
 	protected function updateOrder()
@@ -207,6 +413,7 @@ class Action extends TradingService\Common\Action\HttpAction
 		$orderId = $this->request->getOrder()->getId();
 		$incomingStatus = $this->getExternalStatus();
 
+		$this->previousState = explode(':', (string)$this->provider->getStatus()->getStored($orderId));
 		Market\Trading\State\OrderStatus::setValue($serviceKey, $orderId, implode(':', $incomingStatus));
 	}
 
@@ -246,7 +453,17 @@ class Action extends TradingService\Common\Action\HttpAction
 
 	protected function makeData()
 	{
-		return [];
+		return $this->makeStatusData();
+	}
+
+	protected function makeStatusData()
+	{
+		return [
+			'INCOMING_STATUS' => implode(':', [
+				$this->request->getOrder()->getStatus(),
+				$this->request->getOrder()->getSubStatus(),
+			]),
+		];
 	}
 
 	protected function collectSuccess()
@@ -259,20 +476,5 @@ class Action extends TradingService\Common\Action\HttpAction
 		{
 			$this->response->setRaw('');
 		}
-	}
-
-	protected function pushChange($key, $value)
-	{
-		$this->changes[$key] = $value;
-	}
-
-	protected function hasChanges()
-	{
-		return !empty($this->changes);
-	}
-
-	protected function getChange($key)
-	{
-		return isset($this->changes[$key]) ? $this->changes[$key] : null;
 	}
 }

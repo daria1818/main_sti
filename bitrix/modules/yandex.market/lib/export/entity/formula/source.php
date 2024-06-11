@@ -30,20 +30,15 @@ class Source extends Market\Export\Entity\Template\Source
 		foreach (Market\Template\Functions\Registry::getTypes() as $type)
 		{
 			$function = Market\Template\Functions\Registry::createInstance($type);
-			$title = $type;
-			$isMultiple = true;
 
 			if ($function instanceof Market\Template\Functions\HasConfiguration)
 			{
-				$title = $function->getTitle();
-				$isMultiple = $function->isMultiple();
+				$result[] = [
+					'ID' => $type,
+					'VALUE' => $function->getTitle(),
+					'MULTIPLE' => $function->isMultiple(),
+				];
 			}
-
-			$result[] = [
-				'ID' => $type,
-				'VALUE' => $title,
-				'MULTIPLE' => $isMultiple,
-			];
 		}
 
 		return $result;

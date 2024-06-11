@@ -1,10 +1,10 @@
 <?php
 
 /**
- * РџРµСЂРµРёСЃРїРѕР»СЊР·СѓРµРјР°СЏ СЃСѓС‰РЅРѕСЃС‚СЊ Cargo. РћРїСЂРµРґРµР»СЏРµС‚ РїР°СЂР°РјРµС‚СЂС‹ РґР»СЏ РїРѕРіСЂСѓР·РєРё.
- * РћР±СЉРµРєС‚РЅРѕ-РѕСЂРёРµРЅС‚РёСЂРѕРІР°РЅРЅРѕРµ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёРµ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ СЃР±РѕСЂС‰РёРєРѕРј РїР°СЂР°РјРµС‚СЂРѕРІ РґР»СЏ РѕС‚РїСЂР°РІРєРё Р·Р°РїСЂРѕСЃРѕРІ.
- * РЎСѓС‰РЅРѕСЃС‚СЊ Cargo РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РІ РјРµС‚РѕРґР°С… РїРѕР»СѓС‡РµРЅРёСЏ produceDate, CalculatorV2, RequestV2.
- * РўРµРєСѓС‰Р°СЏ СЃСѓС‰РЅРѕСЃС‚СЊ РјРѕР¶РµС‚ РёР·РјРµРЅСЏС‚СЊ РїР°СЂР°РјРµС‚СЂ deliveryType РІРЅСѓС‚СЂРё РєРѕРЅС„РёРіР° РЅР° РјР°Р»РѕРіР°Р±Р°СЂРёС‚(РїСЂРё РїСЂРѕР№РґРµРЅРЅРѕР№ РІР°Р»РёРґР°С†РёРё).
+ * Переиспользуемая сущность Cargo. Определяет параметры для погрузки.
+ * Объектно-ориентированное представление для работы с сборщиком параметров для отправки запросов.
+ * Сущность Cargo используется в методах получения produceDate, CalculatorV2, RequestV2.
+ * Текущая сущность может изменять параметр deliveryType внутри конфига на малогабарит(при пройденной валидации).
  * @author: Vadim Lazev
  * @company: BIA-Tech
  * @year: 2021
@@ -23,93 +23,93 @@ use DellinShipping\NetworkService;
 class Cargo
 {
     /**
-     * РљРѕР»РёС‡РµСЃС‚РІРѕ
+     * Количество
      * @var $quantity
      */
 
     public $quantity;
 
     /**
-     * РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР°
+     * Максимальная длина
      * @var $maxProductLength
      */
 
     public $maxProductLength = 0;
 
     /**
-     * РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РІС‹СЃРѕС‚Р°
+     * Максимальная высота
      * @var $maxProductHeight
      */
 
     public $maxProductHeight = 0;
     /**
-     * РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ С€РёСЂРёРЅР°
+     * Максимальная ширина
      * @var $maxProductWidth
      */
     public $maxProductWidth = 0;
     /**
-     * Р—Р°СЏРІР»РµРЅРЅР°СЏ РјР°СЃСЃР°
+     * Заявленная масса
      * @var $weight
      */
     public $weight = 0;
     /**
-     * РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ СЃС‚СЂРѕРЅР°. РќРµРѕР±С…РѕРґРёРјР° РґР»СЏ РєР°РЅС‚РѕРІРєРё РјРµСЃС‚Р° РІРґРѕР»СЊ РєСѓР·РѕРІР°.
+     * Максимальная строна. Необходима для кантовки места вдоль кузова.
      * @var $maxSide
      */
     public $maxSide = 0;
     /**
-     * РћР±С‰РёР№ РїРѕРіСЂСѓР·РѕС‡РЅС‹Р№ РѕР±СЉС‘Рј.
+     * Общий погрузочный объём.
      * @var $totalWeight
      */
     public $totalWeight = 0;
     /**
-     * РћР±С‰РёР№ РїРѕРіСЂСѓР·РѕС‡РЅС‹Р№ РѕР±СЉС‘Рј.
+     * Общий погрузочный объём.
      * @var $totalVolume
      */
     public $totalVolume = 0;
     /**
-     * РџР°СЂР°РјРµС‚СЂ РѕР±СЉС‘РјР° РЅРµРіР°Р±Р°СЂРёС‚Р° РѕС‚РЅРѕСЃРёС‚СЃСЏ Рє РїРѕРіСЂСѓР·РѕС‡РЅРѕРјСѓ РјРµСЃС‚Сѓ.
-     * Р’Р°Р»РёРґРёСЂСѓРµС‚СЃСЏ РїРѕ СЃРІРѕР№СЃС‚РІСѓ placeStricts.
+     * Параметр объёма негабарита относится к погрузочному месту.
+     * Валидируется по свойству placeStricts.
      * @var $oversizedVolume
      */
     public $oversizedVolume = 0;
     /**
-     * РџР°СЂР°РјРµС‚СЂ РјР°СЃСЃС‹ РЅРµРіР°Р±Р°СЂРёС‚Р° РѕС‚РЅРѕСЃРёС‚СЃСЏ Рє РїРѕРіСЂСѓР·РѕС‡РЅРѕРјСѓ РјРµСЃС‚Сѓ.
-     * Р’Р°Р»РёРґРёСЂСѓРµС‚СЃСЏ РїРѕ СЃРІРѕР№СЃС‚РІСѓ placeStricts.
+     * Параметр массы негабарита относится к погрузочному месту.
+     * Валидируется по свойству placeStricts.
      * @var $oversizedWeight
      */
     public $oversizedWeight = 0;
     /**
-     * РџР°СЂР°РјРµС‚СЂ РЅР°РёРјРµРЅРѕРІР°РЅРёРµ С‚РѕРІР°СЂР°.
-     * РћРіСЂР°РЅРёС‡РµРЅ 255 СЃРёРјРІРѕР»Р°РјРё.
+     * Параметр наименование товара.
+     * Ограничен 255 символами.
      * @var $freightName
      */
     public $freightName='';
 
     /**
-     * РҐР°СЂРґРєРѕРґ С…Р°СЂР°РєС‚РµСЂР° РіСЂСѓР·Р°.   
+     * Хардкод характера груза.   
      * @var $freightUID
      */
     public $freightUID='';
 
 
     /**
-     * РџР°СЂР°РјРµС‚СЂ РЅРµРѕР±С…РѕРґРёРјС‹Р№ РґР»СЏ РІР°Р»РёРґР°С†РёРё РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РїРѕРіСЂСѓР·РєРё.
-     * Р”Р»РёРЅР° РІ РјРµС‚СЂР°С…. РњР°СЃСЃР° РІ РєРі. Р—РґРµСЃСЊ СѓРєР°Р·Р°РЅС‹ РїР°СЂР°РјРµС‚СЂС‹ С„СѓСЂС‹.
+     * Параметр необходимый для валидации возможности погрузки.
+     * Длина в метрах. Масса в кг. Здесь указаны параметры фуры.
      * @var array
      */
 
     private $globalStricts = [
-        'length'=>13.6,
+        'length'=>13.6, 
         'width_height'=>2.4,
         'totalVolume' => 80,
         'totalWeight' => 20000
     ];
 
     /**
-     * РџР°СЂР°РјРµС‚СЂ РЅРµРѕР±С…РѕРґРёРјС‹Р№ РґР»СЏ РІР°Р»РёРґР°С†РёРё РіСЂСѓР·РѕРІРѕРіРѕ РјРµСЃС‚Р° РіР°Р±Р°СЂРёС‚Р° РёР»Рё РЅРµ РіР°Р±Р°СЂРёС‚Р°.
-     * Р”Р»РёРЅР° РІ РјРµС‚СЂР°С…. РњР°СЃСЃР° РІ РєРі. Р—РґРµСЃСЊ СѓРєР°Р·Р°РЅС‹ РїР°СЂР°РјРµС‚СЂС‹ РіР°Р±Р°СЂРёС‚РЅРѕРіРѕ РјРµСЃС‚Р°.
-     * Р•СЃР»Рё РІС‹С€Рµ - СЌС‚Рѕ РЅРµ РіР°Р±Р°СЂРёС‚ Рё РјС‹ РґРѕР»Р¶РЅС‹ РґРѕР±Р°РІРёС‚СЊ РІ Р·Р°РїСЂРѕСЃ РїР°СЂР°РјРµС‚СЂС‹ oversizedWeight Рё oversizedVolume.
+     * Параметр необходимый для валидации грузового места габарита или не габарита.
+     * Длина в метрах. Масса в кг. Здесь указаны параметры габаритного места.
+     * Если выше - это не габарит и мы должны добавить в запрос параметры oversizedWeight и oversizedVolume.
      * @var array
      */
     private $placeStricts = [
@@ -120,9 +120,9 @@ class Cargo
         ];
 
     /**
-     * РџР°СЂР°РјРµС‚СЂ РЅРµРѕР±С…РѕРґРёРјС‹Р№ РґР»СЏ РІР°Р»РёРґР°С†РёРё РјР°Р»РѕРіР°Р±Р°СЂРёС‚РЅРѕРіРѕ РіСЂСѓР·Р°.
-     * Р”Р»РёРЅР° РІ РјРµС‚СЂР°С…. РњР°СЃСЃР° РІ РєРі. Р—РґРµСЃСЊ СѓРєР°Р·Р°РЅС‹ РїР°СЂР°РјРµС‚СЂС‹ РіР°Р±Р°СЂРёС‚РЅРѕРіРѕ РјРµСЃС‚Р°.
-     * Р’Р»РёСЏРµС‚ РЅР° РїР°СЂР°РјРµС‚СЂ deliveryType РІРµСЂРѕСЏС‚РЅРµРµ РІСЃРµРіРѕ РѕС‚РїСЂР°РІРёРј РµРіРѕ РІ РєРѕРЅС„РёРі.
+     * Параметр необходимый для валидации малогабаритного груза.
+     * Длина в метрах. Масса в кг. Здесь указаны параметры габаритного места.
+     * Влияет на параметр deliveryType вероятнее всего отправим его в конфиг.
      * @var array
      */
 
@@ -135,9 +135,9 @@ class Cargo
 
 
     /**
-     * Р¤Р°СЃР°РґС‹ РѕСЃРЅРѕРІРЅС‹С… СЃСѓС‰РЅРѕСЃС‚РµР№.
-     * @var Order  - СЃСѓС‰РЅРѕСЃС‚СЊ Р·Р°РєР°Р·Р°
-     * @var Config - СЃСѓС‰РЅРѕСЃС‚СЊ РєРѕРЅС„РёРіР°.
+     * Фасады основных сущностей.
+     * @var Order  - сущность заказа
+     * @var Config - сущность конфига.
      */
 
     private Order $order;
@@ -180,7 +180,7 @@ class Cargo
     }
 
     /**
-     * РћРїСЂРµРґРµР»СЏРµРј РїР°СЂР°РјРµС‚СЂС‹ РіСЂСѓР·Р° РєРѕС‚РѕСЂС‹Рµ РІ РґР°Р»СЊРЅРµР№С€РµРј Р±СѓРґРµРј РїРµСЂРµРѕРїСЂРµРґРµР»СЏС‚СЊ.
+     * Определяем параметры груза которые в дальнейшем будем переопределять.
      */
 
 
@@ -190,7 +190,7 @@ class Cargo
         $products = $this->order->products;
 
         /**
-         * РћРїСЂРµРґРµР»СЏРµРј СЃР°РјС‹Рµ РєСЂСѓРїРЅС‹Рµ РіР°Р±Р°СЂРёС‚С‹ РґР»СЏ РІР°Р»РёРґР°С†РёРё РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РїРѕРіСЂСѓР·РєРё.
+         * Определяем самые крупные габариты для валидации возможности погрузки.
          *
          */
 
@@ -202,7 +202,7 @@ class Cargo
             if($product->width  > $this->maxProductWidth) $this->maxProductWidth = $product->width;
             if($product->weight > $this->weight) $this->weight = $product->weight;
             // ---Start---
-            // Р’С‹РїРёР»РёР» СЌС‚ РїР°СЂР°РјРµС‚СЂ С‚.Рє. РѕРЅ РїСЂРёРјРµРЅСЏСЋРµС‚СЃСЏ РЅРёР¶Рµ РїСЂРё РіСЂСѓРїРїРёСЂРѕРІР°РЅРёРё РіСЂСѓР·РѕРјРµСЃС‚.
+            // Выпилил эт параметр т.к. он применяюется ниже при группировании грузомест.
             $this->totalWeight += $product->weight*$product->quantity;
             $this->totalVolume += $product->length * $product->height * $product->width * $product->quantity;
 
@@ -212,24 +212,47 @@ class Cargo
         }
 
     }
-
-    /*
-     * Р Р°СЃС‡С‘С‚ РѕРІРµСЂСЃР°Р№Р·РЅС‹С… РїР°СЂР°РјРµС‚СЂРѕРІ.
-     */
-
-    public function buildOversize($product){
-
+    
+    public  function  validationOversize($volumeCargoPlace, $weightCargoPlace, $dimensionsCargoPlace)
+    {
         $stricts = $this->placeStricts;
-        $volume = $product->length * $product->height * $product->width;
-        if($product->length >= $stricts['length'] || $product->width >= $stricts['width_height']
-            || $product->height >= $stricts['width_height']  || $product->weight >= $stricts['totalWeight']
-            || $volume >= $stricts['totalVolume']) {
-            $this->oversizedWeight += $product->weight*$product->quantity ;
-            $this->oversizedVolume += $volume * $product->quantity;
+        
+        if($volumeCargoPlace >= $stricts['totalVolume'])
+        {
+            return true;
         }
 
+        if($weightCargoPlace>= $stricts['totalWeight'])
+        {
+            return true;
+        }
+
+        if($dimensionsCargoPlace->length >= $stricts['length'])
+        {
+            return  true;
+        }
+
+        if($dimensionsCargoPlace->width >= $stricts['width_height'])
+        {
+            return true;
+        }
+
+        if($dimensionsCargoPlace->height >= $stricts['width_height'])
+        {
+            return true;
+        }
+
+        return  false;
+        
+        
+        
     }
 
+    /*
+     * Расчёт оверсайзных параметров.
+     */
+
+        
 
     public function setFrieghtTypeUID($uid)
     {
@@ -237,16 +260,16 @@ class Cargo
     }
 
     /**
-     * РћР±С‰РёР№ РјРµС‚РѕРґ РґР»СЏ РІР°Р»РёРґР°С†РёРё РґР°РЅРЅС‹С….
-     * РџР°СЂР°РјРµС‚СЂС‹ РґР»СЏ РІР°Р»РёРґР°С†РёРё РЅР°С…РѕРґСЏС‚СЃСЏ РІ stricts СЃРІРѕР№СЃС‚РІР° РєР»Р°СЃСЃР°.
+     * Общий метод для валидации данных.
+     * Параметры для валидации находятся в stricts свойства класса.
      * @param $stricts
      * @return bool
      */
     public function productOversizeValidation($stricts){
 
-        //Р’РђР–РќРћ: Р”Р›РРќРђ Р’ STRICTS Р”РћР›Р–РќРђ Р‘Р«РўР¬ Р—РђРџРћР›РќР•РќРђ РЎРђРњР«Рњ Р‘РћР›Р¬РЁРРњ Р—РќРђР§Р•РќРР•Рњ РЎРўРћР РћРќР« (13.6Рј РґР»СЏ С„СѓСЂС‹, Рє РїСЂРёРјРµСЂСѓ).
-        //СЃРјРѕС‚СЂРёРј РЅР° РєР°Р¶РґС‹Р№ С‚РѕРІР°СЂ Рё РїСЂРѕРІРµСЂСЏРµРј, РјРѕР¶РЅРѕ Р»Рё СѓР»РѕР¶РёС‚СЊ РµРіРѕ РІ С„СѓСЂСѓ РєР°Рє РµСЃС‚СЊ Рё СЃ РїРѕРІРѕСЂРѕС‚РѕРј.
-        // Р•СЃР»Рё РЅРµС‚, РІРѕРѕР±С‰Рµ РґР°Р»СЊС€Рµ РЅРµ СЃС‡РёС‚Р°РµРј
+        //ВАЖНО: ДЛИНА В STRICTS ДОЛЖНА БЫТЬ ЗАПОЛНЕНА САМЫМ БОЛЬШИМ ЗНАЧЕНИЕМ СТОРОНЫ (13.6м для фуры, к примеру).
+        //смотрим на каждый товар и проверяем, можно ли уложить его в фуру как есть и с поворотом.
+        // Если нет, вообще дальше не считаем
         
         $length = $this->maxProductLength;
         $width = $this->maxProductWidth;
@@ -256,17 +279,17 @@ class Cargo
         if($totalWeight >= $stricts['totalWeight']) return false;
         if($totalVolume >= $stricts['totalVolume']) return false;
 
-        //РµСЃР»Рё С‚РѕРІР°СЂ С‚РѕСЂС‡РёС‚ РёР· С„СѓСЂС‹/РіСЂСѓР·РѕРјРµСЃС‚Р° РїРѕ СЃР°РјРѕР№ РґР»РёРЅРЅРѕР№ СЃС‚РѕСЂРѕРЅРµ ('length'), С‚Рѕ РґР°Р¶Рµ СЃ РїРѕРІРѕСЂРѕС‚РѕРј РіСЂСѓР· РЅРµ СѓР»РѕР¶РёС‚СЊ
+        //если товар торчит из фуры/грузоместа по самой длинной стороне ('length'), то даже с поворотом груз не уложить
         if($length > $stricts['length'] || $width > $stricts['length']
             || $height > $stricts['length']){
             return false;
         }
         $isOversized = true;
 
-        //Р•СЃР»Рё РІСЃРµ СЃС‚РѕСЂРѕРЅС‹ РјРµРЅСЊС€Рµ РјРёРЅРёРјР°Р»СЊРЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РѕРґРЅРѕР№ СЃС‚РѕСЂРѕРЅС‹, С‚Рѕ С‚РѕРІР°СЂ РіР°Р±Р°СЂРёС‚РЅС‹Р№.
-        // Р•СЃР»Рё РµСЃС‚СЊ СЃС‚РѕСЂРѕРЅР° Р±РѕР»СЊС€Рµ РјРёРЅРёРјР°Р»СЊРЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ (РЅРѕ РјРµРЅСЊС€Рµ stricts['length']),
-        // С‚Рѕ 2 РѕСЃС‚Р°Р»СЊРЅС‹Рµ РЅРµ РјРѕРіСѓС‚ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ РјРёРЅРёРјР°Р»СЊРЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ, РїРѕСЌС‚РѕРјСѓ РІРµСЂС‚РёРј С‚РѕРІР°СЂ РІРѕ РІСЃРµС… С‚СЂРµС… РїР»РѕСЃРєРѕСЃС‚СЏС….
-        // Р•СЃР»Рё РЅР°С…РѕРґРёРј С‚Р°РєРѕРµ РїРѕР»РѕР¶РµРЅРёРµ, РіРґРµ С‚РѕРІР°СЂ РЅРµ РІС‹РїРёСЂР°РµС‚ РёР· РіР°Р±Р°СЂРёС‚РѕРІ, Р·РЅР°С‡РёС‚ С‚РѕРІР°СЂ РіР°Р±Р°СЂРёС‚РЅС‹Р№.
+        //Если все стороны меньше минимального значения одной стороны, то товар габаритный.
+        // Если есть сторона больше минимального значения (но меньше stricts['length']),
+        // то 2 остальные не могут быть больше минимального значения, поэтому вертим товар во всех трех плоскостях.
+        // Если находим такое положение, где товар не выпирает из габаритов, значит товар габаритный.
         
         if(
             ($length <= $stricts['width_height'] && $length <= $stricts['width_height'] && $height<= $stricts['width_height'])||
@@ -278,50 +301,96 @@ class Cargo
         }
         if($isOversized) return false;
 
-        //РџРѕ РёС‚РѕРіСѓ РІСЃРµС… РїСЂРѕРІРµСЂРѕРє, РµСЃР»Рё РѕР±С‰РёР№ РІРµСЃ/РѕР±СЉРµРј С‚РѕРІР°СЂРѕРІ РІРїРёСЃС‹РІР°РµС‚СЃСЏ РІ С„СѓСЂСѓ/РіСЂСѓР·РѕРјРµСЃС‚Рѕ
-        // Рё С‚РѕРІР°СЂ РјРѕР¶РЅРѕ РїРѕР»РѕР¶РёС‚СЊ С‚Р°Рє, С‡С‚РѕР±С‹ РѕРЅ РЅРµ РІС‹РїРёСЂР°Р» РёР· С„СѓСЂС‹/РіСЂСѓР·РѕРјРµСЃС‚Р°,
-        // Р·РЅР°С‡РёС‚ РѕРЅ РіР°Р±Р°СЂРёС‚РЅС‹Р№
+        //По итогу всех проверок, если общий вес/объем товаров вписывается в фуру/грузоместо
+        // и товар можно положить так, чтобы он не выпирал из фуры/грузоместа,
+        // значит он габаритный
 
         return true;
     }
 
 
     /**
-     * РџРѕРґРіРѕС‚Р°РІР»РёРІР°РµРј РґР°РЅРЅС‹Рµ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ СЃСѓС‰РЅРѕСЃС‚Рё Cargo
+     * Подготавливаем данные для создания сущности Cargo
      */
 
     protected function prepareCargoData()
     {
 
         $products = $this->order->products;
-        //РћРїСЂРµРґРµР»СЏРµРј РїР°СЂР°РјРµС‚СЂС‹ РїРѕ РЅР°РёР±РѕР»СЊС€РёРј РїР°СЂР°РјРµС‚СЂР°Рј Р’Р“РҐ.
-
         /*
-         * РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РїР°СЂР°РјРµС‚СЂС‹ РіСЂСѓР·Р° РёСЃС…РѕРґСЏ РёР· РєРѕРјРїРѕРЅРѕРІРєРё РіСЂСѓР·РѕРІРѕРіРѕ РјРµСЃС‚Р°.
-         */
+        * Обрабатываем параметры груза исходя из компоновки грузового места.
+        */
         switch ($this->config->getCargoParams()->loadingGroupingOfGoods) {
-            //Р•СЃР»Рё РІРµСЃСЊ С‚РѕРІР°СЂ РІ РѕРґРЅРѕ РіСЂСѓР·РѕРјРµСЃС‚Рѕ
+            //Если весь товар в одно грузоместо
             case 'ONE_CARGO_SPACE':
-                $this->quantity  = 1;
-                foreach($products as $product){
-                    $this->buildOversize($product);
+                $this->quantity = 1;
+                $this->weight = $this->totalWeight;
+                $height = 0;
+                
+                foreach($products as $product)
+                {
+                    $height +=  $product->height * $product->quantity;
                 }
+                
+                $this->maxProductHeight = $height;
+
+                
+                $dimensions = new \stdClass();
+                //При группировке укладываем позиции в высоту.
+                
+                $dimensions->height = $height;
+                $dimensions->weight = $this->totalWeight;
+                $dimensions->length = $this->maxProductLength;
+                $dimensions->width = $this->maxProductWidth;
+                
+                if($this->validationOversize($this->totalVolume, $this->totalWeight, $dimensions))
+                {
+                    $this->oversizedWeight = $this->totalWeight;
+                    $this->oversizedVolume = $this->totalVolume;
+                }
+                
+                $this->maxProductHeight = $height;
+
                 break;
-           // Р•СЃР»Рё РіСЂСѓРїРїРёСЂСѓРµРј РєР°Р¶РґС‹Р№ РІРёРґ С‚РѕРІР°СЂР°, РєР°Рє РѕС‚РґРµР»СЊРЅРѕРµ РіСЂСѓР·РѕРјРµСЃС‚Рѕ.
+        // Если группируем каждый вид товара, как отдельное грузоместо.
             case 'SEPARATED_CARGO_SPACE':
                 $this->quantity = count($products);
 
-                foreach($products as $product){
-                    $this->buildOversize($product);
+                foreach($products as $product)
+                {
+                    $volume = ($product->length * $product->height *
+                        $product->width) * $product->quantity;
+                    $weight = $product->weight * $product->quantity;
+                    
+                    $dimensions = new \stdClass();
+                    //При группировке укладываем позиции в высоту.
+                    $dimensions->height =  $product->height * $product->quantity;
+                    $dimensions->weight = $weight;
+                    $dimensions->length = $product->length;
+                    $dimensions->width = $product->width;
+
+                    
+                    if($this->validationOversize($volume, $weight, $dimensions))
+                    {
+                        $this->oversizedWeight += $weight;
+                        $this->oversizedVolume += $volume;
+                    }
                 }
 
                 break;
-            // Р•СЃР»Рё РєР°Р¶РґР°СЏ РµРґРёРЅРёС†Р° С‚РѕРІР°СЂР° - РѕС‚РґРµР»СЊРЅРѕРµ РіСЂСѓР·РѕРјРµСЃС‚Рѕ.
+            // Если каждая единица товара - отдельное грузоместо.
             case 'SINGLE_ITEM_SINGLE_SPACE':
 
                 foreach ($products as $product) {
-                    $this->buildOversize($product);
                     $this->quantity += $product->quantity;
+                    $volume = $product->length * $product->height * $product->width;
+                    $weight = $product->weight;
+                    if($this->validationOversize($volume, $weight, $product))
+                    {
+                        $this->oversizedWeight += $product->weight*$product->quantity ;
+                        $this->oversizedVolume += $volume * $product->quantity;
+                    }
+                
                 }
 
                 break;
@@ -333,12 +402,12 @@ class Cargo
 
 
     /**
-     * РњРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РѕС‚РІРµС‡Р°РµС‚ Р·Р° РєР°РЅС‚РѕРІРєСѓ РіСЂСѓР·Р° РІРЅСѓС‚СЂРё РїРѕРіСЂСѓР·РѕС‡РЅРѕРіРѕ РјРµСЃС‚Р°.
+     * Метод, который отвечает за кантовку груза внутри погрузочного места.
      *
      */
     public function switchToValidLWH()
     {
-       // С‚.Рє. РґР»РёРЅР° - СЌС‚Рѕ РїР°СЂР°РјРµС‚СЂ РїРѕРіСЂСѓР·РєРё РІРґРѕР»СЊ РєСѓР·РѕРІР°, РїСЂРёРЅРёРјР°РµРј РµРіРѕ Р·Р° РјР°РєcРёРјР°Р»СЊРЅС‹Р№.
+       // т.к. длина - это параметр погрузки вдоль кузова, принимаем его за макcимальный.
 
         $this->maxSide = $this->maxProductLength;
         if($this->maxProductWidth > $this->maxProductLength){
@@ -358,18 +427,18 @@ class Cargo
 
     public function changeDeliveryType(){
 
-        if($this->config->isSmallGoods()){
+        if(!$this->config->isSmallGoods()){ 
             return ;
         }
 
         $terminalsInDerivalPoint = NetworkService::GetTerminals($this->config->getAppkey(),
-                                                            $this->config->getKladrCodeDeliveryFrom(), false)['terminals'];
+                                                            $this->config->getKladrCodeDeliveryFrom(), false);
         $terminalsInArrivalPoint = NetworkService::GetTerminals($this->config->getAppkey(),
-                                                            $this->order->person->getKLADRToArrival(), false)['terminals'];
+                                                            $this->order->person->getKLADRToArrival(), false);
 
-        $isTerminalsInCityDerival = (is_array($terminalsInDerivalPoint))? (count($terminalsInDerivalPoint) > 0) : false;
+        $isTerminalsInCityDerival = (is_array($terminalsInDerivalPoint['terminals']))? (count($terminalsInDerivalPoint['terminals']) > 0) : false;
 
-        $isTerminalsInCityArival = (is_array($terminalsInArrivalPoint)) ? (count($terminalsInArrivalPoint) > 0) : false;
+        $isTerminalsInCityArival = (is_array($terminalsInArrivalPoint['terminals'])) ? (count($terminalsInArrivalPoint['terminals']) > 0) : false;
 
         $isTerminalsInCities = $isTerminalsInCityDerival && $isTerminalsInCityArival;
 
@@ -383,8 +452,8 @@ class Cargo
     }
 
     /**
-     * РњРµС‚РѕРґ С„РѕСЂРјРёСЂСѓСЋС‰РёР№ СЂРµР·СѓР»СЊС‚Р°С‚ РјСѓС‚РёСЂРѕРІР°РЅРёСЏ РґР°РЅРЅС‹С… РґР»СЏ Р·Р°РїСЂРѕСЃРѕРІ.
-     * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РєР°Рє РєРѕРЅРµС‡РЅС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ РґР»СЏ РѕС‚РїСЂР°РІРєРё СЃСѓС‰РЅРѕСЃС‚Рё Cargo.
+     * Метод формирующий результат мутирования данных для запросов.
+     * Используется как конечный интерфейс для определения параметров для отправки сущности Cargo.
      * @return array
      * @throws \Exception
      */

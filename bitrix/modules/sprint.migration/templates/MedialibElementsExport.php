@@ -7,6 +7,7 @@
  * @var $extendClass
  * @var $moduleVersion
  * @var $iblockElementsFile
+ * @var $author
  * @formatter:off
  */
 
@@ -19,12 +20,15 @@ namespace Sprint\Migration;
 class <?php echo $version ?> extends <?php echo $extendClass ?>
 
 {
+
+    protected $author = "<?php echo $author ?>";
+
     protected $description = "<?php echo $description ?>";
 
     protected $moduleVersion = "<?php echo $moduleVersion ?>";
 
     /**
-     * @throws Exceptions\ExchangeException
+     * @throws Exceptions\MigrationException
      * @throws Exceptions\RestartException
      * @throws Exceptions\HelperException
      * @return bool|void
@@ -42,10 +46,5 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
                           ->saveElement($item);
                  }
              );
-    }
-
-    public function down()
-    {
-        //your code ...
     }
 }

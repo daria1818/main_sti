@@ -65,17 +65,12 @@ class Gift extends Offer
             {
                 case 'change':
                 case 'refresh':
-                    $filter['>=TIMESTAMP_X'] = $this->getParameter('initTime');
+                    $filter['>=TIMESTAMP_X'] = $this->getParameter('initTimeUTC');
                 break;
             }
         }
 
         return $filter;
-    }
-
-    protected function getQueryExcludeFilterPrimary($queryContext)
-    {
-        return 0; // equal for all
     }
 
     protected function getQueryChangesFilter($changes, $context)
@@ -87,6 +82,7 @@ class Gift extends Offer
 	{
 		return [
 			Market\Export\Run\Manager::ENTITY_TYPE_CURRENCY => true,
+			Market\Export\Run\Manager::ENTITY_TYPE_COLLECTION => true,
 		];
 	}
 
@@ -118,7 +114,7 @@ class Gift extends Offer
             if (!empty($offerChanges))
             {
                 $result[] = [
-                    '>=EXPORT_PROMO_GIFT.TIMESTAMP_X' => $this->getParameter('initTime')
+                    '>=EXPORT_PROMO_GIFT.TIMESTAMP_X' => $this->getParameter('initTimeUTC')
                 ];
             }
 
@@ -251,7 +247,7 @@ class Gift extends Offer
         {
             case 'change':
             case 'refresh':
-                $filter['>=TIMESTAMP_X'] = $this->getParameter('initTime');
+                $filter['>=TIMESTAMP_X'] = $this->getParameter('initTimeUTC');
             break;
         }
 

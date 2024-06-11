@@ -7,28 +7,25 @@ use Yandex\Market;
 
 Main\Localization\Loc::loadMessages(__FILE__);
 
-abstract class Base
+abstract class Base implements Market\Data\Run\Step
 {
 	const STORAGE_STATUS_FAIL = 1;
 	const STORAGE_STATUS_SUCCESS = 2;
-	const STORAGE_STATUS_INVALID = 3;
 	const STORAGE_STATUS_DUPLICATE = 4;
 	const STORAGE_STATUS_DELETE = 5;
 
 	/** @var Market\Export\Run\Processor */
-	protected $processor = null;
+	protected $processor;
 	/** @var Market\Export\Xml\Tag\Base */
-	protected $tag = null;
+	protected $tag;
 	/** @var Market\Export\Xml\Tag\Base[] */
 	protected $typedTagList = [];
 	/** @var string|null */
-	protected $tagParentName = null;
+	protected $tagParentName;
 	/** @var array */
-	protected $tagPath = null;
+	protected $tagPath;
 	/** @var string */
-	protected $runAction = null;
-	/** @var int|null*/
-	protected $totalCount;
+	protected $runAction;
 	/** @var bool */
 	protected $useTagPrimary;
 
@@ -40,13 +37,6 @@ abstract class Base
 	public function __construct(Market\Export\Run\Processor $processor)
 	{
 		$this->processor = $processor;
-	}
-
-	public function destroy()
-	{
-		$this->processor = null;
-		$this->tag = null;
-		$this->tagParentName = null;
 	}
 
 	/**
@@ -67,19 +57,6 @@ abstract class Base
 	}
 
 	/**
-	 * Инвалидируем лог и хранилище шага по изменениям
-	 *
-	 * @deprecated
-	 */
-	public function invalidate()
-	{
-		$context = $this->getContext();
-		$changes = $this->getChanges();
-
-		$this->invalidateDataStorage($changes, $context);
-	}
-
-	/**
 	 * Очищаем лог и хранилище шага полностью
 	 *
 	 * @param $isStrict bool
@@ -95,16 +72,6 @@ abstract class Base
 	public function getReadyCount()
 	{
 		return null;
-	}
-
-	public function getTotalCount()
-	{
-		return $this->totalCount;
-	}
-
-	public function setTotalCount($count)
-	{
-		$this->totalCount = ($count !== null ? (int)$count : null);
 	}
 
 	/**
@@ -145,7 +112,7 @@ abstract class Base
 		else
 		{
 			$initTime = $this->getParameter('initTime');
-			$isValidInitTime = ($initTime && $initTime instanceof Main\Type\Date);
+			$isValidInitTime = ($initTime instanceof Main\Type\Date);
 
 			switch ($action)
 			{
@@ -176,6 +143,7 @@ abstract class Base
 	/**
 	 * Запускаем шаг
 	 *
+	 * @param $action
 	 * @param $offset
 	 *
 	 * @return Market\Result\Step
@@ -204,7 +172,6 @@ abstract class Base
 		if (!$this->isVirtual())
 		{
 			$this->writeDataFile($storageResultList, $context);
-			$this->writeDataCopyPublic($storageResultList, $context);
 		}
 
 		$this->writeDataLog($tagResultList, $context);
@@ -349,12 +316,6 @@ abstract class Base
 		return null;
 	}
 
-	/**
-	 * Пользовательское события для модификации результата шага через $tagResultList
-	 *
-	 * @param $dataList
-	 * @param $tagResultList Market\Result\XmlNode[]
-	 */
 	protected function writeDataUserEvent($tagResultList, $elementList, array $context = [], array $data = null)
 	{
 		$stepName = $this->getName();
@@ -379,6 +340,7 @@ abstract class Base
 	 * Класс хранилища результовов шага
 	 *
 	 * @return Market\Reference\Storage\Table
+	 * @noinspection PhpReturnDocTypeMismatchInspection
 	 */
 	protected function getStorageDataClass()
 	{
@@ -406,21 +368,6 @@ abstract class Base
 	protected function getStorageRuntime()
 	{
 		return [];
-	}
-
-	/**
-	 * Инвалидириуем результаты выгрузки по изменениям
-	 *
-	 * @deprecated
-	 *
-	 * @param $changes
-	 * @param $context
-	 *
-	 * @throws \Bitrix\Main\ArgumentException
-	 */
-	protected function invalidateDataStorage($changes, $context)
-	{
-		// disabled
 	}
 
 	/**
@@ -458,12 +405,12 @@ abstract class Base
 	/**
 	 * Записываем результат выгрузки в постоянное хранилище
 	 *
-	 * @param $tagResultList Market\Result\XmlNode[]
-	 * @param $tagValuesList Market\Result\XmlValue[]
-	 * @param $elementList
-	 * @param $context
-	 * @param $data
-	 * @param $limit
+	 * @param Market\Result\XmlNode[] $tagResultList
+	 * @param Market\Result\XmlValue[] $tagValuesList
+	 * @param array $elementList
+	 * @param array $context
+	 * @param array|null $data
+	 * @param int|null $limit
 	 *
 	 * @return array
 	 */
@@ -626,7 +573,7 @@ abstract class Base
 		$filter['=ELEMENT_ID'] = $elementIds;
 
 		$this->updateDataStorage($filter, [
-			'TIMESTAMP_X' => new Main\Type\DateTime(),
+			'TIMESTAMP_X' => new Market\Data\Type\CanonicalDateTime(),
 		]);
 	}
 
@@ -649,7 +596,7 @@ abstract class Base
 			'HASH' => '',
 			'PRIMARY' => '',
 			'CONTENTS' => '',
-			'TIMESTAMP_X' => new Main\Type\DateTime(),
+			'TIMESTAMP_X' => new Market\Data\Type\CanonicalDateTime(),
 		];
 
 		$this->updateDataStorage($filter, $fields);
@@ -897,7 +844,7 @@ abstract class Base
 				'limit' => 1
 			]);
 
-			if ($row = $query->fetch())
+			if ($query->fetch())
 			{
 				$result = true;
 			}
@@ -926,7 +873,7 @@ abstract class Base
 			{
 				case 'change':
 				case 'refresh':
-					$filter['>=TIMESTAMP_X'] = $this->getParameter('initTime');
+					$filter['>=TIMESTAMP_X'] = $this->getParameter('initTimeUTC');
 				break;
 			}
 		}
@@ -947,13 +894,11 @@ abstract class Base
 	 */
 	protected function makeStorageDataList($tagResultList, $tagValuesList, $elementList, $context, $data)
 	{
-		$timestamp = new Main\Type\DateTime();
+		$timestamp = new Market\Data\Type\CanonicalDateTime();
 		$result = [];
 
 		foreach ($tagResultList as $elementId => $tagResult)
 		{
-			$rowId = null;
-			$writeAction = null;
 			$element = isset($elementList[$elementId]) ? $elementList[$elementId] : null;
 			$tagValues = isset($tagValuesList[$elementId]) ? $tagValuesList[$elementId] : null;
 
@@ -980,13 +925,9 @@ abstract class Base
 				$fields['PRIMARY'] = $this->getTagResultPrimary($tagResult, $tagValues);
 				$fields['HASH'] = $this->getTagResultHash($tagResult, $tagValues);
 				$fields['CONTENTS'] = $tagResult->getXmlContents();
+			}
 
-				$result[$elementId] = $fields;
-			}
-			else
-			{
-				$result[$elementId] = $fields;
-			}
+			$result[$elementId] = $fields;
 		}
 
 		return $result;
@@ -1044,7 +985,7 @@ abstract class Base
 			if (!$useCollision) { continue; }
 
 			$valueMap = $this->collectChunkCollisionMap($fieldsList, $collisionField);
-			$duplicatesByStatus = $this->checkStoredCollision($valueMap, $collisionField, $context);
+			$duplicatesByStatus = $this->checkStoredCollision($valueMap, $collisionField, $context, array_column($fieldsList, 'ELEMENT_ID', 'ELEMENT_ID'));
 
 			foreach ($duplicatesByStatus as $status => $duplicateMap)
 			{
@@ -1070,22 +1011,11 @@ abstract class Base
 
 	protected function applyDuplicateMap($tagResultList, $fieldsList, $duplicateMap, $collisionField)
 	{
-		if (empty($duplicateMap))
-		{
-			// nothing
-		}
-		else if ($this->getName() === Market\Export\Run\Manager::STEP_OFFER)
-		{
-			$this->registerCollisionError($tagResultList, $duplicateMap, $collisionField);
+		if (empty($duplicateMap)) { return $fieldsList; }
 
-			$fieldsList = $this->applyStatusStorageDataList($fieldsList, $duplicateMap, static::STORAGE_STATUS_DUPLICATE);
-		}
-		else
-		{
-			$this->invalidateTagResultList($tagResultList, $duplicateMap);
+		$this->registerCollisionError($tagResultList, $duplicateMap, $collisionField);
 
-			$fieldsList = $this->applyStatusStorageDataList($fieldsList, $duplicateMap, static::STORAGE_STATUS_FAIL);
-		}
+		$fieldsList = $this->applyStatusStorageDataList($fieldsList, $duplicateMap, static::STORAGE_STATUS_DUPLICATE);
 
 		return $fieldsList;
 	}
@@ -1240,6 +1170,7 @@ abstract class Base
 	 * @param $data array
 	 *
 	 * @return array
+	 * @noinspection PhpUnusedParameterInspection
 	 */
 	protected function getStorageAdditionalData($tagResult, $tagValues, $element, $context, $data)
 	{
@@ -1339,11 +1270,12 @@ abstract class Base
 	 * @param $valueMap array<string, int>
 	 * @param $fieldName string
 	 * @param $context array
+	 * @param $used array
 	 *
 	 * @return array<int, array<string, string>>
 	 * @throws \Bitrix\Main\ArgumentException
 	 */
-	protected function checkStoredCollision($valueMap, $fieldName, $context)
+	protected function checkStoredCollision($valueMap, $fieldName, $context, $used)
 	{
 		$result = [];
 		$dataClass = $this->getStorageDataClass();
@@ -1358,9 +1290,9 @@ abstract class Base
 				$fieldName,
 			];
 
-			if ($this->getRunAction() !== 'full')
+			if ($this->getRunAction() === Market\Export\Run\Processor::ACTION_REFRESH)
 			{
-				$refreshDate = $this->getParameter('initTime');
+				$refreshDate = $this->getParameter('initTimeUTC');
 				$refreshDateString = $refreshDate->format('Y-m-d H:i:s');
 
 				$select[] = 'TIMESTAMP_X';
@@ -1384,7 +1316,10 @@ abstract class Base
 					{
 						$elementId = $valueMap[$fieldValue];
 
-						if ($refreshDateString !== null && $refreshDateString > $row['TIMESTAMP_X'])
+						if (
+							isset($used[$row['ELEMENT_ID']])
+							|| ($refreshDateString !== null && $refreshDateString > $row['TIMESTAMP_X'])
+						)
 						{
 							$status = static::STORAGE_STATUS_DUPLICATE;
 						}
@@ -1667,17 +1602,23 @@ abstract class Base
 
 					$writeResultList = $writer->writeTagList($actionData, $tagParentName);
 
-					if (empty($writeResultList) && $this->isAllowDeleteParent()) // failed write to file, then hasn't parent tag
+					if (empty($writeResultList) && $this->isAllowDeleteParent()) // failed write to file, then parent tag is missing
 					{
 						$parentPath = $this->getTagPath();
-						$chainContents = '<' . $tagParentName . '>' . implode('', $actionData) . '</' . $tagParentName . '>';
+						$needRepeat = [];
+						$pathName = $tagParentName;
 
 						foreach ($parentPath as $parentName => $parentPosition)
 						{
-							$parentWriteResult = $writer->writeTag($chainContents, $parentName, $parentPosition);
+							$parentWriteResult = $writer->writeParent($pathName, $parentName, $parentPosition);
 
 							if ($parentWriteResult)
 							{
+								foreach (array_reverse($needRepeat) as list($missingName, $repeatParent, $repeatPosition))
+								{
+									$writer->writeParent($missingName, $repeatParent, $repeatPosition);
+								}
+
 								break;
 							}
 
@@ -1686,9 +1627,13 @@ abstract class Base
 								|| $parentPosition === Market\Export\Run\Writer\Base::POSITION_PREPEND
 							)
 							{
-								$chainContents = '<' . $parentName . '>' . $chainContents . '</' . $parentName . '>';
+								$needRepeat[] = [ $pathName, $parentName, $parentPosition ];
+
+								$pathName = $parentName;
 							}
 						}
+
+						$writer->writeTagList($actionData, $tagParentName);
 					}
 				break;
 
@@ -1712,73 +1657,6 @@ abstract class Base
 						}
 					}
 				break;
-			}
-		}
-	}
-
-	/**
-	 * Записываем изменения в публичный файл экспорта
-	 *
-	 * @param $storageResultList array[]
-	 * @param $context array
-	 */
-	protected function writeDataCopyPublic($storageResultList, $context)
-	{
-		if (
-			$this->getRunAction() === 'change'
-			&& ($writer = $this->getPublicWriter())
-		)
-		{
-			$updateList = [];
-			$isAllowDelete = $this->isAllowPublicDelete();
-
-			foreach ($storageResultList as $storageResult)
-			{
-				$primary = $storageResult['PRIMARY'];
-
-				if ($storageResult['STATUS'] === static::STORAGE_STATUS_SUCCESS)
-				{
-					$updateList[$primary] = (string)$storageResult['CONTENTS'];
-				}
-				else if ($isAllowDelete && !isset($updateList[$primary]))
-				{
-					$updateList[$primary] = '';
-				}
-			}
-
-			if (!empty($updateList))
-			{
-				$tag = $this->getTag();
-				$tagName = $tag->getName();
-				$primaryName = $this->getTagPrimaryName($tag);
-				$isTagSelfClosed = $tag->isSelfClosed();
-
-				$writer->lock(true);
-
-				// update
-
-				$updateResult = $writer->updateTagList($tagName, $updateList, $primaryName, $isTagSelfClosed);
-
-				// add
-
-				$addList = [];
-
-				foreach ($updateList as $elementId => $contents)
-				{
-					if ($contents !== '' && !isset($updateResult[$elementId]))
-					{
-						$addList[$elementId] = $contents;
-					}
-				}
-
-				if (!empty($addList))
-				{
-					$parentName = $this->getTagParentName();
-
-					$writer->writeTagList($addList, $parentName);
-				}
-
-				$writer->unlock();
 			}
 		}
 	}
@@ -1907,6 +1785,23 @@ abstract class Base
 		];
 	}
 
+	public function after($action)
+	{
+		if ($action === Market\Export\Run\Processor::ACTION_CHANGE)
+		{
+			$this->removeInvalid();
+		}
+		else if ($action === Market\Export\Run\Processor::ACTION_REFRESH)
+		{
+			$this->removeOld();
+		}
+	}
+
+	public function finalize($action)
+	{
+		// nothing by default
+	}
+
 	/**
 	 * Удаляем инвалидированные элементы, которые не попали в выгрузку по изменениям
 	 *
@@ -1923,7 +1818,7 @@ abstract class Base
 			$filter = [
 				'=SETUP_ID' => $context['SETUP_ID'],
 				'!=STATUS' => static::STORAGE_STATUS_DELETE,
-				'<TIMESTAMP_X' => $this->getParameter('initTime')
+				'<TIMESTAMP_X' => $this->getParameter('initTimeUTC')
 			];
 
 			if (!empty($changesFilter))
@@ -1946,7 +1841,7 @@ abstract class Base
 		$filter = [
 			'=SETUP_ID' => $context['SETUP_ID'],
 			'!=STATUS' => static::STORAGE_STATUS_DELETE,
-			'<TIMESTAMP_X' => $this->getParameter('initTime')
+			'<TIMESTAMP_X' => $this->getParameter('initTimeUTC')
 		];
 
 		$this->removeByFilter($filter, $context);
@@ -1978,7 +1873,7 @@ abstract class Base
 			'HASH' => '',
 			'PRIMARY' => '',
 			'CONTENTS' => '',
-			'TIMESTAMP_X' => new Main\Type\DateTime(),
+			'TIMESTAMP_X' => new Market\Data\Type\CanonicalDateTime(),
 		];
 
 		$hasUpdateStorage = $this->updateDataStorage($filter, $updateFields);
@@ -2005,7 +1900,6 @@ abstract class Base
 			$writeList = $this->collectWriteDataStorageResult($updateRows, $exitsRows);
 
 			$this->writeDataFile($writeList, $context);
-			$this->writeDataCopyPublic($writeList, $context);
 		}
 	}
 
@@ -2023,6 +1917,7 @@ abstract class Base
 
 		if ($dataClass !== null && $logEntityType !== null)
 		{
+			/** @noinspection PhpParamsInspection */
 			Market\Logger\Table::deleteBatch([
 				'filter' => [
 					'=ENTITY_TYPE' => $logEntityType,
@@ -2071,16 +1966,6 @@ abstract class Base
 	}
 
 	/**
-	 * Писатель в публичный файл
-	 *
-	 * @return \Yandex\Market\Export\Run\Writer\Base|null
-	 */
-	protected function getPublicWriter()
-	{
-		return $this->getProcessor()->getPublicWriter();
-	}
-
-	/**
 	 * Параметр выполнения
 	 *
 	 * @param $name
@@ -2126,8 +2011,6 @@ abstract class Base
 	 */
 	public function getTag($type = null)
 	{
-		$result = null;
-
 		if ($type !== null)
 		{
 			if (isset($this->typedTagList[$type]))
@@ -2142,19 +2025,16 @@ abstract class Base
 				$this->typedTagList[$type] = $result;
 			}
 		}
+		else if ($this->tag !== null)
+		{
+			$result = $this->tag;
+		}
 		else
 		{
-			if ($this->tag !== null)
-			{
-				$result = $this->tag;
-			}
-			else
-			{
-				$format = $this->getFormat();
-				$result = $this->getFormatTag($format);
+			$format = $this->getFormat();
+			$result = $this->getFormatTag($format);
 
-				$this->tag = $result;
-			}
+			$this->tag = $result;
 		}
 
 		return $result;
@@ -2205,7 +2085,7 @@ abstract class Base
 			$format = $this->getFormat();
 			$parentName = $this->getTagParentName();
 			$rootTag = $format->getRoot();
-			$path = $this->findTagPath($rootTag, $parentName);
+			$path = $this->findTagPath($rootTag, $parentName, $this->useTagPathReverse());
 
 			if ($path === null)
 			{
@@ -2218,21 +2098,30 @@ abstract class Base
 		return $this->tagPath;
 	}
 
+	protected function useTagPathReverse()
+	{
+		return true;
+	}
+
 	/**
 	 * Поиск пути к тегу
 	 *
 	 * @param Market\Export\Xml\Tag\Base $tag
-	 * @param $findName
+	 * @param string $findName
+	 * @param bool $useReverse
 	 *
 	 * @return array|null
 	 */
-	protected function findTagPath(Market\Export\Xml\Tag\Base $tag, $findName)
+	protected function findTagPath(Market\Export\Xml\Tag\Base $tag, $findName, $useReverse = false)
 	{
 		$result = null;
 		$afterTagNameList = [];
+		$children = $tag->getChildren();
+
+		if ($useReverse) { $children = array_reverse($children); }
 
 		/** @var Market\Export\Xml\Tag\Base $child */
-		foreach (array_reverse($tag->getChildren()) as $child) // because gifts require promos, categories and currencies requires offers
+		foreach ($children as $child) // because gifts require promos, categories and currencies requires offers
 		{
 			$childName = $child->getName();
 			$childResult = null;
@@ -2253,7 +2142,11 @@ abstract class Base
 				{
 					foreach (array_reverse($afterTagNameList) as $afterTagName)
 					{
-						$result[$afterTagName] = Market\Export\Run\Writer\Base::POSITION_BEFORE;
+						$result[$afterTagName] = (
+							$useReverse
+								? Market\Export\Run\Writer\Base::POSITION_BEFORE
+								: Market\Export\Run\Writer\Base::POSITION_AFTER
+						);
 					}
 				}
 				else
@@ -2322,10 +2215,11 @@ abstract class Base
 	 * @param $tagDescriptionList
 	 * @param $sourceValues
 	 * @param $context
+	 * @param Market\Export\Xml\Tag\Base $root
 	 *
 	 * @return Market\Result\XmlValue
 	 */
-	protected function buildTagValues($elementId, $tagDescriptionList, $sourceValues, $context)
+	protected function buildTagValues($elementId, $tagDescriptionList, $sourceValues, $context, Market\Export\Xml\Tag\Base $root = null)
 	{
 		$result = new Market\Result\XmlValue();
 
@@ -2334,9 +2228,15 @@ abstract class Base
 			$result->setType($sourceValues['TYPE']);
 		}
 
+		if ($root === null)
+		{
+			$root = $this->getTag();
+		}
+
 		foreach ($tagDescriptionList as $tagDescription)
 		{
 			$tagName = $tagDescription['TAG'];
+			$tag = $root->getId() === $tagName ? $root : $root->getChild($tagName);
 
 			// get values list
 
@@ -2364,7 +2264,7 @@ abstract class Base
 
 			$tagSettings = isset($tagDescription['SETTINGS']) ? $tagDescription['SETTINGS'] : null;
 
-			if ($tagSettings !== null && is_array($tagSettings))
+			if (is_array($tagSettings))
 			{
 				foreach ($tagSettings as $settingName => $setting)
 				{
@@ -2387,7 +2287,7 @@ abstract class Base
 			$valueKeys = array_flip(array_keys($tagValues));
 			$attributeValues = [];
 
-			if (isset($tagDescription['ATTRIBUTES']))
+			if (!empty($tagDescription['ATTRIBUTES']))
 			{
 				foreach ($tagDescription['ATTRIBUTES'] as $attributeName => $attributeSourceMap)
 				{
@@ -2408,12 +2308,40 @@ abstract class Base
 				}
 			}
 
+			// children
+
+			$childrenValues = [];
+
+			if (!empty($tagDescription['CHILDREN']))
+			{
+				$childrenTag = $this->buildTagValues($elementId, $tagDescription['CHILDREN'], $sourceValues, $context);
+
+				if ($tag !== null && $childrenTag->hasMultipleTags() && ($tag->isMultiple() || $tag->isUnion()))
+				{
+					$childrenValueKeys = $childrenTag->getMultipleKeys();
+
+					foreach ($childrenValueKeys as $childrenValueKey)
+					{
+						$childrenValues[$childrenValueKey] = $childrenTag->getMultipleData($childrenValueKey);
+					}
+
+					$valueKeys += array_flip(array_keys($childrenValues));
+				}
+				else if (!empty($valueKeys))
+				{
+					/** @noinspection PhpArrayIndexResetIsUnnecessaryInspection */
+					reset($valueKeys);
+					$childrenValues[key($valueKeys)] = $childrenTag->getTagData();
+				}
+			}
+
 			// export values
 
 			foreach ($valueKeys as $valueKey => $dummy)
 			{
 				$tagValue = isset($tagValues[$valueKey]) ? $tagValues[$valueKey] : null;
-				$isEmptyTagValue = $this->isEmptyXmlValue($tagValue); // is empty
+				$childrenValue = isset($childrenValues[$valueKey]) ? $childrenValues[$valueKey] : null;
+				$isEmptyTagValue = empty($childrenValue) && $this->isEmptyXmlValue($tagValue); // is empty
 				$tagAttributeList = [];
 
 				foreach ($attributeValues as $attributeName => $attributeValue)
@@ -2431,9 +2359,9 @@ abstract class Base
 					}
 				}
 
-				if (!$isEmptyTagValue && !$result->hasTag($tagName, $tagValue, $tagAttributeList))
+				if (!$isEmptyTagValue && !$result->hasTag($tagName, $tagValue, $tagAttributeList, $childrenValue))
 				{
-					$result->addTag($tagName, $tagValue, $tagAttributeList, $tagSettings);
+					$result->addTag($tagName, $tagValue, $tagAttributeList, $tagSettings, $childrenValue);
 				}
 			}
 		}
@@ -2477,15 +2405,13 @@ abstract class Base
 
 	protected function applyValueConflict($elementValue, $conflictAction)
 	{
-		switch ($conflictAction['TYPE'])
+		if ($conflictAction['TYPE'] === 'INCREMENT')
 		{
-			case 'INCREMENT':
-				$result = $elementValue + $conflictAction['VALUE'];
-			break;
-
-			default:
-				$result = $elementValue;
-			break;
+			$result = $elementValue + $conflictAction['VALUE'];
+		}
+		else
+		{
+			$result = $elementValue;
 		}
 
 		return $result;

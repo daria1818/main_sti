@@ -22,7 +22,7 @@ if(isset($_REQUEST['ID']) || !empty($_REQUEST['ID'])) {
 function makeListTimeToWorkAndBreak($value){
     $html = '';
     $ttt = ($value == "0")?'selected':'';
-    $html.= '<option value ="0" '.$ttt.' >Не выбран</option>';
+    $html.= '<option value ="0" '.$ttt.' >'.GetMessage("DELLINDEV_SHIPMENT_CHOOSE_TIME").'</option>';
     for($n = 0;$n<=24;$n++) {
         if ($n == 24 || $n == 0) {
             $changed = ($value == '23:59')?'selected':'';
@@ -51,6 +51,8 @@ function displaySpecOnRender($dataValue){
    return (isset($dataValue['LOADING_TYPE']) && ($dataValue['LOADING_TYPE'] == 'SPEC')) ? ""  : "display:none";
 
 }
+
+
 
 ?>
 
@@ -248,17 +250,18 @@ function displaySpecOnRender($dataValue){
         "BUTTON_CLOSE": "<?=Loc::getMessage("BUTTON_CLOSE")?>",
         "BUTTON_SELECT": "<?=Loc::getMessage("BUTTON_SELECT")?>"
 	});
-
+    BX.Sale.Dellin.DerivalSettings.ajaxUrl = "<?=$componentPath.'/ajax.php'?>";
+		BX.Sale.Dellin.DerivalSettings.serviceAjaxClass = "<?=CUtil::JSEscape($arParams['AJAX_SERVICE_CLASS'])?>";
 	BX.ready(function() {
         let element = document.querySelector('[name="CONFIG[MAIN][PASSWORD]"]');
             element.type = 'password';
         BX.Sale.Dellin.DerivalSettings.ajaxUrl = "<?=$componentPath.'/ajax.php'?>";
 		BX.Sale.Dellin.DerivalSettings.serviceAjaxClass = "<?=CUtil::JSEscape($arParams['AJAX_SERVICE_CLASS'])?>";
-		BX.Sale.Dellin.DerivalSettings.getTerminalDerival();
+		//BX.Sale.Dellin.DerivalSettings.getTerminalDerival();
 		BX.Sale.Dellin.DerivalSettings.displayFieldsOnMethod();
 
-        //Добро пожаловать в костыленд.
-        //Костыль для логов.
+        //пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
+        //пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ.
 		let messageBlock = document.querySelector('#logsMessage');
 
 		let linkLogs = document.createElement('a');
@@ -268,7 +271,7 @@ function displaySpecOnRender($dataValue){
             messageBlock.append(linkLogs);
 
 
-        //Переделка под поведение сайта
+        //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
         //
 
         let blockSpec = document.querySelector('#req');
@@ -347,6 +350,103 @@ function displaySpecOnRender($dataValue){
                 }
             });
 
+        BX.namespace('BX.Sale.Dellin.SettingStates');
+
+        BX.Sale.Dellin.SettingStates = {
+            isLoadingOPF: true,
+            isLoadingCountries: true,
+            isLoadingTerminals: true,
+            isLoadingCounteragents: true,
+            checkAllLoad: function ()
+            {
+                this.isLoading
+            }
+        }
+
+        const manageTabSaveButton = () => {
+
+
+            let buttonSave = document.querySelector('input[type="submit"]');
+
+            if(!buttonSave)
+            {
+                console.warn('ButtonSave is empty');
+                return ;
+            }
+
+            if(buttonSave.disabled || !buttonSave.disabled )
+            {
+                buttonSave.className = (buttonSave.disabled)? 'adm-btn-save' : '';
+                buttonSave.disabled = !buttonSave.disabled;
+            }
+
+
+        }
+
+        const manageTabApplyButton = () => {
+
+            let buttonApply = document.querySelector('input[name="apply"]');
+
+            if(!buttonApply)
+            {
+                console.warn('buttonApply is empty');
+                return ;
+            }
+
+            if(buttonApply.disabled || !buttonApply.disabled)
+            {
+                buttonApply.disabled = !buttonApply.disabled;
+            }
+            
+
+
+        }
+
+        let XMLHttpReqPromise = (method) => 
+        {
+            return new Promise((resolve, reject)=>{
+                method.onload = function() {
+                    if (method.status < 200 || method.status >= 300) {
+                        reject({request: method});
+                    } else {
+                        resolve(method);
+                    }
+                }
+            });
+        }
+        
+        BX.showWait();
+        manageTabApplyButton();
+        manageTabSaveButton();
+
+        //append job in webapi
+        setTimeout(()=>{
+
+            //console.log('terminals',BX.Sale.Dellin.DerivalSettings.getTerminalDerival());
+            //console.log('opf', BX.Sale.Dellin.YuriSettings.getOpfData());
+            //console.log('counteragents', BX.Sale.Dellin.YuriSettings.getCounterAgents());
+
+            let PromiseAllAjaxRequests = Promise.allSettled([
+                XMLHttpReqPromise(BX.Sale.Dellin.DerivalSettings.getTerminalDerival()),
+                //BX.Sale.Dellin.DerivalSettings.getTerminalDerival,
+                XMLHttpReqPromise(BX.Sale.Dellin.YuriSettings.getCounterAgents()),
+              //  BX.Sale.Dellin.YuriSettings.getOpfData,
+                XMLHttpReqPromise(BX.Sale.Dellin.YuriSettings.getOpfData())
+               // BX.Sale.Dellin.YuriSettings.getCounterAgents    
+            ]).then(result => {
+                console.log('Loaded data');
+                BX.closeWait();
+                manageTabApplyButton();
+                manageTabSaveButton();
+            },
+                error => console.error('Error Promise'));
+        }, 0)
+
+        
+
+        
+
+        
 
         // let loadingWork = document.querySelector('#loadingWork');
 		//     loadingWork.addEventListener('change', ()=>{

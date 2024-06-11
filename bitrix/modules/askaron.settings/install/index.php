@@ -25,18 +25,18 @@ class askaron_settings extends CModule
 
 	public $NEED_MODULES = array();
 
-	public function askaron_settings()
+	public function __construct()
 	{
 		$arModuleVersion = array();
 
 		$path = str_replace('\\', '/', __FILE__);
-		$path = substr($path, 0, strlen($path) - strlen('/index.php'));
+		$path = mb_substr($path, 0, mb_strlen($path) - mb_strlen('/index.php'));
 		include($path.'/version.php');
 
 		$check_last = "/local/modules/".$this->MODULE_ID."/install/index.php";
-		$check_last_len = strlen($check_last);
+		$check_last_len = mb_strlen($check_last);
 
-		if ( substr($path, -$check_last_len) == $check_last )
+		if ( mb_substr($path, -$check_last_len) == $check_last )
 		{
 			$this->MY_DIR = "local";
 		}		
@@ -66,7 +66,7 @@ class askaron_settings extends CModule
 				if (!IsModuleInstalled($module))
 					$askaron_settings_global_errors[] = GetMessage('ASKARON_SETTINGS_NEED_MODULES', array('#MODULE#' => $module));
 
-		if ( strlen($this->NEED_MAIN_VERSION) > 0  && version_compare(SM_VERSION, $this->NEED_MAIN_VERSION) < 0)
+		if ( mb_strlen($this->NEED_MAIN_VERSION) > 0  && version_compare(SM_VERSION, $this->NEED_MAIN_VERSION) < 0)
 		{
 			$askaron_settings_global_errors[] = GetMessage( 'ASKARON_SETTINGS_NEED_RIGHT_VER', array('#NEED#' => $this->NEED_MAIN_VERSION) );
 		}

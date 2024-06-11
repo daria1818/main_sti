@@ -1,8 +1,6 @@
 <?php
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) { die(); }
 
-use Yandex\Market;
-
 /** @var $tag \Yandex\Market\Export\Xml\Tag\Base */
 /** @var $attribute \Yandex\Market\Export\Xml\Attribute\Base */
 /** @var $tagValues array */
@@ -58,7 +56,7 @@ else
 ?>
 <tr class="<?= $isAttributePlaceholder ? 'is--hidden' : ''; ?> js-param-node-collection__item" data-plugin="Field.Param.Node" <?= $rowAttributes; ?>>
 	<td class="b-param-table__cell for--label">
-		<input class="js-param-node__input" type="hidden" data-name="ID" <?
+		<input class="js-param-node__input" type="hidden" data-name="ID" <?php
 
 			if (!$isTagPlaceholder && !$isAttributePlaceholder)
 			{
@@ -67,7 +65,7 @@ else
 			}
 
 		?> />
-		<input class="js-param-node__input is--persistent" type="hidden" value="<?= htmlspecialcharsbx($attributeType); ?>" data-name="XML_TYPE" <?
+		<input class="js-param-node__input is--persistent" type="hidden" value="<?= htmlspecialcharsbx($attributeType); ?>" data-name="XML_TYPE" <?php
 
 			if (!$isTagPlaceholder && !$isAttributePlaceholder)
 			{
@@ -75,7 +73,7 @@ else
 			}
 
 		?> />
-		<input class="js-param-node__input is--persistent" type="hidden" value="<?= htmlspecialcharsbx($attributeId); ?>" data-name="XML_ATTRIBUTE_NAME" <?
+		<input class="js-param-node__input is--persistent" type="hidden" value="<?= htmlspecialcharsbx($attributeId); ?>" data-name="XML_ATTRIBUTE_NAME" <?php
 
 			if (!$isTagPlaceholder && !$isAttributePlaceholder)
 			{
@@ -83,16 +81,16 @@ else
 			}
 
 		?> />
-		<?
+		<?php
 		include __DIR__ . '/name.php';
 		?>
 	</td>
 	<td class="b-param-table__cell width--param-source-cell">
-		<?
+		<?php
 		if ($isDefined)
 		{
 			?>
-			<input type="hidden" name="js-param-node__input" value="<?= isset($attributeValue['SOURCE_TYPE']) ? htmlspecialcharsbx($attributeValue['SOURCE_TYPE']) : ''; ?>" data-name="SOURCE_TYPE" <?
+			<input type="hidden" name="js-param-node__input" value="<?= isset($attributeValue['SOURCE_TYPE']) ? htmlspecialcharsbx($attributeValue['SOURCE_TYPE']) : ''; ?>" data-name="SOURCE_TYPE" <?php
 
 				if (!$isTagPlaceholder && !$isAttributePlaceholder)
 				{
@@ -100,10 +98,10 @@ else
 				}
 
 			?> />
-			<?
+			<?php
 		}
 		?>
-		<select class="b-param-table__input js-param-node__source js-param-node__input" <?= $isDefined ? 'disabled' : ''; ?> data-name="SOURCE_TYPE" <?
+		<select class="b-param-table__input js-param-node__source js-param-node__input" <?= $isDefined ? 'disabled' : ''; ?> data-name="SOURCE_TYPE" <?php
 
 			if (!$isTagPlaceholder && !$isAttributePlaceholder)
 			{
@@ -111,7 +109,7 @@ else
 			}
 
 		?>>
-			<?
+			<?php
 			foreach ($arResult['SOURCE_TYPE_ENUM'] as $typeEnum)
 			{
 				if (!isset($availableSources[$typeEnum['ID']])) { continue; }
@@ -129,7 +127,7 @@ else
 
 				?>
 				<option value="<?= $typeEnum['ID'] ?>" <?= $isSelected ? 'selected': ''; ?> <?= $isDefault ? 'data-default="true"' : ''; ?>><?= $typeEnum['VALUE']; ?></option>
-				<?
+				<?php
 			}
 			?>
 		</select>
@@ -144,23 +142,23 @@ else
 		?>
 	</td>
 	<td class="b-param-table__cell">
-		<?
+		<?php
 		if ($isAttribute)
 		{
 			if (!$attribute->isRequired() && !$attribute->isVisible())
 			{
 				?>
-				<button class="adm-btn js-param-node-collection__item-delete spacing--1x3" type="button">-</button>
-				<?
+				<button class="adm-btn js-param-node-collection__item-delete" type="button">-</button>
+				<?php
 			}
 		}
 		else // is tag value
 		{
-			if ($tag->isMultiple() || (!$tag->isRequired() && !$tag->isVisible()))
+			if ($tag->isMultiple() || $tag->isUnion() || (!$tag->isRequired() && !$tag->isVisible()))
 			{
 				?>
-				<button class="adm-btn js-param-tag-collection__item-delete <?= $tag->isRequired() && count($tagValues) <= 1 ? 'is--hidden' : ''; ?> spacing--1x3" type="button">-</button>
-				<?
+				<button class="adm-btn js-param-tag-collection__item-delete level--<?= $tagLevel ?> <?= $tag->isRequired() && count($tagValues) <= 1 ? 'is--hidden' : ''; ?>" type="button">-</button>
+				<?php
 			}
 		}
 		?>

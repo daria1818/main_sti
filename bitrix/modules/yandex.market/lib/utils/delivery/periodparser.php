@@ -131,6 +131,7 @@ class PeriodParser
 			$unit,
 			$unit . '_2',
 			$unit . '_5',
+			$unit . '_SHORT',
 		];
 
 		foreach ($forms as $form)

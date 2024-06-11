@@ -29,39 +29,37 @@ class Collection
 		}
 
 		$result = sprintf('<table %s>', Market\Ui\UserField\Helper\Attributes::stringify($attributes));
+		$valuesCount = count($values);
 
 		foreach ($values as $value)
 		{
+			$isLast = ($valuesCount - 1 === $valueIndex);
 			$itemName = $name . '[' . $valueIndex . ']';
 
 			$result .= '<tr class="js-input-collection__item"><td>';
 			$result .= $renderer($itemName, $value);
 			$result .= ' ';
-			$result .= static::renderDeleteButton();
+			$result .= static::renderRowActions($isLast);
 			$result .= '</td></tr>';
 
 			++$valueIndex;
 		}
 
-		$result .= '<tr><td>';
-		$result .= static::renderAddButton();
-		$result .= '</td></tr>';
+		$result .= static::renderGroupActions();
 		$result .= '</table>';
 
 		return $result;
 	}
 
-	protected static function renderDeleteButton()
+	protected static function renderRowActions($isLast = false)
 	{
-		return sprintf(
-			'<a class="b-remove js-input-collection__delete" href="#"></a>'
-		);
+		return '<a class="b-remove js-input-collection__delete" href="#"></a>';
 	}
 
-	protected static function renderAddButton()
+	protected static function renderGroupActions()
 	{
 		return sprintf(
-			'<input class="js-input-collection__add" type="button" value="%s">',
+			'<tr><td><input class="js-input-collection__add" type="button" value="%s"></td></tr>',
 			Main\Localization\Loc::getMessage('USER_TYPE_PROP_ADD')
 		);
 	}

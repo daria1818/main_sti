@@ -11,6 +11,7 @@ class Summary
 	{
 		if ((string)$template !== '')
 		{
+			$fields = SummaryTemplate::normalizeNames($fields);
 			$fieldKeys = SummaryTemplate::getUsedKeys($template);
 			$usedFields = array_intersect_key($fields, array_flip($fieldKeys));
 			$displayValues = static::getDisplayValues($usedFields, $values);
@@ -25,7 +26,7 @@ class Summary
 			$result = implode(', ', $displayValues);
 		}
 
-		return $result;
+		return trim($result);
 	}
 
 	protected static function getFieldsWithSummary($fields)
@@ -57,11 +58,14 @@ class Summary
 
 		foreach ($fields as $key => $field)
 		{
-			if (!isset($values[$key])) { continue; }
+			$fieldValue = Market\Utils\Field::getChainValue($values, $key);
+
+			if ($fieldValue === null) { continue; }
+			if (!empty($field['HIDDEN']) && $field['HIDDEN'] !== 'N') { continue; }
+			if (isset($field['DEPEND']) && !Market\Utils\UserField\DependField::test($field['DEPEND'], $values)) { continue; }
 
 			$hasSummaryTemplate = !empty($field['SETTINGS']['SUMMARY']) && is_string($field['SETTINGS']['SUMMARY']);
 			$isMultiple = (isset($field['MULTIPLE']) && $field['MULTIPLE'] !== 'N');
-			$fieldValue = $values[$key];
 
 			if ($hasSummaryTemplate && $isMultiple)
 			{

@@ -47,6 +47,11 @@ class ExportDate
 			}
 		}
 
+		if ($result instanceof Market\Data\Type\CanonicalDateTime)
+		{
+			$result->setServerTimeZone();
+		}
+
 		return $result;
 	}
 }

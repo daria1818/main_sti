@@ -117,6 +117,8 @@ class DellinBlockAdmin
                 if(!$basketItem->canBuy() || $basketItem->isDelay())
                     continue;
 
+                if($basketItem->isBundleChild())
+                    continue;
 
                 $dimensions = $basketItem->getField('DIMENSIONS');
 
@@ -135,7 +137,7 @@ class DellinBlockAdmin
                     'quantity' => $item->getQuantity(),
                     'unitWeight' => 'G',
                     'weight' => $basketItem->getWeight(),
-                    'unitDemensions' => '��',
+                    'unitDemensions' => Loc::getMessage("DELLINDEV_SHIPMENT_MM"),
                     'lenght' => $length,
                     'width' => $width,
                     'height' => $height,
@@ -209,7 +211,7 @@ class DellinBlockAdmin
     private static function getDefaultDate($method_id){
 
         $configParams = \Bitrix\Sale\Delivery\Services\Manager::getById($method_id);
-        $deliveryDelay = $configParams['CONFIG']['CARGO']['DAYDELAY'];
+        $deliveryDelay = (int)$configParams['CONFIG']['CARGO']['DAYDELAY'];
         $produceDate = date("d.m.Y",
             mktime(0, 0, 0, date("m"),
                 date("d") + $deliveryDelay, date("Y")));
@@ -357,11 +359,12 @@ class DellinBlockAdmin
 
         foreach($collection->getShipmentItemCollection() as $item){
 
-            $basketItem = $item->getBasketItem();
-
+            $basketItem = $item->getBasketItem();           
             if(!$basketItem->canBuy() || $basketItem->isDelay())
                 continue;
 
+            if($basketItem->isBundleChild())
+                continue;
 
             $dimensions = $basketItem->getField('DIMENSIONS');
 
@@ -384,7 +387,7 @@ class DellinBlockAdmin
                         'quantity' => $item->getQuantity(),
                         'unitWeight' => 'G',
                         'weight' => $basketItem->getWeight(),
-                        'unitDemensions' => 'MM',
+                        'unitDemensions' => Loc::getMessage("DELLINDEV_SHIPMENT_MM"),
                         'lenght' => $length,
                         'width' => $width,
                         'height' => $height,
@@ -619,9 +622,7 @@ class DellinBlockAdmin
         $cityName = $locationData['CITY_NAME_ORIG'];
         $price = $order->getPrice();
         $shipmentCost = $order->getDeliveryPrice();
-		if($personName = $props->getPayerName()){
         $personName = $props->getPayerName()->getValue();
-		}
 //        $personPhone = $props->getItemByOrderPropertyCode('PHONE')->getValue();
 //        $personAddress = $props->getItemByOrderPropertyCode('ADDRESS')->getValue();
 //        $terminal_id = $props->getItemByOrderPropertyCode('TERMINAL_ID')->getValue();
@@ -644,7 +645,9 @@ class DellinBlockAdmin
 
         foreach( $mapProps as $varName => $propName){
             $obj = $props->getItemByOrderPropertyCode($propName);
-            if(method_exists($obj, 'getValue')){
+            if(is_null($obj)){
+                ${$varName} = '';
+            } else if(method_exists($obj, 'getValue')){
                 ${$varName} = $obj->getValue();
             } else {
                 ${$varName} = '';
@@ -673,7 +676,7 @@ class DellinBlockAdmin
             'regionName' => $regionName
         ];
 
-        if (self::isYuriPerson($personType) && $props->getItemByOrderPropertyCode('COMPANY'))
+        if (self::isYuriPerson($personType))
         {
 
             $result['companyInfo'] = [

@@ -28,10 +28,13 @@ class ShipmentSchedule extends TradingService\Reference\Options\Fieldset
 		return $this->getFieldsetCollection('SCHEDULE');
 	}
 
-	/** @return string|null */
-	public function getShipmentDelay()
+	public function getAssemblyDelay()
 	{
-		return $this->getValue('SHIPMENT_DELAY');
+		/** @var AssemblyDelayOption $assemblyDelay */
+		$assemblyDelay = $this->getFieldset('ASSEMBLY_DELAY');
+		$assemblyDelay->disableUseDefaults();
+
+		return $assemblyDelay;
 	}
 
 	/** @return HolidayOption */
@@ -40,15 +43,35 @@ class ShipmentSchedule extends TradingService\Reference\Options\Fieldset
 		return $this->getFieldset('HOLIDAY');
 	}
 
+	protected function applyValues()
+	{
+		$this->applyShipmentDelayToAssembly();
+		$this->getAssemblyDelay()->applyTimeValue($this->getSchedule());
+	}
+
+	protected function applyShipmentDelayToAssembly()
+	{
+		$shipmentDelay = (string)$this->getValue('SHIPMENT_DELAY');
+		$assemblyDelay = $this->getAssemblyDelay();
+
+		if ($shipmentDelay === '' || !$assemblyDelay->isEmpty()) { return; }
+
+		$assemblyDelay->setValues([
+			'TIME' => $shipmentDelay,
+		]);
+		unset($this->values['SHIPMENT_DELAY']);
+	}
+
 	public function getFieldDescription(TradingEntity\Reference\Environment $environment, $siteId)
 	{
 		return parent::getFieldDescription($environment, $siteId) + [
 			'SETTINGS' => [
-				'SUMMARY' => '#SCHEDULE#',
+				'SUMMARY' => '#SCHEDULE# (#HOLIDAY.CALENDAR#)',
 				'PLACEHOLDER' => self::getMessage('PLACEHOLDER'),
 				'LAYOUT' => 'summary',
 				'MODAL_WIDTH' => 600,
 				'MODAL_HEIGHT' => 450,
+				'VALIGN_PUSH' => 'pill',
 			],
 		];
 	}
@@ -69,10 +92,10 @@ class ShipmentSchedule extends TradingService\Reference\Options\Fieldset
 				'GROUP' => self::getMessage('SCHEDULE_GROUP'),
 				'HELP_MESSAGE' => self::getMessage('SCHEDULE_HELP'),
 			],
-			'SHIPMENT_DELAY' => [
-				'TYPE' => 'time',
-				'NAME' => self::getMessage('SHIPMENT_DELAY'),
-				'HELP_MESSAGE' => self::getMessage('SHIPMENT_DELAY_HELP'),
+			'ASSEMBLY_DELAY' => $this->getAssemblyDelay()->getFieldDescription($environment, $siteId) + [
+				'TYPE' => 'fieldset',
+				'NAME' => self::getMessage('ASSEMBLY_DELAY'),
+				'HELP_MESSAGE' => self::getMessage('ASSEMBLY_DELAY_HELP'),
 			],
 		];
 	}
@@ -88,6 +111,19 @@ class ShipmentSchedule extends TradingService\Reference\Options\Fieldset
 		{
 			$key = sprintf('HOLIDAY[%s]', $name);
 			$overrides = $this->getHolidayFieldOverrides($name);
+
+			if (isset($field['DEPEND']))
+			{
+				$newDepend = [];
+
+				foreach ($field['DEPEND'] as $dependName => $rule)
+				{
+					$newName = sprintf('[HOLIDAY][%s]', $dependName);
+					$newDepend[$newName] = $rule;
+				}
+
+				$field['DEPEND'] = $newDepend;
+			}
 
 			$result[$key] = $overrides + $field + $defaults;
 		}
@@ -127,6 +163,7 @@ class ShipmentSchedule extends TradingService\Reference\Options\Fieldset
 	{
 		return [
 			'HOLIDAY' => HolidayOption::class,
+			'ASSEMBLY_DELAY' => AssemblyDelayOption::class,
 		];
 	}
 }

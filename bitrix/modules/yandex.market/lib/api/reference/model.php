@@ -27,6 +27,16 @@ abstract class Model extends Market\Reference\Common\Model
 		return $this->getField('id');
 	}
 
+	public function hasField($name)
+	{
+		return Market\Utils\Field::hasChainValue($this->fields, $name);
+	}
+
+	public function getField($name)
+	{
+		return Market\Utils\Field::getChainValue($this->fields, $name);
+	}
+
 	public function getRequiredField($name)
 	{
 		$value = $this->getField($name);

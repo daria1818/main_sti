@@ -4,6 +4,8 @@ use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 use Yandex\Market;
 
+define('NOT_CHECK_PERMISSIONS', true); // allow from crm
+
 require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/prolog_admin_before.php';
 
 Main\Localization\Loc::loadMessages(__FILE__);
@@ -41,6 +43,4 @@ catch (Main\SystemException $exception)
 	];
 }
 
-echo Main\Web\Json::encode($response);
-
-require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/epilog_admin_after.php';
+Market\Utils\HttpResponse::sendJson($response);

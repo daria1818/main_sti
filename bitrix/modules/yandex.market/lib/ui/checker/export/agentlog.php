@@ -23,6 +23,12 @@ class AgentLog extends Checker\Reference\AbstractTest
 			$result->addError($error);
 		}
 
+		foreach ($this->getLogRecords(Market\Logger\Level::ERROR) as $logRecord)
+		{
+			$error = $this->makeError($logRecord);
+			$result->addError($error);
+		}
+
 		foreach ($this->getLogRecords(Market\Logger\Level::WARNING) as $logRecord)
 		{
 			$error = $this->makeError($logRecord);

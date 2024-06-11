@@ -8,72 +8,93 @@ use Yandex\Market\Reference\Assert;
 use Yandex\Market\Trading\Setup as TradingSetup;
 use Yandex\Market\Trading\Service as TradingService;
 
-class EditForm extends Market\Component\Plain\EditForm
+class EditForm extends Market\Component\TradingActivityView\EditForm
 {
-	public function load($primary, array $select = [], $isCopy = false)
-	{
-		$service = $this->getSetup()->wakeupService();
-		$options = $service->getOptions();
-
-		if (Market\Trading\State\SessionCache::has('order', $primary))
-		{
-			$orderClassName = $service->getModelFactory()->getOrderClassName();
-			$fields = Market\Trading\State\SessionCache::get('order', $primary);
-
-			$order = $orderClassName::initialize($fields);
-		}
-		else
-		{
-			$orderFacade = $service->getModelFactory()->getOrderFacadeClassName();
-
-			$order = $orderFacade::load($options, $primary);
-		}
-
-		return $this->getActivity()->getValues($order);
-	}
-
-	public function add($fields)
-	{
-		throw new Main\NotSupportedException();
-	}
+	use Market\Reference\Concerns\HasMessage;
 
 	public function update($primary, $fields)
 	{
 		$result = new Main\Entity\UpdateResult();
-		$tradingInfo = $this->getTradingInfo($primary);
+		$hasSuccess = false;
+		$groupPrimaries = $this->getGroupPrimary($primary);
+		$onlyOne = count($groupPrimaries) === 1;
 
-		$procedure = new Market\Trading\Procedure\Runner(
-			Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER,
-			$tradingInfo['ACCOUNT_NUMBER']
-		);
-
-		try
+		foreach ($groupPrimaries as $onePrimary)
 		{
-			$procedure->run(
-				$this->getSetup(),
-				$this->getActionPath(),
-				$this->getActivity()->getPayload($fields) + $this->getTradingPayload($tradingInfo)
+			$activity = $this->getActivity();
+			$entityType = $activity->getSourceType();
+			$tradingInfo = $this->getTradingInfo($entityType, $onePrimary);
+
+			$procedure = new Market\Trading\Procedure\Runner(
+				$entityType,
+				$tradingInfo['ACCOUNT_NUMBER']
 			);
-		}
-		catch (Market\Exceptions\Trading\NotImplementedAction $exception)
-		{
-			$result->addError(new Main\Error($exception->getMessage()));
-		}
-		catch (Market\Exceptions\Api\Request $exception)
-		{
-			$result->addError(new Main\Error($exception->getMessage()));
-		}
-		catch (\Exception $exception)
-		{
-			$procedure->logException($exception);
 
-			$result->addError(new Main\Error($exception->getMessage()));
+			try
+			{
+				$procedure->run(
+					$this->getSetup(),
+					$this->getActionPath(),
+					$this->getActivity()->getPayload($fields) + $this->getTradingPayload($entityType, $tradingInfo)
+				);
+
+				$hasSuccess = true;
+			}
+			catch (Market\Exceptions\Trading\NotImplementedAction $exception)
+			{
+				$result->addError(new Main\Error($exception->getMessage()));
+			}
+			catch (Market\Exceptions\Api\Request $exception)
+			{
+				$exceptionMessage = $exception->getMessage();
+				$message = $onlyOne ? $exceptionMessage : self::getMessage('PROCEDURE_ERROR', [
+					'#ORDER_ID#' => $onePrimary,
+					'#MESSAGE#' => $exceptionMessage,
+				], $exceptionMessage);
+
+				$result->addError(new Main\Error($message));
+			}
+			catch (\Exception $exception)
+			{
+				$procedure->logException($exception);
+
+				$result->addError(new Main\Error($exception->getMessage()));
+			}
+		}
+
+		if ($hasSuccess)
+		{
+			Market\Trading\State\SessionCache::releaseByType('order');
 		}
 
 		return $result;
 	}
 
-	protected function getTradingInfo($primary)
+	protected function getGroupPrimary($default)
+	{
+		$group = $this->getComponentParam('GROUP_PRIMARY');
+
+		return is_array($group) ? $group : [$default];
+	}
+
+	protected function getTradingInfo($entityType, $primary)
+	{
+		if ($entityType === Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER)
+		{
+			$result = $this->getOrderTradingInfo($primary);
+		}
+		else
+		{
+			$result = [
+				'ID' => $primary,
+				'ACCOUNT_NUMBER' => $primary,
+			];
+		}
+
+		return $result;
+	}
+
+	protected function getOrderTradingInfo($primary)
 	{
 		$platform = $this->getSetup()->getPlatform();
 		$orderRegistry = $this->getSetup()->getEnvironment()->getOrderRegistry();
@@ -85,46 +106,40 @@ class EditForm extends Market\Component\Plain\EditForm
 		];
 	}
 
-	protected function getTradingPayload(array $tradingInfo)
+	protected function getTradingPayload($entityType, array $tradingInfo)
+	{
+		if ($entityType === Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER)
+		{
+			$result = $this->getOrderTradingPayload($tradingInfo);
+		}
+		else if ($entityType === Market\Trading\Entity\Registry::ENTITY_TYPE_LOGISTIC_SHIPMENT)
+		{
+			$result = $this->getShipmentTradingPayload($tradingInfo);
+		}
+		else
+		{
+			$result = [];
+		}
+
+		return $result + [
+			'immediate' => true,
+		];
+	}
+
+	protected function getOrderTradingPayload(array $tradingInfo)
 	{
 		return [
 			'internalId' => $tradingInfo['INTERNAL_ORDER_ID'],
 			'orderId' => $tradingInfo['EXTERNAL_ORDER_ID'],
 			'orderNum' => $tradingInfo['ACCOUNT_NUMBER'],
-			'immediate' => true,
 		];
 	}
 
-	/** @return TradingSetup\Model */
-	protected function getSetup()
+	protected function getShipmentTradingPayload(array $tradingInfo)
 	{
-		$action = $this->getComponentParam('TRADING_SETUP');
-
-		Assert::notNull($action, 'TRADING_SETUP');
-		Assert::typeOf($action, TradingSetup\Model::class, 'TRADING_SETUP');
-
-		return $action;
-	}
-
-	/** @return string */
-	protected function getActionPath()
-	{
-		$path = $this->getComponentParam('TRADING_PATH');
-
-		Assert::notNull($path, 'TRADING_PATH');
-
-		return (string)$path;
-	}
-
-	/** @return TradingService\Reference\Action\DataAction */
-	protected function getAction()
-	{
-		$action = $this->getComponentParam('TRADING_ACTION');
-
-		Assert::notNull($action, 'TRADING_ACTION');
-		Assert::typeOf($action, TradingService\Reference\Action\DataAction::class, 'TRADING_ACTION');
-
-		return $action;
+		return [
+			'shipmentId' => $tradingInfo['ID'],
+		];
 	}
 
 	/** @return TradingService\Reference\Action\FormActivity */

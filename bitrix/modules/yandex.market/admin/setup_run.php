@@ -87,7 +87,7 @@ if ($requestAction)
 						$setup->handleRefresh(false);
 					}
 
-					Market\Export\Run\Manager::releaseChanges($setupId, $initTime);
+					Market\Watcher\Track\StampFacade::shift(Market\Glossary::SERVICE_EXPORT, $setupId);
 
 					Market\Export\Run\Admin::setTimeLimit($timeLimit);
 					Market\Export\Run\Admin::setTimeSleep($timeSleep);
@@ -100,15 +100,7 @@ if ($requestAction)
 					Market\Environment::stamp();
 					Market\Export\Run\Admin::release($setupId);
 
-					if ($setup->hasFullRefresh())
-					{
-						$setup->handleRefresh(true);
-					}
-
-					if ($setup->isAutoUpdate())
-					{
-						$setup->handleChanges(true);
-					}
+					$setup->updateListener();
 
 					$response['status'] = 'ok';
 					$response['message'] = '<div class="b-admin-message-list compensate--spacing message-width--auto">';
@@ -125,9 +117,29 @@ if ($requestAction)
 
 					$adminMessage = new CAdminMessage(array(
 						'MESSAGE' => Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_TITLE'),
-						'DETAILS' => Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_DETAILS', [
-							'#URL#' => $setup->getFileRelativePath()
-						]),
+						'DETAILS' => sprintf(
+							'<div class="b-grid gutter--centi">
+								<div class="b-grid__item">
+									<a class="b-link-complex" href="%1$s" download>
+										<svg class="b-icon size--small b-link-complex__icon" width="10" height="10">
+											<use xlink:href="/bitrix/images/yandex.market/yml-actions.svg#download"></use>
+										</svg>
+										<span class="b-link-complex__target">%2$s</span>
+									</a> 
+								</div>
+								<div class="b-grid__item">
+									<a class="b-link-complex" href="%1$s" target="_blank">
+										<svg class="b-icon size--small b-link-complex__icon" width="10" height="10">
+											<use xlink:href="/bitrix/images/yandex.market/yml-actions.svg#launch"></use>
+										</svg>
+										<span class="b-link-complex__target">%3$s</span>
+									</a>
+								</div>
+							</div>',
+							$setup->getFileRelativePath(),
+							Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_DOWNLOAD'),
+							Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_OPEN')
+						),
 						'TYPE' => 'OK',
 						'HTML' => true
 					));
@@ -135,23 +147,54 @@ if ($requestAction)
 					$response['message'] .= $adminMessage->Show();
 					$response['message'] .= '</div>';
 
-					// log
+					// copy url
 
-					$queryLog = Market\Logger\Table::getList([
-						'filter' => [
-							'=ENTITY_TYPE' => [
-								Market\Logger\Table::ENTITY_TYPE_EXPORT_RUN_ROOT,
-								Market\Logger\Table::ENTITY_TYPE_EXPORT_RUN_OFFER,
-								Market\Logger\Table::ENTITY_TYPE_EXPORT_RUN_CATEGORY,
-								Market\Logger\Table::ENTITY_TYPE_EXPORT_RUN_CURRENCY,
-							],
-							'=ENTITY_PARENT' => $setupId
+					$response['message'] .= '<div class="b-admin-text-message spacing--1x1">';
+					$response['message'] .= '<input type="text" value="' . htmlspecialcharsbx($setup->getFileUrl()) . '" size="50" /> ';
+					$response['message'] .= '<button class="adm-btn js-plugin-click" type="button" data-plugin="Ui.Input.CopyClipboard">' . Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_COPY_LINK') . '</button>';
+					$response['message'] .= '</div>';
+
+					// statistic
+
+					$queryStatistic = Market\Export\Run\Storage\OfferTable::getList([
+						'filter' => [ '=SETUP_ID' => $setup->getId() ],
+						'group' => [ 'STATUS' ],
+						'select' => [ 'STATUS', 'CNT' ],
+						'runtime' => [
+							new Main\Entity\ExpressionField('CNT', 'COUNT(*)')
 						],
-						'select' => [ 'ENTITY_PARENT' ],
-						'limit' => 1,
 					]);
 
-					if ($queryLog->fetch())
+					$statistic = $queryStatistic->fetchAll();
+					$statistic = array_column($statistic, 'CNT', 'STATUS');
+					$usedStatuses = [
+						Market\Export\Run\Steps\Base::STORAGE_STATUS_SUCCESS,
+						Market\Export\Run\Steps\Base::STORAGE_STATUS_DUPLICATE,
+						Market\Export\Run\Steps\Base::STORAGE_STATUS_FAIL,
+					];
+					$hasErrors = false;
+
+					$response['message'] .= '<div class="b-admin-text-message spacing--1x1">';
+
+					foreach ($usedStatuses as $statusId)
+					{
+						$count = isset($statistic[$statusId]) ? (int)$statistic[$statusId] : 0;
+
+						if ($count === 0 && $statusId !== Market\Export\Run\Steps\Base::STORAGE_STATUS_SUCCESS) { continue; }
+
+						if ($count > 0 && $statusId !== Market\Export\Run\Steps\Base::STORAGE_STATUS_SUCCESS)
+						{
+							$hasErrors = true;
+						}
+
+						$response['message'] .= '<div class="spacing--1x4">';
+						$response['message'] .= Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_STAT_' . $statusId, [
+							'#COUNT#' => $count,
+						]);
+						$response['message'] .= '</div>';
+					}
+
+					if ($hasErrors)
 					{
 						$logQuery = [
 							'lang' => LANGUAGE_ID,
@@ -167,20 +210,13 @@ if ($requestAction)
 
 						$logUrl = 'yamarket_log.php?' . http_build_query($logQuery);
 
-						$response['message'] .=
-							PHP_EOL
-							. '<div class="b-admin-text-message spacing--1x2">'
-							. Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_LOG', [
-								'#URL#' => htmlspecialcharsbx($logUrl)
-							])
-							. '</div>';
+						$response['message'] .= '<div class="spacing--1x4">';
+						$response['message'] .= Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_SUCCESS_LOG', [
+							'#URL#' => htmlspecialcharsbx($logUrl),
+						]);
+						$response['message'] .= '</div>';
 					}
 
-					// copy url
-
-					$response['message'] .= '<div class="b-admin-text-message spacing--1x1">';
-					$response['message'] .= '<input type="text" value="' . htmlspecialcharsbx($setup->getFileUrl()) . '" size="50" /> ';
-					$response['message'] .= '<button class="adm-btn js-plugin-click" type="button" data-plugin="Ui.Input.CopyClipboard">' . Market\Config::getLang('ADMIN_SETUP_RUN_ACTION_RUN_COPY_LINK') . '</button>';
 					$response['message'] .= '</div>';
 				}
 				else if ($processResult->isSuccess())
@@ -353,9 +389,7 @@ if ($requestAction)
 
 	if ($request->isAjaxRequest())
 	{
-		$APPLICATION->RestartBuffer();
-		echo Market\Utils::jsonEncode($response, JSON_UNESCAPED_UNICODE);
-		die();
+		Market\Utils\HttpResponse::sendJson($response);
 	}
 	else
 	{

@@ -8,10 +8,15 @@ class Registry
 {
 	const FUNCTION_NOT = 'not';
 	const FUNCTION_SUM = 'sum';
+	const FUNCTION_TOTAL = 'total';
 	const FUNCTION_SUBTRACT = 'subtract';
 	const FUNCTION_MULTIPLY = 'multiply';
 	const FUNCTION_IF = 'if';
 	const FUNCTION_FIRST = 'first';
+	const FUNCTION_CHARACTERISTIC = 'characteristic';
+	const FUNCTION_ROUND = 'round';
+	const FUNCTION_FLOOR = 'floor';
+	const FUNCTION_CEIL = 'ceil';
 
 	protected static $typeMap;
 
@@ -20,10 +25,15 @@ class Registry
 		return [
 			static::FUNCTION_NOT,
 			static::FUNCTION_SUM,
+			static::FUNCTION_TOTAL,
 			static::FUNCTION_SUBTRACT,
 			static::FUNCTION_MULTIPLY,
 			static::FUNCTION_IF,
 			static::FUNCTION_FIRST,
+			static::FUNCTION_CHARACTERISTIC,
+			static::FUNCTION_ROUND,
+			static::FUNCTION_FLOOR,
+			static::FUNCTION_CEIL
 		];
 	}
 

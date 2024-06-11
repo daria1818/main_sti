@@ -107,7 +107,10 @@ class CalculateHandler
                 $result->addError(new \Bitrix\Main\Error($configClass->priceError));
             }
 
-            $result->setPeriodDescription($deliveryProfileData['data'][$type]['time']);
+            $time = (isset($deliveryProfileData['data'][$type]['time']['value']))?
+                $deliveryProfileData['data'][$type]['time']['value'].' '.$deliveryProfileData['data'][$type]['time']['unit']
+                :$deliveryProfileData['data'][$type]['time'];
+            $result->setPeriodDescription($time);
 
             if(isset($deliveryProfileData['data']['debug'])){
                 $debugAnswer = $deliveryProfileData['data']['debug'];

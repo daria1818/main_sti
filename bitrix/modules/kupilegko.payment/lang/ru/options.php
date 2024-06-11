@@ -30,3 +30,6 @@ $MESS['ALFABANK_TAX_DEFAULT_VALUE_6'] = 'НДС чека по ставке 20%';
 $MESS['ALFABANK_TAX_DEFAULT_VALUE_7'] = 'НДС чека по ставке 20/120';
 
 $MESS['CALLBACK_REDIRECT_BROADCAST_DESCRIPTION'] = 'URL для перенаправления callback-уведомления';
+
+$MESS['ALFABANK_CANCEL_ORDER_BY_TIMEOUT_DESCRIPTION'] = 'Отменять заказ в магазине, при получении коллбека с операцией "отклонен по таймауту"';
+$MESS['ALFABANK_CANCEL_ORDER_BY_TIMEOUT_LABEL'] = 'Функция отмены заказа включена';

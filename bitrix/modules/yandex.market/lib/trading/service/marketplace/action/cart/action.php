@@ -4,23 +4,29 @@ namespace Yandex\Market\Trading\Service\Marketplace\Action\Cart;
 
 use Yandex\Market;
 use Bitrix\Main;
-use Yandex\Market\Trading\Entity as TradingEntity;
 use Yandex\Market\Trading\Service as TradingService;
 
 /** @property TradingService\Marketplace\Provider $provider */
 class Action extends TradingService\Common\Action\Cart\Action
 {
+	use TradingService\Marketplace\Concerns\Action\HasBasketStoreData;
 	use TradingService\Marketplace\Concerns\Action\HasBasketWarehouses;
-
-	protected static function includeMessages()
-	{
-		Main\Localization\Loc::loadMessages(__FILE__);
-		parent::includeMessages();
-	}
 
 	protected function createRequest(Main\HttpRequest $request, Main\Server $server)
 	{
 		return new Request($request, $server);
+	}
+
+	public function checkAuthorization()
+	{
+		try
+		{
+			parent::checkAuthorization();
+		}
+		catch (Market\Exceptions\Trading\AccessDenied $exception)
+		{
+			throw new Market\Exceptions\Trading\PingDenied($exception->getMessage());
+		}
 	}
 
 	protected function getPriceCalculationMode()
@@ -32,8 +38,6 @@ class Action extends TradingService\Common\Action\Cart\Action
 	{
 		$this->collectTaxSystem();
 		$this->collectItems();
-
-		$this->applySelfTest();
 	}
 
 	protected function collectItems()
@@ -71,7 +75,9 @@ class Action extends TradingService\Common\Action\Cart\Action
 				if ($basketQuantity > 0 && $basketResult->isSuccess())
 				{
 					$hasValidItems = true;
-					$responseItem['count'] = $basketQuantity;
+					$ratio = isset($this->basketPackRatio[$itemIndex]) ? $this->basketPackRatio[$itemIndex] : 1;
+
+					$responseItem['count'] = (int)floor($basketQuantity / $ratio);
 					$responseItem['vat'] = Market\Data\Vat::convertForService($basketData['VAT_RATE']);
 					$responseItem['delivery'] = true;
 				}
@@ -86,21 +92,5 @@ class Action extends TradingService\Common\Action\Cart\Action
 		{
 			$this->response->setField('cart.items', []);
 		}
-	}
-
-	protected function applySelfTest()
-	{
-		$this->applySelfTestOutOfStock();
-	}
-
-	protected function applySelfTestOutOfStock()
-	{
-		if (!$this->provider->getOptions()->getSelfTestOption()->isOutOfStock()) { return; }
-
-		$this->response->setField('cart.items', []);
-
-		$this->provider->getLogger()->warning(static::getLang(
-			'TRADING_MARKETPLACE_CART_SELF_TEST_OUT_OF_STOCK_ON'
-		));
 	}
 }

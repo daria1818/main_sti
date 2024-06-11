@@ -38,8 +38,10 @@ class User extends Market\Trading\Entity\Reference\User
 		$filters = $this->getSearchFilters();
 		$result = null;
 
-		foreach ($filters as $filter)
+		foreach ($filters as $type => $filter)
 		{
+			if (!$this->canSearch($type)) { continue; }
+
 			$query = Main\UserTable::getList([
 				'filter' => $filter,
 				'select' => [ 'ID' ],
@@ -56,6 +58,14 @@ class User extends Market\Trading\Entity\Reference\User
 		return $result;
 	}
 
+	protected function canSearch($field)
+	{
+		if ($field === 'XML_ID') { return true; }
+		if ($this->getPhoneFieldName() === $field) { return parent::canSearch('PHONE'); }
+
+		return parent::canSearch($field);
+	}
+
 	protected function getSearchFilters()
 	{
 		$filters = $this->fillSearchFilters();
@@ -70,6 +80,12 @@ class User extends Market\Trading\Entity\Reference\User
 		$xmlId = (string)$this->getXmlId();
 		$email = isset($this->data['EMAIL']) ? trim($this->data['EMAIL']) : '';
 		$phone = isset($this->data['PHONE']) ? trim($this->data['PHONE']) : '';
+		list($payer) = $this->extractPayerField($this->data);
+		$nameFilter = $this->makeNameSearchFilter((array)$payer, [
+			'NAME' => true,
+			'LAST_NAME' => true,
+			'SECOND_NAME' => false,
+		]);
 
 		if ($xmlId !== '')
 		{
@@ -100,7 +116,47 @@ class User extends Market\Trading\Entity\Reference\User
 			$filters[$phoneField] = [ '=' . $phoneField => $phoneFormatted ];
 		}
 
+		// name
+
+		if ($nameFilter !== null)
+		{
+			$filters['NAME'] = $nameFilter;
+		}
+
 		return $filters;
+	}
+
+	protected function makeNameSearchFilter(array $payer, array $fields)
+	{
+		$result = [];
+
+		foreach ($fields as $field => $required)
+		{
+			$value = isset($payer[$field]) ? trim($payer[$field]) : '';
+
+			if ($value !== '')
+			{
+				if ($required)
+				{
+					$result['=' . $field] = $value;
+				}
+				else
+				{
+					$result[] = [
+						'LOGIC' => 'OR',
+						[ '=' . $field => $value ],
+						[ $field => false ],
+					];
+				}
+			}
+			else if ($required)
+			{
+				$result = null;
+				break;
+			}
+		}
+
+		return $result;
 	}
 
 	protected function sortSearchFiltersByPriority($filters)
@@ -387,7 +443,7 @@ class User extends Market\Trading\Entity\Reference\User
 		$bottomLengthLimit = 3;
 		$topLengthLimit = 47;
 
-		if ($topLengthLimit > 47)
+		if ($loginLength > 47)
 		{
 			$loginLength = $topLengthLimit;
 			$login = Market\Data\TextString::getSubstring($login, 0, $topLengthLimit);
@@ -506,7 +562,7 @@ class User extends Market\Trading\Entity\Reference\User
 		}
 		else
 		{
-			$result = trim(Main\Context::getCurrent()->getRequest()->getHttpHost());
+			$result = trim(Market\Utils\Url::httpHost());
 
 			if ($result === '')
 			{
@@ -638,7 +694,7 @@ class User extends Market\Trading\Entity\Reference\User
 
 	protected function createRandomPhone()
 	{
-		return '+74950000000';
+		return '+79000000000';
 	}
 
 	protected function existsPhone($phone)
@@ -692,7 +748,7 @@ class User extends Market\Trading\Entity\Reference\User
 
 	protected function randomizePhone($phone)
 	{
-		$replacesLimit = 4;
+		$replacesLimit = 7;
 		$replacesCount = 0;
 		$phoneLength = Market\Data\TextString::getLength($phone);
 
@@ -742,6 +798,14 @@ class User extends Market\Trading\Entity\Reference\User
 			}
 
 			unset($data['PHONE']);
+		}
+
+		if (
+			!isset($data['LOGIN'], $data['PHONE_NUMBER'], $data['EMAIL']) // no auth data
+			&& empty($data['EXTERNAL_AUTH_ID'])
+		)
+		{
+			$data['EXTERNAL_AUTH_ID'] = 'sale';
 		}
 
 		return $data;

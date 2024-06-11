@@ -14,7 +14,7 @@ class Marker
 
 		return [
 			'X-Module-Version',
-			'market-bitrix-version-' . $moduleVersion
+			sprintf('bitrix.%s-ya-market-module', $moduleVersion),
 		];
 	}
 }

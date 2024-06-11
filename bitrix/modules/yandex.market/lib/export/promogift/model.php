@@ -3,6 +3,8 @@
 namespace Yandex\Market\Export\PromoGift;
 
 use Yandex\Market;
+use Yandex\Market\Watcher;
+use Yandex\Market\Export\Glossary;
 
 class Model extends Market\Export\PromoProduct\Model
 {
@@ -56,6 +58,30 @@ class Model extends Market\Export\PromoProduct\Model
             ]
         ];
     }
+
+	public function getSetupBindEntities(Market\Export\Setup\Model $setup)
+	{
+		$context = $this->getContext();
+
+		if (
+			!$this->isExportExternalGift($context)
+			|| $setup->getIblockLinkCollection()->getByIblockId($context['IBLOCK_ID']) !== null
+		)
+		{
+			return [];
+		}
+
+		$result = [
+			new Watcher\Track\BindEntity(Glossary::ENTITY_OFFER, $context['IBLOCK_ID'], Glossary::ENTITY_GIFT, $setup->getId()),
+		];
+
+		if ($context['HAS_OFFER'])
+		{
+			$result[] = new Watcher\Track\BindEntity(Glossary::ENTITY_OFFER, $context['OFFER_IBLOCK_ID'], Glossary::ENTITY_GIFT, $setup->getId());
+		}
+
+		return $result;
+	}
 
     public function getContext($isOnlySelf = false)
     {

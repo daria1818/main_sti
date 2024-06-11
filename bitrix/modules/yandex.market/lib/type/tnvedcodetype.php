@@ -20,13 +20,14 @@ class TnVedCodeType extends AbstractType
 	public function validate($value, array $context = [], Market\Export\Xml\Reference\Node $node = null, Market\Result\XmlNode $nodeResult = null)
 	{
 		$value = $this->sanitizeValue($value);
+		$length = Market\Data\TextString::getLength($value);
 		$errorCode = null;
 
 		if ($value === '')
 		{
 			$errorCode = 'NOT_NUMERIC';
 		}
-		else if (Market\Data\TextString::getLength($value) !== 10)
+		else if ($length !== 10 && $length !== 14)
 		{
 			$errorCode = 'LENGTH_NOT_MATCH';
 		}

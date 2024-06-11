@@ -69,6 +69,7 @@ class Offer extends Base
 					'#PREFIX#' => static::ADV_PREFIX,
 				]),
 				'TYPE' => 'boolean',
+				'DEPRECATED' => 'Y',
 			],
 		];
 

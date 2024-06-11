@@ -27,9 +27,7 @@ class Utils
 
 		// return string to site charset
 
-		$application = Main\Application::getInstance();
-
-		if (!$application->isUtfMode())
+		if (!Main\Application::isUtfMode())
 		{
 			$result = Main\Text\Encoding::convertEncoding($result, 'UTF-8', SITE_CHARSET);
 		}

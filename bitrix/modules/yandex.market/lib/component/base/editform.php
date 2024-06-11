@@ -1,9 +1,7 @@
 <?php
-
 namespace Yandex\Market\Component\Base;
 
-use Bitrix\Main;
-
+/** @property \Yandex\Market\Components\AdminFormEdit $component */
 abstract class EditForm extends AbstractProvider
 {
 	/**

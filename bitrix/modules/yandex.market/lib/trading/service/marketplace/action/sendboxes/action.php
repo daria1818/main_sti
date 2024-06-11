@@ -70,7 +70,7 @@ class Action extends TradingService\Reference\Action\DataAction
 	{
 		$logger = $this->provider->getLogger();
 		$message = static::getLang('TRADING_ACTION_SEND_BOXES_SEND_LOG', [
-			'#SHIPMENT_ID#' => $this->request->getShipmentId(),
+			'#SHIPMENT_ID#' => $this->request->getShipmentId() ?: '',
 			'#BOX_COUNT#' => count($this->request->getBoxes()),
 		]);
 

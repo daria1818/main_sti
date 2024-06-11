@@ -84,7 +84,10 @@ class GridList extends Market\Component\Model\GridList
 		$promoIds = array_column($result, 'ID');
 		$promoIds = array_filter($promoIds);
 
-		Market\Export\Run\Data\PromoStatus::preload($promoIds);
+		Market\Export\Run\Data\EntityStatus::preload(
+			Market\Export\Run\Manager::ENTITY_TYPE_PROMO,
+			$promoIds
+		);
 	}
 
     protected function normalizeQueryFilter(array $filter)

@@ -1,9 +1,7 @@
 <?php
-
 namespace Yandex\Market\Ui\Trading\ShipmentRequest;
 
 use Yandex\Market;
-use Bitrix\Main;
 
 class Order extends Market\Api\Reference\Model
 {
@@ -17,33 +15,54 @@ class Order extends Market\Api\Reference\Model
 		return (int)$this->getRequiredField('SETUP_ID');
 	}
 
+	public function getInternalId()
+	{
+		return (int)$this->getRequiredField('INTERNAL_ID');
+	}
+
 	public function getAccountNumber()
 	{
 		return (string)$this->getRequiredField('ACCOUNT_NUMBER');
 	}
 
-	/** @return Basket */
-	public function getBasket()
+	public function getShipmentId()
 	{
-		return $this->getRequiredCollection('BASKET');
+		return (int)$this->getRequiredField('SHIPMENT_ID');
 	}
 
-	/** @return ShipmentCollection */
-	public function getShipments()
+	public function getInitialBoxCount()
 	{
-		return $this->getRequiredCollection('SHIPMENT');
+		return (int)$this->getRequiredField('BOX_INITIAL_COUNT');
 	}
 
-	public function useDimensions()
+	public function useAutoFinish()
 	{
-		return $this->getField('USE_DIMENSIONS') !== 'N';
+		return (string)$this->getField('AUTO_FINISH') === 'Y';
+	}
+
+	/** @return BoxCollection */
+	public function getBoxCollection()
+	{
+		return $this->getRequiredCollection('BOX');
+	}
+
+	/** @return BasketConfirm */
+	public function getBasketConfirm()
+	{
+		return $this->getChildModel('BASKET_CONFIRM');
+	}
+
+	protected function getChildModelReference()
+	{
+		return [
+			'BASKET_CONFIRM' => BasketConfirm::class,
+		];
 	}
 
 	protected function getChildCollectionReference()
 	{
 		return [
-			'BASKET' => Basket::class,
-			'SHIPMENT' => ShipmentCollection::class,
+			'BOX' => BoxCollection::class,
 		];
 	}
 }

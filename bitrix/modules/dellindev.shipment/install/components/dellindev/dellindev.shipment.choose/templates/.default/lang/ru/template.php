@@ -1,6 +1,11 @@
 <?
-$MESS["DELLIN"] = "Деловые линии";
-$MESS["DELLINDEV_TERMINAL_LIST"] = "Терминалы доступные для забора груза";
-$MESS["DELLINDEV_SELECTED_TERMINAL"] = "Выбран терминал:";
-
+$MESS["DELLINDEV_SHIPMENT_NAIMENOVANIE_TERMINA"] = "Наименование терминала: ";
+$MESS["DELLINDEV_SHIPMENT_GOROD"] = "город";
+$MESS["DELLINDEV_SHIPMENT_VYBERITE_TERMINAL_NA"] = "Выберите терминал на карте:";
+$MESS["DELLINDEV_SHIPMENT_DELOVYE_LINII"] = "Деловые линии";
+$MESS["DELLINDEV_SHIPMENT_VYBRATQ_TERMINAL"] = "выбрать терминал";
+$MESS["DELLINDEV_SHIPMENT_NAJALI_NA"] = "Нажали на Dellin";
+$MESS["DELLINDEV_SHIPMENT_NAZAD"] = "Назад";
+$MESS["DELLINDEV_SHIPMENT_VPERED"] = "Вперёд";
+$MESS["DELLINDEV_SHIPMENT_KLIK_NA_IZMENITQ"] = "Клик на изменить";
 ?>

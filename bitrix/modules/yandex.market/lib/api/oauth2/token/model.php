@@ -45,7 +45,7 @@ class Model extends Market\Reference\Storage\Model
 
 	public function getLogin()
 	{
-		return $this->getField('LOGIN');
+		return $this->getField('USER_LOGIN');
 	}
 
 	public function getAccessToken()

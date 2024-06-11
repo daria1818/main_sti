@@ -58,24 +58,53 @@ class EditForm extends Market\Component\Plain\EditForm
 
 	protected function saveOptions($values)
 	{
+		$changes = [];
+
 		foreach ($values as $name => $value)
 		{
 			$field = $this->getField($name);
 
 			if ($field === null) { continue; }
 
+			$currentValue = $this->getOptionValue($name);
 			$optionValue = $this->convertFieldToOptionValue($field, $value);
 			$optionValueString = (string)$optionValue;
 
 			if ($optionValueString === '' || (string)$this->getDefaultValue($field) === $optionValueString)
 			{
+				if ($currentValue === null) { continue; }
+
 				Market\Config::removeOption($name);
 			}
 			else
 			{
+				if ((string)$currentValue === $optionValueString) { continue; }
+
 				Market\Config::setOption($name, $optionValue);
 			}
+
+			$changes[$name] = $optionValue;
 		}
+
+		$this->applyOptionsChanges($changes);
+	}
+
+	protected function applyOptionsChanges(array $changes)
+	{
+		foreach ($changes as $name => $value)
+		{
+			if ($name === 'export_writer_index')
+			{
+				$this->applyWriterIndexChange($value);
+			}
+		}
+	}
+
+	protected function applyWriterIndexChange($value)
+	{
+		if ($value === 'Y') { return; }
+
+		Market\Export\Run\Writer\IndexFacade::resetAll();
 	}
 
 	protected function savePermissions()

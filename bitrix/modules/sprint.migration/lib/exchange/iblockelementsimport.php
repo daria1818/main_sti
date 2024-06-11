@@ -3,7 +3,6 @@
 namespace Sprint\Migration\Exchange;
 
 use Sprint\Migration\AbstractExchange;
-use Sprint\Migration\Exceptions\ExchangeException;
 use Sprint\Migration\Exceptions\HelperException;
 use Sprint\Migration\Exceptions\RestartException;
 use Sprint\Migration\Locale;
@@ -16,7 +15,7 @@ class IblockElementsImport extends AbstractExchange
     /**
      * @param callable $converter
      *
-     * @throws ExchangeException
+     * @throws HelperException
      * @throws RestartException
      */
     public function execute(callable $converter)
@@ -28,24 +27,24 @@ class IblockElementsImport extends AbstractExchange
         $params = $this->exchangeEntity->getRestartParams();
 
         if (!isset($params['total'])) {
-            $this->exchangeEntity->exitIf(
-                !is_file($this->file),
-                Locale::getMessage('ERR_EXCHANGE_FILE_NOT_FOUND')
-            );
+            if (!is_file($this->file)) {
+                throw new HelperException(
+                    Locale::getMessage('ERR_EXCHANGE_FILE_NOT_FOUND', ['#FILE#' => $this->file])
+                );
+            }
 
             $reader = new XMLReader();
             $reader->open($this->getExchangeFile());
             $params['total'] = 0;
             $params['offset'] = 0;
-            $params['iblock_id'] = 0;
             $exchangeVersion = 0;
+
+            $iblockUid = '';
 
             while ($reader->read()) {
                 if ($this->isOpenTag($reader, 'items')) {
                     $exchangeVersion = (int)$reader->getAttribute('exchangeVersion');
-                    $params['iblock_id'] = $iblockExchange->getIblockIdByUid(
-                        $reader->getAttribute('iblockUid')
-                    );
+                    $iblockUid = $reader->getAttribute('iblockUid');
                 }
                 if ($this->isOpenTag($reader, 'item')) {
                     $params['total']++;
@@ -54,12 +53,12 @@ class IblockElementsImport extends AbstractExchange
             $reader->close();
 
             if (!$exchangeVersion || $exchangeVersion < self::EXCHANGE_VERSION) {
-                $this->exchangeEntity->exitWithMessage(
+                throw new HelperException(
                     Locale::getMessage('ERR_EXCHANGE_VERSION', ['#NAME#' => $this->getExchangeFile()])
                 );
             }
 
-            $this->exchangeEntity->exitIfEmpty($params['iblock_id'], Locale::getMessage('ERR_IB_NOT_FOUND'));
+            $params['iblock_id'] = $iblockExchange->getIblockIdByUid($iblockUid);
         }
 
         $reader = new XMLReader();
@@ -209,10 +208,7 @@ class IblockElementsImport extends AbstractExchange
 
         $value = [];
         foreach ($field['value'] as $val) {
-            $val['value'] = $iblockExchange->getSectionIdByUniqName(
-                $iblockId,
-                $val['value']
-            );
+            $val['value'] = $iblockExchange->getSectionIdByUniqName($iblockId, $val['value']);
             $value[] = $this->makeFieldValue($val);
         }
 
@@ -235,7 +231,7 @@ class IblockElementsImport extends AbstractExchange
         $iblockExchange = $this->getHelperManager()->IblockExchange();
         $type = $iblockExchange->getPropertyType($iblockId, $code);
 
-        if (in_array($type, ['L', 'F', 'G'])) {
+        if (in_array($type, ['L', 'F', 'G', 'E'])) {
             return 'convertProperty' . ucfirst($type);
         } else {
             return 'convertPropertyS';
@@ -263,10 +259,24 @@ class IblockElementsImport extends AbstractExchange
         $res = [];
         if ($linkIblockId) {
             foreach ($prop['value'] as $val) {
-                $val['value'] = $iblockExchange->getSectionIdByUniqName(
-                    $linkIblockId,
-                    $val['value']
-                );
+                $val['value'] = $iblockExchange->getSectionIdByUniqName($linkIblockId, $val['value']);
+                $res[] = $this->makePropertyValue($val);
+            }
+        }
+
+        return ($isMultiple) ? $res : $res[0];
+    }
+
+    protected function convertPropertyE($iblockId, $prop)
+    {
+        $iblockExchange = $this->getHelperManager()->IblockExchange();
+        $isMultiple = $iblockExchange->isPropertyMultiple($iblockId, $prop['name']);
+        $linkIblockId = $iblockExchange->getPropertyLinkIblockId($iblockId, $prop['name']);
+
+        $res = [];
+        if ($linkIblockId) {
+            foreach ($prop['value'] as $val) {
+                $val['value'] = $iblockExchange->getElementIdByUniqName($linkIblockId, $val['value']);
                 $res[] = $this->makePropertyValue($val);
             }
         }

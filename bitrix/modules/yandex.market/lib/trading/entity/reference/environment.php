@@ -24,8 +24,13 @@ abstract class Environment
 	protected $property;
 	protected $paySystem;
 	protected $delivery;
+	protected $outletRegistry;
+	protected $courierRegistry;
+	protected $digitalRegistry;
 	protected $listener;
 	protected $adminExtension;
+	protected $reserve;
+	protected $pack;
 
 	public function __construct($code)
 	{
@@ -167,6 +172,24 @@ abstract class Environment
 	protected function createProduct()
 	{
 		throw new Market\Exceptions\NotImplementedEntity(static::class, 'Product');
+	}
+
+	public function getPack()
+	{
+		if ($this->pack === null)
+		{
+			$this->pack = $this->createPack();
+		}
+
+		return $this->pack;
+	}
+
+	/**
+	 * @return Pack
+	 */
+	protected function createPack()
+	{
+		throw new Market\Exceptions\NotImplementedEntity(static::class, 'Pack');
 	}
 
 	public function getStore()
@@ -401,5 +424,75 @@ abstract class Environment
 	protected function createDelivery()
 	{
 		throw new Market\Exceptions\NotImplementedEntity(static::class, 'Delivery');
+	}
+
+	public function getOutletRegistry()
+	{
+		if ($this->outletRegistry === null)
+		{
+			$this->outletRegistry = $this->createOutletRegistry();
+		}
+
+		return $this->outletRegistry;
+	}
+
+	/**
+	 * @return OutletRegistry
+	 */
+	protected function createOutletRegistry()
+	{
+		throw new Market\Exceptions\NotImplementedEntity(static::class, 'createOutletRegistry');
+	}
+
+	public function getCourierRegistry()
+	{
+		if ($this->courierRegistry === null)
+		{
+			$this->courierRegistry = $this->createCourierRegistry();
+		}
+
+		return $this->courierRegistry;
+	}
+
+	/**
+	 * @return CourierRegistry
+	 */
+	protected function createCourierRegistry()
+	{
+		throw new Market\Exceptions\NotImplementedEntity(static::class, 'createCourierRegistry');
+	}
+
+	public function getReserve()
+	{
+		if ($this->reserve === null)
+		{
+			$this->reserve = $this->createReserve();
+		}
+
+		return $this->reserve;
+	}
+
+	/**
+	 * @return Reserve
+	 */
+	protected function createReserve()
+	{
+		throw new Market\Exceptions\NotImplementedEntity(static::class, 'Reserve');
+	}
+
+	public function getDigitalRegistry()
+	{
+		if ($this->digitalRegistry === null)
+		{
+			$this->digitalRegistry = $this->createDigitalRegistry();
+		}
+
+		return $this->digitalRegistry;
+	}
+
+	/** @return DigitalRegistry */
+	protected function createDigitalRegistry()
+	{
+		throw new Market\Exceptions\NotImplementedEntity(static::class, 'DigitalRegistry');
 	}
 }

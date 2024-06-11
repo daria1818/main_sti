@@ -12,11 +12,33 @@ class Url
 		$request = Main\Context::getCurrent()->getRequest();
 		$variables += [
 			'protocol' => $request->isHttps() ? 'https' : 'http',
-			'host' => $request->getHttpHost(),
+			'host' => static::httpHost($request),
 		];
 		$hostWithProtocol = static::compileTemplate('#protocol#://#host#', $variables);
 
 		return $hostWithProtocol . $path;
+	}
+
+	public static function httpHost(Main\HttpRequest $request = null)
+	{
+		if ($request === null)
+		{
+			$globalRequest = Main\Context::getCurrent()->getRequest();
+
+			if (!($globalRequest instanceof Main\HttpRequest)) { return null; }
+
+			$request = $globalRequest;
+		}
+
+		$host = $request->getHttpHost();
+		$converter = \CBXPunycode::GetConverter();
+
+		if ($converter->IsEncoded($host))
+		{
+			$host = $converter->Decode($host);
+		}
+
+		return $host;
 	}
 
 	protected static function compileTemplate($template, $variables)

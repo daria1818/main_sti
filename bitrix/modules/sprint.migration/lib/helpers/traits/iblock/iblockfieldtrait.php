@@ -37,7 +37,7 @@ trait IblockFieldTrait
         $fields = array_replace_recursive($exportExists, $fields);
 
         if (empty($exists)) {
-            $ok = $this->getMode('test') ? true : $this->updateIblockFields($iblockId, $fields);
+            $ok = $this->getMode('test') || $this->updateIblockFields($iblockId, $fields);
             $this->outNoticeIf(
                 $ok,
                 Locale::getMessage(
@@ -51,7 +51,7 @@ trait IblockFieldTrait
         }
 
         if ($this->hasDiff($exportExists, $fields)) {
-            $ok = $this->getMode('test') ? true : $this->updateIblockFields($iblockId, $fields);
+            $ok = $this->getMode('test') || $this->updateIblockFields($iblockId, $fields);
             $this->outNoticeIf(
                 $ok,
                 Locale::getMessage(
@@ -63,17 +63,6 @@ trait IblockFieldTrait
             );
             $this->outDiffIf($ok, $exportExists, $fields);
             return $ok;
-        }
-
-        if ($this->getMode('out_equal')) {
-            $this->out(
-                Locale::getMessage(
-                    'IB_FIELDS_EQUAL',
-                    [
-                        '#NAME#' => $iblockId,
-                    ]
-                )
-            );
         }
 
         return true;
@@ -131,35 +120,15 @@ trait IblockFieldTrait
 
     protected function prepareExportIblockFields($fields)
     {
-        if (empty($fields)) {
-            return $fields;
-        }
-
-        $exportFields = [];
-        foreach ($fields as $code => $field) {
-            if ($field['VISIBLE'] == 'N' || preg_match('/^(LOG_)/', $code)) {
-                continue;
-            }
-            $exportFields[$code] = $field;
-        }
-
-        return $exportFields;
+        return array_filter($fields, function ($field, $code) {
+            return ($field['VISIBLE'] != 'N');
+        }, ARRAY_FILTER_USE_BOTH);
     }
 
     protected function prepareExportIblockElementFields($fields)
     {
-        if (empty($fields)) {
-            return $fields;
-        }
-
-        $exportFields = [];
-        foreach ($fields as $code => $field) {
-            if ($field['VISIBLE'] == 'N' || preg_match('/^(SECTION_|LOG_)/', $code)) {
-                continue;
-            }
-            $exportFields[$code] = $field;
-        }
-
-        return $exportFields;
+        return array_filter($fields, function ($field, $code) {
+            return !($field['VISIBLE'] == 'N' || preg_match('/^(SECTION_|LOG_)/', $code));
+        },ARRAY_FILTER_USE_BOTH);
     }
 }

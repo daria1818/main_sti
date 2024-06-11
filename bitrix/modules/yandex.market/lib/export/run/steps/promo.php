@@ -17,6 +17,7 @@ class Promo extends Base
     public function run($action, $offset = null)
     {
         $result = new Market\Result\Step();
+
         $setup = $this->getSetup();
         $context = $setup->getContext();
         $promoCollection = $setup->getPromoCollection();
@@ -247,11 +248,11 @@ class Promo extends Base
         if ($isNeedCheckProduct)
         {
             $result[] = [
-                '>=EXPORT_PROMO_PRODUCT.TIMESTAMP_X' => $this->getParameter('initTime')
+                '>=EXPORT_PROMO_PRODUCT.TIMESTAMP_X' => $this->getParameter('initTimeUTC')
             ];
 
             $result[] = [
-                '>=EXPORT_PROMO_GIFT.TIMESTAMP_X' => $this->getParameter('initTime')
+                '>=EXPORT_PROMO_GIFT.TIMESTAMP_X' => $this->getParameter('initTimeUTC')
             ];
         }
 
@@ -266,6 +267,14 @@ class Promo extends Base
 
         return $result;
     }
+
+	protected function getIgnoredTypeChanges()
+	{
+		return [
+			Market\Export\Run\Manager::ENTITY_TYPE_CURRENCY => true,
+			Market\Export\Run\Manager::ENTITY_TYPE_COLLECTION => true,
+		];
+	}
 
     protected function getQueryExcludeFilterPrimary($queryContext)
     {

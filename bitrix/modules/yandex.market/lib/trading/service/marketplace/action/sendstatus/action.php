@@ -8,6 +8,7 @@ use Yandex\Market\Trading\Entity as TradingEntity;
 use Yandex\Market\Trading\Service as TradingService;
 
 class Action extends TradingService\Common\Action\SendStatus\Action
+	implements TradingService\Reference\Action\HasActivity
 {
 	/** @var TradingService\Marketplace\Provider */
 	protected $provider;
@@ -22,6 +23,32 @@ class Action extends TradingService\Common\Action\SendStatus\Action
 		return new Request($data);
 	}
 
+	public function getActivity()
+	{
+		return new Activity($this->provider, $this->environment);
+	}
+
+	protected function isChangedOrderStatus($orderId, $state)
+	{
+		$result = parent::isChangedOrderStatus($orderId, $state);
+
+		if ($result === false) { return false; }
+
+		if ($state === TradingService\Marketplace\Status::STATE_SHOP_FAILED)
+		{
+			$stored = (string)$this->provider->getStatus()->getStored($orderId);
+			list(, $storedSubStatus) = explode(':', $stored, 2);
+
+			$result = ($storedSubStatus !== $state);
+		}
+		else if ($state === TradingService\Marketplace\Status::STATE_SHIPPED)
+		{
+			$result = false; // prevent submit deprecated substatus
+		}
+
+		return $result;
+	}
+
 	protected function checkHasStatus($orderId, $state)
 	{
 		$result = false;
@@ -29,7 +56,7 @@ class Action extends TradingService\Common\Action\SendStatus\Action
 		try
 		{
 			$serviceStatuses = $this->provider->getStatus();
-			$externalOrder = $this->loadExternalOrder($orderId);
+			$externalOrder = $this->getExternalOrder();
 			$orderStatus = $externalOrder->getStatus();
 			$subStatus = $externalOrder->getSubStatus();
 
@@ -47,13 +74,8 @@ class Action extends TradingService\Common\Action\SendStatus\Action
 
 					$result =
 						$serviceStatuses->isLeftProcessing($orderStatus)
-						|| ($serviceStatuses->isProcessing($orderStatus) && isset($availableStates[$subStatus]));
-				break;
-
-				case TradingService\Marketplace\Status::STATE_SHIPPED:
-					$result =
-						$serviceStatuses->isLeftProcessing($orderStatus)
-						|| ($serviceStatuses->isProcessing($orderStatus) && $subStatus === $state);
+						|| ($serviceStatuses->isProcessing($orderStatus) && isset($availableStates[$subStatus]))
+						|| ($serviceStatuses->isProcessing($orderStatus) && $serviceStatuses->getSubStatusOrder($subStatus) === null);
 				break;
 			}
 		}
@@ -173,5 +195,20 @@ class Action extends TradingService\Common\Action\SendStatus\Action
 		}
 
 		return $result;
+	}
+
+	protected function saveState($orderId, $state)
+	{
+		if ($state !== TradingService\Marketplace\Status::STATE_SHOP_FAILED)
+		{
+			parent::saveState($orderId, $state);
+			return;
+		}
+
+		$serviceKey = $this->provider->getUniqueKey();
+		$fullStatus = [ TradingService\Marketplace\Status::STATUS_PROCESSING, $state ];
+
+		Market\Trading\State\OrderStatus::setValue($serviceKey, $orderId, implode(':', $fullStatus));
+		Market\Trading\State\OrderStatus::commit($serviceKey, $orderId);
 	}
 }

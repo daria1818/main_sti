@@ -1,29 +1,31 @@
 <?php
-
 namespace Yandex\Market\Trading\Procedure;
 
 use Yandex\Market;
-use Bitrix\Main;
 
 class Agent extends Market\Reference\Agent\Base
 {
-	protected static $previousUser = null;
-	protected static $isPlaceholderUserCreated = false;
+	public static function getDefaultParams()
+	{
+		return [
+			'interval' => 60,
+			'sort' => 200,
+		];
+	}
 
 	public static function repeat()
 	{
+		Market\Environment::restore();
+		Market\Environment::makeUserPlaceholder();
+
 		$repeater = new Repeater();
 
-		static::processRepeatQueue($repeater);
-
-		return static::modifyRepeatPeriod($repeater);
-	}
-
-	protected static function processRepeatQueue(Repeater $repeater)
-	{
-		static::createPlaceholderUser();
 		$repeater->processQueue();
-		static::releasePlaceholderUser();
+		$needRepeat = static::modifyRepeatPeriod($repeater);
+
+		Market\Environment::reset();
+
+		return $needRepeat;
 	}
 
 	protected static function modifyRepeatPeriod(Repeater $repeater)
@@ -40,35 +42,5 @@ class Agent extends Market\Reference\Agent\Base
 		}
 
 		return $result;
-	}
-
-	protected static function createPlaceholderUser()
-	{
-		global $USER;
-
-		if (!($USER instanceof \CUser))
-		{
-			static::$isPlaceholderUserCreated = true;
-			static::$previousUser = $USER;
-
-			$USER = new \CUser();
-		}
-	}
-
-	protected static function releasePlaceholderUser()
-	{
-		global $USER;
-
-		if (static::$isPlaceholderUserCreated)
-		{
-			if (static::$previousUser !== null)
-			{
-				$USER = static::$previousUser;
-			}
-			else
-			{
-				unset($USER);
-			}
-		}
 	}
 }

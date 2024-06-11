@@ -4,6 +4,9 @@ require_once( dirname(__FILE__)."/../prolog.php" );
 use \Bitrix\Main\Localization\Loc;
 Loc::loadMessages(__FILE__);
 
+global $APPLICATION;
+global $USER;
+
 IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/options.php");
 //CJSCore::Init('clipboard');
 
@@ -42,8 +45,8 @@ else
 	$ID = 1;
 
 	if (
-		$REQUEST_METHOD == "POST"
-		&& strlen($Update) > 0
+		$_SERVER["REQUEST_METHOD"] == "POST"
+		&& mb_strlen( $_REQUEST["Update"]) > 0
 		&& $RIGHT_W
 		&& check_bitrix_sessid()
 	)
@@ -110,7 +113,7 @@ else
 
 <?endif ?>
 
-	<? if (strlen($errorText) > 0):?>
+	<? if (mb_strlen($errorText) > 0):?>
 	<?
 	CAdminMessage::ShowMessage(
 		Array(

@@ -184,30 +184,30 @@ class PromoProduct extends Offer
         return $result;
     }
 
-    protected function makeQueryFilters($sourceFilterList, $sourceSelectList, $queryContext, $changesFilter = null)
-    {
-	    $categoryFilterIds = null;
-
-	    if (!$queryContext['HAS_DISCOUNT_PRICE'] && $this->getRunAction() !== null) // can be category filter
+	protected function compileQueryFilters(
+		Market\Export\Routine\QueryBuilder\Filter $filterBuilder,
+		array $sourceFilter,
+		array $sourceSelect,
+		array $context,
+		array $changesFilter = null
+	)
+	{
+	    if (!$context['HAS_DISCOUNT_PRICE'] && $this->getRunAction() !== null) // can be category filter
 	    {
-		    $categoryFilterIds = $this->getCategoryFilterIdList($sourceFilterList, $queryContext['IBLOCK_LINK']);
+		    $categoryFilterIds = $this->getCategoryFilterIdList($sourceFilter, $context['IBLOCK_LINK']);
+
+		    if ($categoryFilterIds !== null)
+		    {
+			    return [
+				    [
+					    'SPECIAL' => 'category',
+					    'VALUE' => $categoryFilterIds,
+				    ],
+			    ];
+		    }
 	    }
 
-	    if ($categoryFilterIds !== null)
-	    {
-	    	$result = [
-	    		[
-	    			'SPECIAL' => 'category',
-				    'VALUE' => $categoryFilterIds,
-			    ]
-		    ];
-	    }
-	    else
-	    {
-	    	$result = parent::makeQueryFilters($sourceFilterList, $sourceSelectList, $queryContext, $changesFilter);
-	    }
-
-	    return $result;
+	    return parent::compileQueryFilters($filterBuilder, $sourceFilter, $sourceSelect, $context, $changesFilter);
     }
 
     protected function exportIblockFilter($queryFilter, $sourceSelect, $querySelect, $tagDescriptionList, $context, $queryOffset = null, $limit = null, $successCount = 0)
@@ -259,11 +259,6 @@ class PromoProduct extends Offer
         $this->filterOnlyUsedElementList($elementList, $context);
     }
 
-    protected function getQueryExcludeFilterPrimary($queryContext)
-    {
-        return (int)$queryContext['PROMO_ID'];
-    }
-
     protected function getExistDataStorageFilter(array $context)
     {
         return [
@@ -304,7 +299,7 @@ class PromoProduct extends Offer
             {
                 case 'change':
                 case 'refresh':
-                    $filter['>=TIMESTAMP_X'] = $this->getParameter('initTime');
+                    $filter['>=TIMESTAMP_X'] = $this->getParameter('initTimeUTC');
                 break;
             }
         }
@@ -340,11 +335,11 @@ class PromoProduct extends Offer
             if (!empty($offerChanges))
             {
                 $result[] = [
-                    '>=EXPORT_OFFER.TIMESTAMP_X' => $this->getParameter('initTime')
+                    '>=EXPORT_OFFER.TIMESTAMP_X' => $this->getParameter('initTimeUTC')
                 ];
 
 				$result[] = [
-					'>=EXPORT_CATEGORY.TIMESTAMP_X' => $this->getParameter('initTime'),
+					'>=EXPORT_CATEGORY.TIMESTAMP_X' => $this->getParameter('initTimeUTC'),
 					'=EXPORT_CATEGORY.STATUS' => static::STORAGE_STATUS_DELETE
 				];
             }
@@ -398,7 +393,7 @@ class PromoProduct extends Offer
         parent::writeDataLog($newTagResultList, $context);
     }
 
-    protected function buildTagValues($elementId, $tagDescriptionList, $sourceValues, $context)
+    protected function buildTagValues($elementId, $tagDescriptionList, $sourceValues, $context, Market\Export\Xml\Tag\Base $root = null)
     {
         $result = parent::buildTagValues($elementId, $tagDescriptionList, $sourceValues, $context);
         $result->setType($context['ELEMENT_TYPE']);
@@ -511,7 +506,8 @@ class PromoProduct extends Offer
     protected function getIgnoredTypeChanges()
     {
         return [
-            Market\Export\Run\Manager::ENTITY_TYPE_GIFT => true
+            Market\Export\Run\Manager::ENTITY_TYPE_GIFT => true,
+            Market\Export\Run\Manager::ENTITY_TYPE_COLLECTION => true,
         ];
     }
 

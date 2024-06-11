@@ -7,7 +7,6 @@ use Bitrix\Main;
 
 class EnumerationType
 {
-	use Concerns\HasMultipleRow;
 	use Concerns\HasCompatibleExtends;
 
 	public static function getCommonExtends()
@@ -15,6 +14,7 @@ class EnumerationType
 		return Main\UserField\Types\EnumType::class;
 	}
 
+	/** @noinspection PhpDeprecationInspection */
 	public static function getCompatibleExtends()
 	{
 		return \CUserTypeEnum::class;
@@ -34,7 +34,17 @@ class EnumerationType
 
 	public static function GetList($arUserField)
 	{
-		$values = (array)$arUserField['VALUES'];
+		if (is_callable($arUserField['VALUES']))
+		{
+			$function = $arUserField['VALUES'];
+			$values = $function();
+		}
+		else
+		{
+			$values = $arUserField['VALUES'];
+		}
+
+		if (!is_array($values)) { $values = []; }
 
 		$result = new \CDBResult();
 		$result->InitFromArray($values);
@@ -42,11 +52,13 @@ class EnumerationType
 		return $result;
 	}
 
+	/** @noinspection PhpUnused */
 	public static function GetFilterHTML($arUserField, $arHtmlControl)
 	{
 		return static::callParent('GetFilterHTML', [$arUserField, $arHtmlControl]);
 	}
 
+	/** @noinspection PhpUnused */
 	public static function GetFilterData($arUserField, $arHtmlControl)
 	{
 		return static::callParent('GetFilterData', [$arUserField, $arHtmlControl]);
@@ -54,45 +66,25 @@ class EnumerationType
 
 	public static function GetEditFormHTML($arUserField, $arHtmlControl)
 	{
+		$enum = call_user_func([ $arUserField['USER_TYPE']['CLASS_NAME'], 'getList'], $arUserField);
+		$settings = static::makeSelectViewSettings($arUserField);
 		$attributes = Helper\Attributes::extractFromSettings($arUserField['SETTINGS']);
+		$attributes += static::makeSelectViewAttributes($arUserField);
+		$attributes['name'] = $arHtmlControl['NAME'];
+		$selected = Helper\Value::asSingle($arUserField, $arHtmlControl);
 
 		if (isset($arUserField['SETTINGS']['DISPLAY']) && $arUserField['SETTINGS']['DISPLAY'] === 'CHECKBOX')
 		{
-			$arUserField['MANDATORY'] = 'Y'; // hide no value for all variants
-
-			$result = static::callParent('GetEditFormHTML', [$arUserField, $arHtmlControl]);
-			$result = Helper\Attributes::insert($result, $attributes);
+			$result = View\Radio::getControl($enum, $selected, $attributes, $settings);
 		}
 		else
 		{
-			$settings = static::makeSelectViewSettings($arUserField);
-			$attributes += static::makeSelectViewAttributes($arUserField);
-			$attributes['name'] = $arHtmlControl['NAME'];
-
-			// value
-
-			if ($arUserField['ENTITY_VALUE_ID'] < 1 && (string)$arUserField['SETTINGS']['DEFAULT_VALUE'] !== '')
-			{
-				$arHtmlControl['VALUE'] = $arUserField['SETTINGS']['DEFAULT_VALUE'];
-			}
-			else if ($arHtmlControl['VALUE'] === '' && array_key_exists('VALUE', $arUserField) && $arUserField['VALUE'] === null)
-			{
-				$arHtmlControl['VALUE'] =
-					isset($arUserField['SETTINGS']['DEFAULT_VALUE'])
-						? $arUserField['SETTINGS']['DEFAULT_VALUE']
-						: null;
-			}
-
-			// view
-
 			if (!isset($attributes['size']) || $attributes['size'] <= 1)
 			{
 				$arHtmlControl['VALIGN'] = 'middle';
 			}
 
-			$enum = call_user_func([ $arUserField['USER_TYPE']['CLASS_NAME'], 'getList'], $arUserField);
-
-			$result = View\Select::getControl($enum, $arHtmlControl['VALUE'], $attributes, $settings);
+			$result = View\Select::getControl($enum, $selected, $attributes, $settings);
 		}
 
 		return $result;
@@ -101,50 +93,32 @@ class EnumerationType
 	public static function GetEditFormHTMLMulty($userField, $htmlControl)
 	{
 		$attributes = Helper\Attributes::extractFromSettings($userField['SETTINGS']);
+		$attributes += static::makeSelectViewAttributes($userField);
+		$settings = static::makeSelectViewSettings($userField);
+		$enum = call_user_func([ $userField['USER_TYPE']['CLASS_NAME'], 'getList'], $userField);
+		$selected = Helper\Value::asMultiple($userField, $htmlControl);
 
 		if (isset($userField['SETTINGS']['DISPLAY']) && $userField['SETTINGS']['DISPLAY'] === 'CHECKBOX')
 		{
-			$userField['MANDATORY'] = 'Y'; // hide no value for all variants
+			$attributes['name'] = preg_replace('/\[]$/', '', $userField['FIELD_NAME']);
+			$attributes['name'] .= '[]';
 
-			if (class_exists(Main\UserField\Types\EnumType::class))
-			{
-				$htmlControl['NAME'] = preg_replace('/\[\]$/', '', $htmlControl['NAME']);
-			}
-
-			$result = static::hasParentMethod('renderEditForm')
-				? static::callParent('renderEditForm', [$userField, $htmlControl])
-				: static::callParent('GetEditFormHTMLMulty', [$userField, $htmlControl]);
-			$result = Helper\Attributes::insert($result, $attributes);
+			$result = View\Checkbox::getControl($enum, $selected, $attributes, $settings);
 		}
 		else
 		{
-			$attributes += static::makeSelectViewAttributes($userField);
-			$settings = static::makeSelectViewSettings($userField);
-			$enum = call_user_func([ $userField['USER_TYPE']['CLASS_NAME'], 'getList'], $userField);
 			$enum = Helper\Enum::toArray($enum);
-			$values = Helper\Value::asMultiple($userField, $htmlControl);
-			$valueIndex = 0;
 
-			if (empty($values)) { $values[] = ''; }
+			$result = View\CollectionCompact::render(
+				$userField['FIELD_NAME'],
+				$selected,
+				static function($name, $value) use ($enum, $attributes, $settings) {
+					$attributes['name'] = $name;
 
-			$result = sprintf('<table id="%s">', static::makeFieldHtmlId($userField, 'table'));
-
-			foreach ($values as $value)
-			{
-				$attributes['name'] = $userField['FIELD_NAME'] . '[' . $valueIndex . ']';
-
-				$result .= '<tr><td>';
-				$result .= View\Select::getControl($enum, $value, $attributes, $settings);
-				$result .= '</td></tr>';
-
-				++$valueIndex;
-			}
-
-			$result .= '<tr><td style="padding-top: 6px;">';
-			$result .= static::getMultipleAddButton($userField);
-			$result .= '</td></tr>';
-			$result .= '</table>';
-			$result .= static::getMultipleAutoSaveScript($userField);
+					return View\Select::getControl($enum, $value, $attributes, $settings);
+				},
+				Fieldset\Helper::makeChildAttributes($userField)
+			);
 		}
 
 		return $result;
@@ -160,6 +134,11 @@ class EnumerationType
 		if ($userField['SETTINGS']['LIST_HEIGHT'] > 1)
 		{
 			$attributes['size'] = $userField['SETTINGS']['LIST_HEIGHT'];
+		}
+
+		if (isset($userField['SETTINGS']['ONCHANGE']))
+		{
+			$attributes['onchange'] = $userField['SETTINGS']['ONCHANGE'];
 		}
 
 		return $attributes;
@@ -180,29 +159,31 @@ class EnumerationType
 	public static function GetAdminListViewHTML($arUserField, $arHtmlControl)
 	{
 		$result = '&nbsp;';
-		$isFoundResult = false;
 
 		if (!empty($arHtmlControl['VALUE']))
 		{
-			$query = call_user_func([ $arUserField['USER_TYPE']['CLASS_NAME'], 'getlist' ], $arUserField);
+			$value = $arHtmlControl['VALUE'];
+			$query = call_user_func([ $arUserField['USER_TYPE']['CLASS_NAME'], 'getList' ], $arUserField);
+			$enum = $query ? Helper\Enum::toArray($query) : [];
+			$enumMap = array_column($enum, 'VALUE', 'ID');
 
-			if ($query)
+			if (isset($enumMap[$value]))
 			{
-				while ($option = $query->Fetch())
-				{
-					if ($option['ID'] == $arHtmlControl['VALUE'])
-					{
-						$isFoundResult = true;
-						$result = Market\Utils::htmlEscape($option['VALUE']);
-						break;
-					}
-				}
+				$result = $enumMap[$value];
+			}
+			else if (
+				isset($arUserField['SETTINGS']['DESCRIPTION_FIELD'])
+				&& !empty($arUserField['ROW'][$arUserField['SETTINGS']['DESCRIPTION_FIELD']])
+			)
+			{
+				$result = $arUserField['ROW'][$arUserField['SETTINGS']['DESCRIPTION_FIELD']];
+			}
+			else
+			{
+				$result = sprintf('[%s]', $value);
 			}
 
-			if (!$isFoundResult)
-			{
-				$result = '[' . Market\Utils::htmlEscape($arHtmlControl['VALUE']) . ']';
-			}
+			$result = Market\Utils::htmlEscape($result);
 		}
 
 		return $result;
@@ -210,31 +191,61 @@ class EnumerationType
 
 	public static function GetAdminListViewHTMLMulty($arUserField, $arHtmlControl)
 	{
-		$result = '';
+		$result = '&nbsp;';
 
 		if (!empty($arHtmlControl['VALUE']))
 		{
-			$query = call_user_func([ $arUserField['USER_TYPE']['CLASS_NAME'], 'getlist' ], $arUserField);
-			$valueList = (array)$arHtmlControl['VALUE'];
-			$valueMap = array_flip($valueList);
+			$query = call_user_func([ $arUserField['USER_TYPE']['CLASS_NAME'], 'getList' ], $arUserField);
+			$enum = $query ? Helper\Enum::toArray($query) : [];
+			$enumMap = array_column($enum, 'VALUE', 'ID');
+			$displayValues = [];
 
-			if ($query)
+			foreach ((array)$arHtmlControl['VALUE'] as $value)
 			{
-				while ($option = $query->Fetch())
+				if (isset($enumMap[$value]))
 				{
-					if (isset($valueMap[$option['ID']]))
-					{
-						$result .= ($result !== '' ? ' / ' : '') . Market\Utils::htmlEscape($option['VALUE']);
-					}
+					$displayValues[] = $enumMap[$value];
+				}
+				else
+				{
+					$displayValues[] = sprintf('[%s]', $value);
 				}
 			}
-		}
 
-		if ($result === '')
-		{
-			$result = '&nbsp;';
+			$result = implode(' / ', $displayValues);
+			$result = Market\Utils::htmlEscape($result);
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @noinspection PhpUnused
+	 * @noinspection PhpUnusedParameterInspection
+	 */
+	public static function ymExportValue(array $userField, $value, array $row = null)
+	{
+		if ((string)$value === '')
+		{
+			if (!isset($userField['SETTINGS']['CAPTION_NO_VALUE'])) { return null; }
+
+			return $userField['SETTINGS']['CAPTION_NO_VALUE'];
+		}
+
+		$query = call_user_func([ $userField['USER_TYPE']['CLASS_NAME'], 'getList' ], $userField);
+		$enum = $query ? Helper\Enum::toArray($query) : [];
+		$enumMap = array_column($enum, 'VALUE', 'ID');
+
+		if (!isset($enumMap[$value])) { return $value; }
+
+		$idMarker = sprintf('[%s]', $value);
+		$display = $enumMap[$value];
+
+		if (Market\Data\TextString::getPosition($display, $idMarker) === 0)
+		{
+			return $display;
+		}
+
+		return $idMarker . ' ' . $display;
 	}
 }

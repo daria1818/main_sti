@@ -27,6 +27,7 @@ foreach ($arResult['SOURCE_TYPE_ENUM'] as $sourceEnumKey => $sourceEnum)
 					'TYPE' => $field['TYPE'],
 					'SOURCE' => $sourceEnum['ID'],
 					'TAG' => isset($field['TAG']) ? (array)$field['TAG'] : null,
+					'DEPRECATED' => !empty($field['DEPRECATED']),
 				];
 			}
 		}

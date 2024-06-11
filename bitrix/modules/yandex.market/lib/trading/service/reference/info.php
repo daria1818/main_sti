@@ -34,4 +34,14 @@ abstract class Info
 	{
 		return [];
 	}
+
+	public function getCompanyData()
+	{
+		return [];
+	}
+
+	public function getContactData()
+	{
+		return [];
+	}
 }

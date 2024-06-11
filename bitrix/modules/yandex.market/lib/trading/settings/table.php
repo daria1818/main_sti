@@ -33,7 +33,7 @@ class Table extends Market\Reference\Storage\Table
 				'fetch_data_modification' => [__CLASS__, 'getFetchDataModificationForValue']
 			]),
 
-			new Main\Entity\ReferenceField('SETUP', Market\Export\Setup\Table::getClassName(), [
+			new Main\Entity\ReferenceField('SETUP', Market\Trading\Setup\Table::getClassName(), [
 				'=this.SETUP_ID' => 'ref.ID'
 			]),
 		];

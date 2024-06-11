@@ -61,6 +61,48 @@ class Marker
 		return $result;
 	}
 
+	public function getActive($orderId, $limit = 5)
+	{
+		$query = Sale\EntityMarker::getList([
+			'filter' => [
+				'=ENTITY_TYPE' => 'ORDER',
+				'=ENTITY_ID' => $orderId,
+			],
+			'select' => [ 'CODE', 'MESSAGE' ],
+			'limit' => $limit,
+		]);
+
+		return $query->fetchAll();
+	}
+
+	public function hasSameMarker(Sale\OrderBase $order, $message)
+	{
+		$exists = Sale\EntityMarker::getMarker($order->getInternalId());
+
+		if (empty($exists) || !is_array($exists)) { return false; }
+
+		$compareMessage = mb_strtolower($message);
+		$result = false;
+
+		foreach ($exists as $typeExists)
+		{
+			foreach ($typeExists as $exist)
+			{
+				if (!isset($exist['MESSAGE'])) { continue; }
+
+				$existMessage = mb_strtolower($exist['MESSAGE']);
+
+				if (mb_strpos($compareMessage, $existMessage) !== false || mb_strpos($existMessage, $compareMessage) !== false)
+				{
+					$result = true;
+					break;
+				}
+			}
+		}
+
+		return $result;
+	}
+
 	public function addMarker(Sale\OrderBase $order, Sale\Internals\Entity $entity, $message, $code)
 	{
 		$markerResult = new Sale\Result();

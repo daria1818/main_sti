@@ -7,7 +7,10 @@ use Yandex\Market;
 use Yandex\Market\Trading\Service as TradingService;
 use Yandex\Market\Trading\Entity as TradingEntity;
 
-/** @method Fieldset current() */
+/**
+ * @method Fieldset current()
+ * @property Fieldset[] collection
+ */
 abstract class FieldsetCollection
 	implements \ArrayAccess, \Countable, \IteratorAggregate
 {
@@ -19,6 +22,14 @@ abstract class FieldsetCollection
 	public function __construct(TradingService\Reference\Provider $provider)
 	{
 		$this->provider = $provider;
+	}
+
+	public function __clone()
+	{
+		foreach ($this->collection as $key => $item)
+		{
+			$this->collection[$key] = clone $item;
+		}
 	}
 
 	/** @return Fieldset */
@@ -34,6 +45,14 @@ abstract class FieldsetCollection
 	public function getFields(TradingEntity\Reference\Environment $environment, $siteId)
 	{
 		return $this->getConfigurationItem()->getFields($environment, $siteId);
+	}
+
+	public function suppressRequired($enable = true)
+	{
+		foreach ($this->collection as $item)
+		{
+			$item->suppressRequired($enable);
+		}
 	}
 
 	public function setValues(array $values)
@@ -82,6 +101,61 @@ abstract class FieldsetCollection
 		{
 			$result = $this->createItem();
 			$this->configurationItem = $result;
+		}
+
+		return $result;
+	}
+
+	public function filter($condition)
+	{
+		$result = new static($this->provider);
+
+		foreach ($this->collection as $item)
+		{
+			if ($this->testCondition($item, $condition))
+			{
+				$result->collection[] = $item;
+			}
+		}
+
+		return $result;
+	}
+
+	protected function testCondition(Fieldset $item, $condition)
+	{
+		if ($condition === null)
+		{
+			$result = true;
+		}
+		else if (is_array($condition))
+		{
+			$result = true;
+
+			foreach ($condition as $key => $value)
+			{
+				if ($item->getValue($key) !== $value)
+				{
+					$result = false;
+					break;
+				}
+			}
+		}
+		else if (is_string($condition))
+		{
+			$fieldValue = (string)$item->getValue($condition);
+
+			$result = (
+				$fieldValue === Market\Reference\Storage\Table::BOOLEAN_Y
+				|| $fieldValue === 'Y'
+			);
+		}
+		else if (is_callable($condition))
+		{
+			$result = $condition($item);
+		}
+		else
+		{
+			throw new Main\NotImplementedException('unknown condition type');
 		}
 
 		return $result;

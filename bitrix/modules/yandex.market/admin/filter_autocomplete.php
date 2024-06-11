@@ -72,6 +72,4 @@ catch (Main\SystemException $exception)
 	];
 }
 
-echo Market\Utils::jsonEncode($response, JSON_UNESCAPED_UNICODE);
-
-require $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/main/include/epilog_admin_after.php';
+Market\Utils\HttpResponse::sendJson($response);

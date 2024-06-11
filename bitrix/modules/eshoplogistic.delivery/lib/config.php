@@ -49,6 +49,7 @@ class Config
 			'pecom_door'    =>  'Eshoplogistic\Delivery\Profile\PecomDoor',
 			'pecom_term'    =>  'Eshoplogistic\Delivery\Profile\PecomTerminal',
 			'postrf_term'   =>  'Eshoplogistic\Delivery\Profile\PostrfTerminal',
+			'postrf_door'   =>  'Eshoplogistic\Delivery\Profile\PostrfDoor',
 			'sdek_door'     =>  'Eshoplogistic\Delivery\Profile\SdekDoor',
 			'sdek_term'     =>  'Eshoplogistic\Delivery\Profile\SdekTerminal',
 			'ozon_door'     =>  'Eshoplogistic\Delivery\Profile\OzonDoor',
@@ -68,6 +69,8 @@ class Config
 			'yandex_door'  =>  'Eshoplogistic\Delivery\Profile\YandexDoor',
 			'yandex_term'  =>  'Eshoplogistic\Delivery\Profile\YandexTerminal',
             'dostavista_door'  =>  'Eshoplogistic\Delivery\Profile\DostavistaDoor',
+            'kit_door'  =>  'Eshoplogistic\Delivery\Profile\KitDoor',
+            'kit_term'  =>  'Eshoplogistic\Delivery\Profile\KitTerminal',
         );
 
 		$this->profileList = array(
@@ -88,6 +91,7 @@ class Config
 			'pecom_door'    => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_PECOM_DOOR"),
 			'pecom_term'    => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_PECOM_TERMINAL"),
 			'postrf_term'   => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_POSTRF_TERMINAL"),
+			'postrf_door'   => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_POSTRF_DOOR"),
 			'sdek_door'     => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_SDEK_DOOR"),
 			'sdek_term'     => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_SDEK_TERMINAL"),
 			'ozon_door'     => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_OZON_DOOR"),
@@ -107,6 +111,8 @@ class Config
 			'yandex_door'  => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_YANDEX_DOOR"),
 			'yandex_term'  => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_YANDEX_TERMINAL"),
             'dostavista_door'  => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_DOSTAVISTA_DOOR"),
+            'kit_door'  => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_KIT_DOOR"),
+            'kit_term'  => Loc::GetMessage("ESHOP_LOGISTIC_PROFILELIST_KIT_TERMINAL"),
         );
 
 		$this->priceError = Loc::getMessage("ESHOP_LOGISTIC_DELIVERY_PRICE_ERROR");
@@ -142,6 +148,7 @@ class Config
 			'\Eshoplogistic\Delivery\Profile\PecomDoor' => $path.'/lib/profile/pecomdoor.php',
 			'\Eshoplogistic\Delivery\Profile\PecomTerminal' => $path.'/lib/profile/pecomterminal.php',
 			'\Eshoplogistic\Delivery\Profile\PostrfTerminal' => $path.'/lib/profile/postrfterminal.php',
+			'\Eshoplogistic\Delivery\Profile\PostrfDoor' => $path.'/lib/profile/postrfdoor.php',
 			'\Eshoplogistic\Delivery\Profile\SdekDoor' => $path.'/lib/profile/sdekdoor.php',
 			'\Eshoplogistic\Delivery\Profile\SdekTerminal' => $path.'/lib/profile/sdekterminal.php',
 			'\Eshoplogistic\Delivery\Profile\OzonDoor' => $path.'/lib/profile/ozondoor.php',
@@ -161,6 +168,8 @@ class Config
 			'\Eshoplogistic\Delivery\Profile\YandexDoor' => $path.'/lib/profile/yandexdoor.php',
 			'\Eshoplogistic\Delivery\Profile\YandexTerminal' => $path.'/lib/profile/yandexterminal.php',
             '\Eshoplogistic\Delivery\Profile\DostavistaDoor' => $path.'/lib/profile/dostavistadoor.php',
+            '\Eshoplogistic\Delivery\Profile\KitDoor' => $path.'/lib/profile/kitdoor.php',
+            '\Eshoplogistic\Delivery\Profile\KitTerminal' => $path.'/lib/profile/kitterminal.php',
         );
 
 		return $eventDeliveryList;

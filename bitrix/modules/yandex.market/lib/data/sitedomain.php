@@ -124,6 +124,11 @@ class SiteDomain
 			$result = static::getHostFromDomainTable($siteId);
 		}
 
+		if ($result !== null)
+		{
+			$result = rtrim($result, '/');
+		}
+
 		return $result;
 	}
 

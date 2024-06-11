@@ -60,9 +60,9 @@ class Request extends Market\Api\Partner\Reference\Request
 		]);
 	}
 
-	public function setOrderId($trackCode)
+	public function setOrderId($orderId)
 	{
-		$this->orderId = $trackCode;
+		$this->orderId = $orderId;
 	}
 
 	public function getOrderId()

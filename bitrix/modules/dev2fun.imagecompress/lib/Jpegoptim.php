@@ -2,7 +2,7 @@
 /**
  * @author darkfriend <hi@darkfriend.ru>
  * @copyright dev2fun
- * @version 0.4.1
+ * @version 0.7.4
  */
 
 namespace Dev2fun\ImageCompress;
@@ -15,14 +15,18 @@ IncludeModuleLangFile(__FILE__);
 class Jpegoptim
 {
     private static $instance;
+    private static $isOptim = null;
+
     public $lastError;
 
     private $MODULE_ID = 'dev2fun.imagecompress';
     private $jpegOptimPath = '';
+    private $active = false;
 
-    private function __construct()
+    public function __construct()
     {
-        $this->jpegOptimPath = Option::get($this->MODULE_ID, 'path_to_jpegoptim');
+        $this->jpegOptimPath = Option::get($this->MODULE_ID, 'path_to_jpegoptim', '');
+        $this->active = Option::get($this->MODULE_ID, 'enable_jpeg', 'N') === 'Y';
     }
 
     /**
@@ -50,13 +54,29 @@ class Jpegoptim
     }
 
     /**
-     * Проверка возможности оптимизации jpeg
+     * Return has active state
      * @return bool
      */
-    public function isOptim()
+    public function isActive(): bool
     {
-        exec($this->jpegOptimPath . '/jpegoptim --version', $s);
-        return ($s ? true : false);
+        return $this->active;
+    }
+
+    /**
+     * Check available optimization jpeg
+     * @param string|null $path
+     * @return bool
+     */
+    public function isOptim(?string $path = null)
+    {
+        if (!$path) {
+            $path = $this->jpegOptimPath;
+        }
+        if (self::$isOptim === null || $path !== $this->jpegOptimPath) {
+            exec($path . '/jpegoptim --version', $s);
+            self::$isOptim = (bool)$s;
+        }
+        return self::$isOptim;
     }
 
     /**
@@ -84,6 +104,10 @@ class Jpegoptim
      */
     public function compress($strFilePath, $quality = 80, $params = [])
     {
+        if (!$this->isActive()) {
+            $this->lastError = 'no_active';
+            return false;
+        }
         $strFilePath = strtr(
             $strFilePath,
             [
@@ -112,11 +136,12 @@ class Jpegoptim
         if ($quality) {
             $strCommand .= " -m{$quality}";
         }
-        exec($this->jpegOptimPath . "/jpegoptim $strCommand $strFilePath 2>&1", $res);
-        if (!empty($params['changeChmod']))
+        exec($this->jpegOptimPath . "/jpegoptim $strCommand '$strFilePath' 2>&1", $res);
+
+        if (!empty($params['changeChmod'])) {
             chmod($strFilePath, $params['changeChmod']);
-//		foreach (GetModuleEvents($this->MODULE_ID, "OnAfterResize", true) as $arEvent)
-//			ExecuteModuleEventEx($arEvent, array(&$strFilePath));
+        }
+
         $event = new \Bitrix\Main\Event(
             $this->MODULE_ID,
             "OnAfterResize",

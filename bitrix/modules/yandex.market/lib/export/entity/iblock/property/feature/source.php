@@ -3,40 +3,41 @@
 namespace Yandex\Market\Export\Entity\Iblock\Property\Feature;
 
 use Yandex\Market;
-use Bitrix\Main;
 use Bitrix\Iblock;
-
-Main\Localization\Loc::loadMessages(__FILE__);
 
 class Source extends Market\Export\Entity\Reference\Source
 {
+	use Market\Reference\Concerns\HasMessage;
+
 	protected $featurePropertyFields;
 	protected $featurePropertyMap;
 	protected $featurePropertyData;
 
+	protected $setFactory = [];
+
+	public function getTitle()
+	{
+		return self::getMessage('TITLE');
+	}
+
 	public function getFields(array $context = [])
 	{
+		$internalFields = $this->getInternalFields();
 		$result = [];
 
-		if (!$this->loadFeature()) { return $result; }
-
-		$internalFields = $this->getInternalFields();
-		$langPrefix = $this->getLangPrefix();
-
-		foreach ($this->getFeatures($context) as $feature)
+		/** @var Set\Set $feature */
+		foreach ($this->getFactory($context) as $feature)
 		{
-			if (!isset($feature['MODULE_ID'], $feature['FEATURE_ID'])) { continue; }
-
-			$featureFieldKey = $feature['MODULE_ID'] . '.' . $feature['FEATURE_ID'];
-			$featureName = !empty($feature['FEATURE_NAME']) ? $feature['FEATURE_NAME'] : $feature['FEATURE_ID'];
-			$featureTitleLangKey = $langPrefix . 'FEATURE_' . Market\Data\TextString::toUpper($feature['MODULE_ID']) . '_' . Market\Data\TextString::toUpper($feature['FEATURE_ID']);
-			$featureTitle = Market\Config::getLang($featureTitleLangKey, null, $featureName);
-
 			foreach ($internalFields as $internalField)
 			{
 				$field = $internalField;
-				$field['ID'] = $featureFieldKey . '.' . $internalField['ID'];
-				$field['VALUE'] = str_replace('#FEATURE_NAME#', $featureTitle, $internalField['VALUE']);
+				$field['ID'] = $feature->key() . '.' . $internalField['ID'];
+				$field['VALUE'] = str_replace('#FEATURE_NAME#', $feature->title(), $internalField['VALUE']);
+
+				if ($feature->deprecated())
+				{
+					$field['DEPRECATED'] = true;
+				}
 
 				$result[] = $field;
 			}
@@ -47,16 +48,9 @@ class Source extends Market\Export\Entity\Reference\Source
 
 	public function initializeQueryContext($select, &$queryContext, &$sourceSelect)
 	{
-		if (!$this->loadFeature()) { return; }
-
-		$sourceTypesMap = array_filter([
-			Market\Export\Entity\Manager::TYPE_IBLOCK_ELEMENT_PROPERTY => $queryContext['IBLOCK_ID'],
-			Market\Export\Entity\Manager::TYPE_IBLOCK_OFFER_PROPERTY => $queryContext['HAS_OFFER'] ? $queryContext['OFFER_IBLOCK_ID'] : null,
-		]);
-
 		$featureFields = $this->splitFeatureSelect($select);
-		$featureProperties = $this->getFeatureProperties($featureFields, $sourceTypesMap);
-		$requestedProperties = $this->getRequestedProperties($sourceSelect, $sourceTypesMap);
+		$featureProperties = $this->getFeatureProperties($featureFields, $queryContext);
+		$requestedProperties = $this->getRequestedProperties($sourceSelect, $this->usedFeaturePropertiesSources($featureProperties));
 		$featureProperties = $this->excludeRequestedProperties($featureProperties, $requestedProperties);
 
 		$this->extendSourceSelectByValues($sourceSelect, $featureFields, $featureProperties);
@@ -64,6 +58,18 @@ class Source extends Market\Export\Entity\Reference\Source
 		$this->featurePropertyFields = $featureFields;
 		$this->featurePropertyMap = $featureProperties;
 		$this->featurePropertyData = $this->resolvePropertyDataValues($featureFields, $featureProperties);
+	}
+
+	protected function usedFeaturePropertiesSources(array $featureProperties)
+	{
+		$sources = [];
+
+		foreach ($featureProperties as $featureSources)
+		{
+			$sources += $featureSources;
+		}
+
+		return array_keys($sources);
 	}
 
 	public function getElementListValues($elementList, $parentList, $selectFields, $queryContext, $sourceValues)
@@ -101,7 +107,13 @@ class Source extends Market\Export\Entity\Reference\Source
 					}
 				}
 
-				if (!empty($elementValues))
+				if (empty($elementValues)) { continue; }
+
+				if (isset($result[$elementId]))
+				{
+					$result[$elementId] += $elementValues;
+				}
+				else
 				{
 					$result[$elementId] = $elementValues;
 				}
@@ -165,7 +177,7 @@ class Source extends Market\Export\Entity\Reference\Source
 			}
 			else if ($hasMultiple)
 			{
-				foreach ($multipleKeys as $multipleKey => $dummy)
+				foreach ($multipleKeys as $ignored)
 				{
 					$elementValues[$valueKey][] = $value;
 				}
@@ -179,12 +191,10 @@ class Source extends Market\Export\Entity\Reference\Source
 
 	protected function getInternalFields()
 	{
-		$langPrefix = $this->getLangPrefix();
-
 		return [
 			[
 				'ID' => 'DISPLAY_VALUE',
-				'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_DISPLAY_VALUE', null, '#FEATURE_NAME# (DISPLAY_VALUE)'),
+				'VALUE' => self::getMessage('FIELD_DISPLAY_VALUE', null, '#FEATURE_NAME# (DISPLAY_VALUE)'),
 				'TYPE' => Market\Export\Entity\Data::TYPE_STRING,
 				'FILTERABLE' => false,
 				'SELECTABLE' => true,
@@ -192,7 +202,7 @@ class Source extends Market\Export\Entity\Reference\Source
 			],
 			[
 				'ID' => 'NAME',
-				'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_NAME', null, '#FEATURE_NAME# (NAME)'),
+				'VALUE' => self::getMessage('FIELD_NAME', null, '#FEATURE_NAME# (NAME)'),
 				'TYPE' => Market\Export\Entity\Data::TYPE_STRING,
 				'FILTERABLE' => false,
 				'SELECTABLE' => true,
@@ -200,7 +210,7 @@ class Source extends Market\Export\Entity\Reference\Source
 			],
 			[
 				'ID' => 'UNIT',
-				'VALUE' => Market\Config::getLang($langPrefix . 'FIELD_UNIT', null, '#FEATURE_NAME# (UNIT)'),
+				'VALUE' => self::getMessage('FIELD_UNIT', null, '#FEATURE_NAME# (UNIT)'),
 				'TYPE' => Market\Export\Entity\Data::TYPE_STRING,
 				'FILTERABLE' => false,
 				'SELECTABLE' => true,
@@ -256,50 +266,18 @@ class Source extends Market\Export\Entity\Reference\Source
 		];
 	}
 
-	protected function getFeatureProperties($featureFields, $sourceTypesMap)
+	protected function getFeatureProperties($featureFields, $queryContext)
 	{
 		$result = [];
 
-		if (!empty($sourceTypesMap))
+		/** @var Set\Set $feature */
+		foreach ($this->getFactory($queryContext) as $feature)
 		{
-			$iblockIds = array_values($sourceTypesMap);
-			$iblockToSourceTypeMap = array_flip($sourceTypesMap);
+			$featureKey = $feature->key();
 
-			foreach ($featureFields as $featureFieldKey => $featureField)
-			{
-				$result[$featureFieldKey] = [];
+			if (!isset($featureFields[$featureKey])) { continue; }
 
-				$queryProperties = Iblock\PropertyFeatureTable::getList([
-					'select' => [
-						'IBLOCK_PROPERTY_ID' => 'PROPERTY.ID',
-						'IBLOCK_PROPERTY_IBLOCK_ID' => 'PROPERTY.IBLOCK_ID',
-					],
-					'filter' => [
-						'=MODULE_ID' => $featureField['MODULE_ID'],
-						'=FEATURE_ID' => $featureField['FEATURE_ID'],
-						'=IS_ENABLED' => 'Y',
-						'=PROPERTY.IBLOCK_ID' => $iblockIds,
-						'=PROPERTY.ACTIVE' => 'Y',
-					],
-					'order' => [
-						'PROPERTY.SORT' => 'ASC',
-						'PROPERTY.ID' => 'ASC',
-					],
-				]);
-
-				while ($property = $queryProperties->fetch())
-				{
-					$iblockId = (int)$property['IBLOCK_PROPERTY_IBLOCK_ID'];
-					$sourceType = $iblockToSourceTypeMap[$iblockId];
-
-					if (!isset($result[$featureFieldKey][$sourceType]))
-					{
-						$result[$featureFieldKey][$sourceType] = [];
-					}
-
-					$result[$featureFieldKey][$sourceType][] = (int)$property['IBLOCK_PROPERTY_ID'];
-				}
-			}
+			$result[$featureKey] = $feature->properties();
 		}
 
 		return $result;
@@ -328,9 +306,8 @@ class Source extends Market\Export\Entity\Reference\Source
 		return $featureProperties;
 	}
 
-	protected function getRequestedProperties($sourceSelect, $sourceTypesMap)
+	protected function getRequestedProperties($sourceSelect, $sourceTypes)
 	{
-		$sourceTypes = array_keys($sourceTypesMap);
 		$result = [];
 
 		foreach ($sourceTypes as $sourceType)
@@ -390,6 +367,7 @@ class Source extends Market\Export\Entity\Reference\Source
 		foreach ($featureFields as $featureFieldKey => $featureField)
 		{
 			if (empty($featureField['DATA_FIELDS'])) { continue; }
+			if (empty($featureProperties[$featureFieldKey])) { continue; }
 
 			$propertiesBySourceType = $featureProperties[$featureFieldKey];
 			$isNeedUnit = in_array('UNIT', $featureField['DATA_FIELDS'], true);
@@ -436,6 +414,7 @@ class Source extends Market\Export\Entity\Reference\Source
 		foreach ($featureFields as $featureFieldKey => $featureField)
 		{
 			if (empty($featureField['DATA_FIELDS'])) { continue; }
+			if (empty($featureProperties[$featureFieldKey])) { continue; }
 
 			$dataSelectMap += array_flip($featureField['DATA_FIELDS']);
 
@@ -499,238 +478,15 @@ class Source extends Market\Export\Entity\Reference\Source
 		return 'IBLOCK_PROPERTY_FEATURE_';
 	}
 
-	protected function loadFeature()
+	protected function getFactory(array $context)
 	{
-		return (
-			Main\Loader::includeModule('iblock')
-			&& class_exists(Iblock\Model\PropertyFeature::class)
-			&& Iblock\Model\PropertyFeature::isEnabledFeatures()
-		);
-	}
+		$iblockId = (int)$context['IBLOCK_ID'];
 
-	protected function getFeatures(array $context)
-	{
-		$result = $this->getIblockFeatures($context);
-		$result = $this->unsetSiblingServiceFeatures($result, $context);
-		$result = $this->sortFeatures($result);
-
-		return $result;
-	}
-
-	protected function getIblockFeatures($context)
-	{
-		$property = $this->getFirstFeaturesProperty($context);
-
-		if ($property !== null)
+		if (!isset($this->setFactory[$iblockId]))
 		{
-			$result = Iblock\Model\PropertyFeature::getPropertyFeatureList($property);
-		}
-		else
-		{
-			$result = [];
+			$this->setFactory[$iblockId] = new Set\Factory($context);
 		}
 
-		return $result;
-	}
-
-	protected function unsetSiblingServiceFeatures($features, array $context)
-	{
-		$moduleId = Market\Config::getModuleName();
-		$contextServiceName = $context['EXPORT_SERVICE'];
-		$langPrefix = $this->getLangPrefix();
-
-		foreach ($features as $featureKey => &$feature)
-		{
-			if ($feature['MODULE_ID'] !== $moduleId) { continue; }
-
-			$isValid = false;
-			$featureNameWithoutPrefix = str_replace(Market\Ui\Iblock\PropertyFeature::FEATURE_ID_PREFIX, '', $feature['FEATURE_ID']);
-			$serviceName = Market\Data\TextString::toLower($featureNameWithoutPrefix);
-			$service = null;
-
-			if (
-				$serviceName === Market\Ui\Service\Manager::TYPE_COMMON
-				|| Market\Ui\Service\Manager::isExists($serviceName)
-			)
-			{
-				$service = Market\Ui\Service\Manager::getInstance($serviceName);
-				$isValid = ($service->isInverted() !== in_array($contextServiceName, $service->getExportServices(), true));
-			}
-
-			if ($isValid && $service !== null)
-			{
-				$feature['FEATURE_NAME'] = Market\Config::getLang(
-					$langPrefix . 'SELF_FEATURE',
-					[ '#SERVICE#' => $service->getTitle('GENITIVE') ],
-					$feature['FEATURE_NAME']
-				);
-			}
-			else
-			{
-				unset($features[$featureKey]);
-			}
-		}
-		unset($feature);
-
-		return $features;
-	}
-
-	protected function sortFeatures($features)
-	{
-		uasort($features, function($featureA, $featureB) {
-			$features = [
-				'A' => $featureA,
-				'B' => $featureB,
-			];
-			$sorts = array_fill_keys(array_keys($features), 500);
-
-			foreach ($features as $featureKey => $feature)
-			{
-				if ($feature['MODULE_ID'] === Market\Config::getModuleName())
-				{
-					$sorts[$featureKey] = 1;
-				}
-				else if ($feature['MODULE_ID'] === 'iblock' && $feature['FEATURE_ID'] === Iblock\Model\PropertyFeature::FEATURE_ID_DETAIL_PAGE_SHOW)
-				{
-					$sorts[$featureKey] = 2;
-				}
-				else if ($feature['MODULE_ID'] === 'iblock' && $feature['FEATURE_ID'] === Iblock\Model\PropertyFeature::FEATURE_ID_LIST_PAGE_SHOW)
-				{
-					$sorts[$featureKey] = 3;
-				}
-			}
-
-			if ($sorts['A'] === $sorts['B']) { return 0; }
-
-			return $sorts['A'] < $sorts['B'] ? -1 : 1;
-		});
-
-		return $features;
-	}
-
-	protected function getFirstFeaturesProperty(array $context)
-	{
-		$parametersVariants = [
-			$this->getFeaturesPropertyParametersForOffersTree($context),
-			$this->getFeaturesPropertyParametersForOffersBasket($context),
-			$this->getFeaturesPropertyParametersForCatalog($context),
-			$this->getFeaturesPropertyParametersForElements($context),
-		];
-		$result = null;
-
-		foreach ($parametersVariants as $parametersVariant)
-		{
-			if ($parametersVariant === null) { continue; }
-
-			$parametersVariant['limit'] = 1;
-
-			$query = Iblock\PropertyTable::getList($parametersVariant);
-
-			if ($row = $query->fetch())
-			{
-				$result = $row;
-				break;
-			}
-		}
-
-		return $result;
-	}
-
-	protected function getFeaturesPropertyParametersForOffersTree(array $context)
-	{
-		$result = null;
-
-		if (isset($context['OFFER_IBLOCK_ID']) && (int)$context['OFFER_IBLOCK_ID'] > 0)
-		{
-			$result = [
-				'filter' => [
-					'=IBLOCK_ID' => $context['OFFER_IBLOCK_ID'],
-					'=MULTIPLE' => 'N',
-					[
-						'LOGIC' => 'OR',
-						[
-							'=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_LIST,
-						],
-						[
-							'=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_ELEMENT,
-							'!=USER_TYPE' => \CIBlockPropertySKU::USER_TYPE,
-						],
-						[
-							'=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_STRING,
-							'=USER_TYPE' => 'directory',
-						],
-					]
-				],
-			];
-		}
-
-		return $result;
-	}
-
-	protected function getFeaturesPropertyParametersForOffersBasket(array $context)
-	{
-		$result = null;
-
-		if (isset($context['OFFER_IBLOCK_ID']) && (int)$context['OFFER_IBLOCK_ID'] > 0)
-		{
-			$result = [
-				'filter' => [
-					'=IBLOCK_ID' => $context['OFFER_IBLOCK_ID'],
-					'!=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_FILE,
-				],
-			];
-		}
-
-		return $result;
-	}
-
-	protected function getFeaturesPropertyParametersForCatalog(array $context)
-	{
-		$result = null;
-
-		if (isset($context['IBLOCK_ID']) && (int)$context['IBLOCK_ID'] > 0)
-		{
-			$result = [
-				'filter' => [
-					'=IBLOCK_ID' => $context['IBLOCK_ID'],
-					[
-						'LOGIC' => 'OR',
-						[
-							'=MULTIPLE' => 'N',
-							'=PROPERTY_TYPE' => [
-								Iblock\PropertyTable::TYPE_ELEMENT,
-								Iblock\PropertyTable::TYPE_LIST,
-							],
-						],
-						[
-							'=MULTIPLE' => 'Y',
-							'=PROPERTY_TYPE' => [
-								Iblock\PropertyTable::TYPE_ELEMENT,
-								Iblock\PropertyTable::TYPE_SECTION,
-								Iblock\PropertyTable::TYPE_LIST,
-								Iblock\PropertyTable::TYPE_NUMBER,
-								Iblock\PropertyTable::TYPE_STRING,
-							],
-						],
-					]
-				],
-			];
-		}
-
-		return $result;
-	}
-
-	protected function getFeaturesPropertyParametersForElements($context)
-	{
-		$result = null;
-
-		if (isset($context['IBLOCK_ID']) && (int)$context['IBLOCK_ID'] > 0)
-		{
-			$result = [
-				'filter' => [ '=IBLOCK_ID' => $context['IBLOCK_ID'] ],
-			];
-		}
-
-		return $result;
+		return $this->setFactory[$iblockId];
 	}
 }

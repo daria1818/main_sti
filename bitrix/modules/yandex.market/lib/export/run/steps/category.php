@@ -14,12 +14,13 @@ class Category extends Base
 
 	public function getName()
 	{
-		return 'category';
+		return Market\Export\Run\Manager::STEP_CATEGORY;
 	}
 
 	public function run($action, $offset = null)
 	{
 		$result = new Market\Result\Step();
+
 		$context = $this->getContext();
 		$sectionList = $this->getSectionList($context);
 		$tagValuesList = $this->buildTagValuesList([], $sectionList, $context);
@@ -56,6 +57,7 @@ class Category extends Base
 		return [
 			Market\Export\Run\Manager::ENTITY_TYPE_CURRENCY => true,
 			Market\Export\Run\Manager::ENTITY_TYPE_PROMO => true,
+			Market\Export\Run\Manager::ENTITY_TYPE_COLLECTION => true,
 			Market\Export\Run\Manager::ENTITY_TYPE_GIFT => true,
 		];
 	}
@@ -682,7 +684,7 @@ class Category extends Base
 		return $result;
 	}
 
-	protected function buildTagValues($elementId, $dummy, $section, $context)
+	protected function buildTagValues($elementId, $dummy, $section, $context, Market\Export\Xml\Tag\Base $root = null)
 	{
 		$result = new Market\Result\XmlValue();
 

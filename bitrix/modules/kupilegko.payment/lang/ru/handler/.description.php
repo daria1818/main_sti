@@ -27,11 +27,12 @@ $MESS["ALFABANK_PAYMENT_ORDER_NUMBER_DESCR"] = '';
 $MESS["ALFABANK_PAYMENT_ORDER_AMOUNT_NAME"] = 'Сумма заказа';
 $MESS["ALFABANK_PAYMENT_ORDER_AMOUNT_DESCR"] = '';
 $MESS["ALFABANK_PAYMENT_ORDER_DESCRIPTION_NAME"] = 'Описание заказа';
-$MESS["ALFABANK_PAYMENT_ORDER_DESCRIPTION_DESCR"] = 'Передаются только первые 24 символа этого поля.Текст может содержать метки: #PAYMENT_ID# - ID оплаты, #ORDER_ID# - ID заказа, #PAYMENT_NUMBER# - номер оплаты, #ORDER_NUMBER# - номер заказа, #USER_EMAIL# - Email покупателя';
+$MESS["ALFABANK_PAYMENT_ORDER_DESCRIPTION_DESCR"] = "Поле может содержать метки: #PAYMENT_ID# - ID оплаты, #ORDER_ID# - ID заказа, #PAYMENT_NUMBER# - номер оплаты, \n#ORDER_NUMBER# - номер заказа, #USER_EMAIL# - Email покупателя. (не более 24 символов, запрещены к использованию %, +, конец строки '\\r' и перенос строки '\\n').";
 
 
 $MESS["ALFABANK_PAYMENT_FFD_VERSION_NAME"] = 'Формат фискальных документов';
 $MESS["ALFABANK_PAYMENT_FFD_VERSION_DESCR"] = 'Формат версии требуется указать в личном кабинете банка и в кабинете сервиса фискализации';
+$MESS["ALFABANK_PAYMENT_FFD_PAYMENT_DELIVERY_METHOD_NAME"] = 'Тип оплаты для доставки';
 $MESS["ALFABANK_PAYMENT_FFD_PAYMENT_METHOD_NAME"] = 'Тип оплаты';
 $MESS["ALFABANK_PAYMENT_FFD_PAYMENT_METHOD_DESCR"] = 'Для ФФД версии 1.05 и выше';
 $MESS['ALFABANK_PAYMENT_FFD_PAYMENT_METHOD_VALUE_1'] = "Полная предварительная оплата до момента передачи предмета расчёта";
@@ -74,9 +75,8 @@ $MESS["ALFABANK_PAYMENT_OFD_RECIEPT_VALUE_5"] = "Патентная систем
 $MESS["ALFABANK_PAYMENT_OFD_TAX_SYSTEM_NAME"] = "Система налогообложения";
 $MESS["ALFABANK_PAYMENT_OFD_TAX_SYSTEM_DESCR"] = "";
 
-$MESS["ALFABANK_PAYMENT_RETURN_URL_NAME"] = "Адрес, на который требуется перенаправить пользователя в случае успешной оплаты";
-$MESS["ALFABANK_PAYMENT_RETURN_URL_DESCR"] = "Не обязательно для заполнения. Адрес должен быть указан полностью, включая используемый протокол";
-$MESS["ALFABANK_PAYMENT_FAIL_URL_NAME"] = "Адрес, на который требуется перенаправить пользователя в случае неуспешной оплаты";
-$MESS["ALFABANK_PAYMENT_FAIL_URL_DESCR"] = "Не обязательно для заполнения. Адрес должен быть указан полностью, включая используемый протокол";
+$MESS["ALFABANK_PAYMENT_RETURN_URL_NAME"] = "Страница, на которую необходимо перенаправить пользователя в случае успешной оплаты";
+$MESS["ALFABANK_PAYMENT_RETURN_URL_DESCR"] = "Оставьте это поле пустым, если хотите использовать настройки по умолчанию.";
+$MESS["ALFABANK_PAYMENT_FAIL_URL_NAME"] = "Страница, на которую требуется перенаправить пользователя в случае неуспешной оплатыa";
+$MESS["ALFABANK_PAYMENT_FAIL_URL_DESCR"] = "Оставьте это поле пустым, если хотите использовать настройки по умолчанию.";
 
-$MESS["ALFABANK_PAYMENT_FFD_PAYMENT_DELIVERY_METHOD_NAME"] = 'Тип оплаты для доставки';

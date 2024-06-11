@@ -32,10 +32,7 @@ class OrderFacade
 
 		if (!$sendResult->isSuccess())
 		{
-			$errorMessage = implode(PHP_EOL, $sendResult->getErrorMessages());
-			$exceptionMessage = static::getLang('API_ORDERS_FETCH_FAILED', [ '#MESSAGE#' => $errorMessage ]);
-
-			throw new Main\SystemException($exceptionMessage);
+			throw Market\Exceptions\Api\Facade::fromResult($sendResult, static::getLang('API_ORDERS_FETCH_FAILED'));
 		}
 
 		/** @var $response Market\Api\Partner\Orders\Response */
@@ -63,10 +60,7 @@ class OrderFacade
 
 		if (!$sendResult->isSuccess())
 		{
-			$errorMessage = implode(PHP_EOL, $sendResult->getErrorMessages());
-			$exceptionMessage = static::getLang('API_ORDER_FETCH_FAILED', [ '#MESSAGE#' => $errorMessage ], $errorMessage);
-
-			throw new Market\Exceptions\Api\Request($exceptionMessage);
+			throw Market\Exceptions\Api\Facade::fromResult($sendResult, static::getLang('API_ORDER_FETCH_FAILED'));
 		}
 
 		/** @var $response Market\Api\Partner\Order\Response */
@@ -80,7 +74,7 @@ class OrderFacade
 		return new Market\Api\Partner\Order\Request();
 	}
 
-	public static function submitStatus(Market\Api\Reference\HasOauthConfiguration $options, $orderId, $status, $subStatus = null, Market\Psr\Log\LoggerInterface $logger = null)
+	public static function submitStatus(Market\Api\Reference\HasOauthConfiguration $options, $orderId, $status, $subStatus = null, Market\Psr\Log\LoggerInterface $logger = null, array $payload = [])
 	{
 		$request = static::createSubmitStatusRequest();
 
@@ -91,6 +85,7 @@ class OrderFacade
 		$request->setOrderId($orderId);
 		$request->setStatus($status);
 		$request->setSubStatus($subStatus);
+		$request->setPayload($payload);
 
 		$sendResult = $request->send();
 
@@ -101,6 +96,11 @@ class OrderFacade
 
 			throw new Market\Exceptions\Api\Request($exceptionMessage);
 		}
+
+		/** @var Market\Api\Partner\SendStatus\Response $response */
+		$response = $sendResult->getResponse();
+
+		return $response->getOrder();
 	}
 
 	protected static function createSubmitStatusRequest()

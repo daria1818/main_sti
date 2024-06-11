@@ -46,7 +46,10 @@ class Table extends Market\Reference\Storage\Table
 			new Main\Entity\TextField(
 				'SETTINGS',
 				Market\Reference\Storage\Field\Serializer::getParameters()
-			)
+			),
+			new Main\Entity\IntegerField('PARENT_ID', [
+				'default_value' => 0,
+			]),
 		];
 	}
 
@@ -54,27 +57,75 @@ class Table extends Market\Reference\Storage\Table
 	{
 		return [
 			'PARAM_VALUE' => [
-				'TABLE' => Market\Export\ParamValue\Table::getClassName(),
+				'TABLE' => Market\Export\ParamValue\Table::class,
 				'LINK_FIELD' => 'PARAM_ID',
 				'LINK' => [
 					'PARAM_ID' => $primary
 				]
-			]
+			],
+			'CHILDREN' => [
+				'TABLE' => static::class,
+				'LINK_FIELD' => 'PARENT_ID',
+				'LINK' => [
+					'PARENT_ID' => $primary,
+				],
+			],
 		];
 	}
 
 	public static function migrate(Main\DB\Connection $connection)
 	{
+		$tableName = static::getTableName();
+		$exists = $connection->getTableFields($tableName);
+
+		parent::migrate($connection);
+		static::migrateSettingsType($connection, $exists);
+		static::migrateParentId($connection, $exists);
+	}
+
+	protected static function migrateSettingsType(Main\DB\Connection $connection, array $exists)
+	{
+		if (isset($exists['SETTINGS'])) { return; }
+
 		$sqlHelper = $connection->getSqlHelper();
 		$tableName = static::getTableName();
-		$tableFields = $connection->getTableFields($tableName);
 
-		if (!isset($tableFields['SETTINGS']))
+		$connection->queryExecute(sprintf(
+			'ALTER TABLE %s ADD COLUMN %s text NOT NULL',
+			$sqlHelper->quote($tableName),
+			$sqlHelper->quote('SETTINGS')
+		));
+	}
+
+	protected static function migrateParentId(Main\DB\Connection $connection, array $exists)
+	{
+		if (isset($exists['PARENT_ID'])) { return; }
+
+		$sqlHelper = $connection->getSqlHelper();
+		$tableName = static::getTableName();
+
+		$connection->queryExecute(sprintf(
+			'UPDATE %s SET %s=0',
+			$sqlHelper->quote($tableName),
+			$sqlHelper->quote('PARENT_ID')
+		));
+	}
+
+	public static function saveExtractReference(array &$data)
+	{
+		$result = parent::saveExtractReference($data);
+
+		if (!empty($data['IBLOCK_LINK_ID']) && !empty($result['CHILDREN']) && is_array($result['CHILDREN']))
 		{
-			$connection->queryExecute(
-				'ALTER TABLE ' . $sqlHelper->quote($tableName)
-				. ' ADD COLUMN ' . $sqlHelper->quote('SETTINGS') . ' text NOT NULL'
-			);
+			foreach ($result['CHILDREN'] as &$child)
+			{
+				$child += [
+					'IBLOCK_LINK_ID' => $data['IBLOCK_LINK_ID'],
+				];
+			}
+			unset($child);
 		}
+
+		return $result;
 	}
 }

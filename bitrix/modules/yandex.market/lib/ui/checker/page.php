@@ -253,11 +253,7 @@ class Page extends Market\Ui\Reference\Page
 
 	protected function sendAjaxResponse($data)
 	{
-		global $APPLICATION;
-
-		$APPLICATION->RestartBuffer();
-		echo Main\Web\Json::encode($data);
-		die();
+		Market\Utils\HttpResponse::sendJson($data);
 	}
 
 	public function show()
@@ -291,6 +287,7 @@ class Page extends Market\Ui\Reference\Page
 		Market\Ui\Assets::loadPluginCore();
 		Market\Ui\Assets::loadPlugin('base', 'css');
 		Market\Ui\Assets::loadPlugin('admin', 'css');
+		Market\Ui\Assets::loadPlugin('grain', 'css');
 
 		Market\Ui\Assets::loadPlugin('Ui.Checker');
 		Market\Ui\Assets::loadPlugin('Ui.Checker', 'css');
@@ -486,6 +483,7 @@ class Page extends Market\Ui\Reference\Page
 		return [
 			'EXPORT' => [
 				Export\SetupStatus::class,
+				Export\CollectionStatus::class,
 				Export\PromoStatus::class,
 				Export\AgentActivity::class,
 				Export\AgentLastExecution::class,
@@ -495,6 +493,8 @@ class Page extends Market\Ui\Reference\Page
 				Trading\IncomingRequest::class,
 				Trading\OutgoingRequest::class,
 				Trading\EventLog::class,
+                Trading\AgentActivity::class,
+                Trading\AgentLastExecution::class,
 			],
 		];
 	}

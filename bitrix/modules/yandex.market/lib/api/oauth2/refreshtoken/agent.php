@@ -84,11 +84,11 @@ class Agent extends Market\Reference\Agent\Regular
 
 		foreach ($tokenList as $token)
 		{
-			$options = Market\Trading\Facade\Oauth::getConfiguration($token);
+			$setup = Market\Trading\Facade\Oauth::getSetup($token);
 
-			if ($options !== null)
+			if ($setup !== null)
 			{
-				static::refreshToken($token, $options);
+				static::refreshToken($token, $setup);
 			}
 			else // not used
 			{
@@ -97,8 +97,12 @@ class Agent extends Market\Reference\Agent\Regular
 		}
 	}
 
-	protected static function refreshToken(Market\Api\OAuth2\Token\Model $token, Market\Api\Reference\HasOauthConfiguration $options)
+	protected static function refreshToken(Market\Api\OAuth2\Token\Model $token, Market\Trading\Setup\Model $setup)
 	{
+		/** @var Market\Api\Reference\HasOauthConfiguration $options */
+		$service = $setup->wakeupService();
+		$options = $service->getOptions();
+
 		$requestResult = static::requestToken($token, $options);
 
 		if ($requestResult->isSuccess())
@@ -119,8 +123,8 @@ class Agent extends Market\Reference\Agent\Regular
 
 			if (!$token->canRefresh())
 			{
-				static::addLogError($token, $lastResult);
-				static::notifyUserError();
+				static::addLogError($lastResult, $service->getLogger());
+				static::notifyUserError($setup);
 			}
 		}
 
@@ -154,7 +158,13 @@ class Agent extends Market\Reference\Agent\Regular
 		]);
 	}
 
-	protected static function writeTokenError(Market\Api\OAuth2\Token\Model $token, Main\Result $result)
+	/**
+	 * @param Market\Api\OAuth2\Token\Model $token
+	 * @param Main\Result|Market\Result\Base $result
+	 *
+	 * @return Main\Entity\UpdateResult
+	 */
+	protected static function writeTokenError(Market\Api\OAuth2\Token\Model $token, $result)
 	{
 		$message = implode('; ', $result->getErrorMessages());
 
@@ -164,34 +174,66 @@ class Agent extends Market\Reference\Agent\Regular
 		]);
 	}
 
-	protected static function addLogError(Market\Api\OAuth2\Token\Model $token, Main\Result $result)
+	/**
+	 * @param Main\Result|Market\Result\Base $result
+	 * @param Market\Psr\Log\LoggerInterface $logger
+	 */
+	protected static function addLogError($result, Market\Psr\Log\LoggerInterface $logger)
 	{
-		$message = implode('; ', $result->getErrorMessages());
+		$errorMessage = implode('; ', $result->getErrorMessages());
+		$logMessage = static::getLang('API_REFRESH_TOKEN_LOG_ERROR', [ '#MESSAGE#' => $errorMessage ], $errorMessage);
 
-		\CEventLog::Add([
-			'MODULE_ID' => Market\Config::getModuleName(),
-			'ITEM_ID' => $token->getId(),
-			'AUDIT_TYPE_ID' => static::LOG_REFRESH_FAIL,
-			'DESCRIPTION' => $message
+		$logger->error($logMessage, [
+			'AUDIT' => Market\Logger\Trading\Audit::PROCEDURE,
 		]);
 	}
 
-	protected static function notifyUserError()
+	protected static function notifyUserError(Market\Trading\Setup\Model $setup)
 	{
-		$logUrl = Market\Ui\Admin\Path::getPageUrl('event_log', [
+		$uiCode = static::getUiServiceCode($setup);
+		$editUrl = Market\Ui\Admin\Path::getModuleUrl('trading_edit', [
 			'lang' => LANGUAGE_ID,
+			'service' => $uiCode,
+			'id' => $setup->getId(),
+		]);
+		$logUrl = Market\Ui\Admin\Path::getModuleUrl('trading_log', [
+			'lang' => LANGUAGE_ID,
+			'service' => $uiCode,
+			'find_setup' => $setup->getId(),
+			'find_level' => Market\Logger\Level::ERROR,
 			'set_filter' => 'Y',
 			'apply_filter' => 'Y',
-			'find_audit_type_id' => static::LOG_REFRESH_FAIL
 		]);
-		$message = static::getLang('API_REFRESH_TOKEN_NOTIFY_FAIL_REFRESH', [ '#LOG_URL#' => $logUrl ]);
+		$message = static::getLang('API_REFRESH_TOKEN_NOTIFY_FAIL_REFRESH', [
+			'#LOG_URL#' => $logUrl,
+			'#EDIT_URL#' => $editUrl,
+		]);
 
 		\CAdminNotify::Add([
 			'MODULE_ID' => Market\Config::getModuleName(),
 			'TAG' => static::NOTIFY_REFRESH_FAIL,
 			'NOTIFY_TYPE' => \CAdminNotify::TYPE_ERROR,
-			'MESSAGE' => $message
+			'MESSAGE' => $message,
 		]);
+	}
+
+	protected static function getUiServiceCode(Market\Trading\Setup\Model $setup)
+	{
+		$serviceCode = $setup->getServiceCode();
+		$result = null;
+
+		foreach (Market\Ui\Service\Manager::getTypes() as $uiType)
+		{
+			$uiService = Market\Ui\Service\Manager::getInstance($uiType);
+
+			if (in_array($serviceCode, $uiService->getTradingServices(), true))
+			{
+				$result = $uiType;
+				break;
+			}
+		}
+
+		return $result;
 	}
 
 	/**

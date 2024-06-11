@@ -62,13 +62,7 @@ class Response extends Model
 	{
 		$result = null;
 
-		if ($this->hasField('error'))
-		{
-			$error = $this->getField('error');
-
-			$result = $this->parseResponseError($error);
-		}
-		else if ($this->hasField('errors'))
+		if ($this->hasField('errors'))
 		{
 			$errors = (array)$this->getField('errors');
 			$firstError = reset($errors);
@@ -77,6 +71,12 @@ class Response extends Model
 			{
 				$result = $this->parseResponseError($firstError);
 			}
+		}
+		else if ($this->hasField('error'))
+		{
+			$error = $this->getField('error');
+
+			$result = $this->parseResponseError($error);
 		}
 
 		return $result;

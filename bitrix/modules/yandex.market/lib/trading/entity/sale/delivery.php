@@ -87,6 +87,7 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 		return $result;
 	}
 
+	/** @noinspection PhpInternalEntityUsedInspection */
 	protected function filterBySite($deliveryServices, $siteId)
 	{
 		$result = [];
@@ -145,6 +146,120 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 		return $result;
 	}
 
+	public function filterServicesWithoutPeriod(array $deliveryIds)
+	{
+		if (empty($deliveryIds)) { return []; }
+
+		$result = [];
+		$query = Sale\Delivery\Services\Table::getList([
+			'filter' => [ '=ID' => $deliveryIds ],
+		]);
+
+		while ($deliveryRow = $query->fetch())
+		{
+			if ($this->hasServicePeriod($deliveryRow)) { continue; }
+
+			$result[] = $deliveryRow['ID'];
+		}
+
+		return $result;
+	}
+
+	protected function hasServicePeriod(array $deliveryRow)
+	{
+		if (!isset($deliveryRow['CLASS_NAME'])) { return false; }
+
+		$deliveryClassName = ltrim($deliveryRow['CLASS_NAME'], '\\');
+		$deliveryClassName = Market\Data\TextString::toLower($deliveryClassName);
+
+		$result = false;
+		/** @noinspection PhpUndefinedClassInspection */
+		/** @noinspection PhpUndefinedNamespaceInspection */
+		$types = [
+			'configurable' => Sale\Delivery\Services\Configurable::class,
+			'automatic' => Sale\Delivery\Services\AutomaticProfile::class,
+			'additional' => \Sale\Handlers\Delivery\AdditionalProfile::class,
+			'ruspost' => \Sale\Handlers\Delivery\RussianpostProfile::class,
+			'dostavista' => \Sale\Handlers\Delivery\DostavistaHandler::class,
+			'yandexTaxi' => \Sale\Handlers\Delivery\YandextaxiProfile::class,
+			'ipolOzonCourier' => \Ipol\Ozon\Bitrix\Handler\DeliveryHandlerCourier::class,
+			'ipolOzonPickup' => \Ipol\Ozon\Bitrix\Handler\DeliveryHandlerPickup::class,
+			'ipolOzonPostamat' => \Ipol\Ozon\Bitrix\Handler\DeliveryHandlerPostamat::class,
+		];
+
+		foreach ($types as $type => $className)
+		{
+			$className = ltrim($className, '\\');
+			$className = Market\Data\TextString::toLower($className);
+
+			if ($className !== $deliveryClassName) { continue; }
+
+			$method = 'has' . ucfirst($type) . 'ServicePeriod';
+
+			if (method_exists($this, $method))
+			{
+				$result = $this->{$method}($deliveryRow);
+			}
+			else
+			{
+				$result = true;
+			}
+
+			break;
+		}
+
+		return $result;
+	}
+
+	/** @noinspection PhpUnused */
+	protected function hasConfigurableServicePeriod(array $deliveryRow)
+	{
+		if (!isset($deliveryRow['CONFIG']['MAIN']['PERIOD'])) { return false; }
+
+		$result = false;
+		$configPeriod = $deliveryRow['CONFIG']['MAIN']['PERIOD'];
+		$keys = [
+			'FROM',
+			'TO',
+		];
+
+		foreach ($keys as $key)
+		{
+			if (isset($configPeriod[$key]) && (string)$configPeriod[$key] !== '')
+			{
+				$result = true;
+				break;
+			}
+		}
+
+		return $result;
+	}
+
+	/** @noinspection PhpUnused */
+	protected function hasAutomaticServicePeriod(array $deliveryRow)
+	{
+		if (empty($deliveryRow['CODE'])) { return false; }
+
+		$result = false;
+		$matched = [
+			'rus_post',
+			'ipolh_dpd',
+			'boxberry',
+			'sdek',
+		];
+
+		foreach ($matched as $code)
+		{
+			if (Market\Data\TextString::getPosition($deliveryRow['CODE'], $code) === 0)
+			{
+				$result = true;
+				break;
+			}
+		}
+
+		return $result;
+	}
+
 	public function getEmptyDeliveryId()
 	{
 		return (int)Sale\Delivery\Services\Manager::getEmptyDeliveryServiceId();
@@ -164,7 +279,7 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 		{
 			try
 			{
-				/** @var Sale\Delivery\Services\Base $serviceClassName */
+				/** @var class-string<Sale\Delivery\Services\Base> $serviceClassName */
 				$serviceClassName = $serviceParameters['CLASS_NAME'];
 				$serviceId = (int)$serviceParameters['ID'];
 
@@ -230,7 +345,10 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 
 		foreach ($restrictions as $restriction)
 		{
-			if ($restriction['CLASS_NAME'] === '\Bitrix\Sale\Delivery\Restrictions\ByLocation')
+			if (
+				$restriction['CLASS_NAME'] === '\Bitrix\Sale\Delivery\Restrictions\ByLocation'
+				|| $restriction['CLASS_NAME'] === '\Bitrix\Sale\Delivery\Restrictions\ExcludeLocation'
+			)
 			{
 				$result = true;
 				break;
@@ -314,7 +432,7 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 		$shipment->setDeliveryService($deliveryService);
 	}
 
-	protected function getDeliveryService($deliveryId)
+	public function getDeliveryService($deliveryId)
 	{
 		if (!isset($this->deliveryServices[$deliveryId]))
 		{
@@ -439,6 +557,15 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 		return (bool)$queryAccess->fetch();
 	}
 
+	public function getStores($deliveryId)
+	{
+		$deliveryService = $this->getDeliveryService($deliveryId);
+
+		if (!($deliveryService instanceof Sale\Delivery\Services\Configurable)) { return null; }
+
+		return Sale\Delivery\ExtraServices\Manager::getStoresList($deliveryService->getId());
+	}
+
 	public function suggestDeliveryType($deliveryId, array $supportedTypes = null)
 	{
 		$implementedTypes = $this->getSuggestImplementedDeliveryTypes();
@@ -476,14 +603,41 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 		return $result;
 	}
 
+	/** @noinspection PhpUnused */
+	protected function matchDeliveryTypeDelivery(Sale\Delivery\Services\Base $deliveryService)
+	{
+		if ($deliveryService instanceof SaleHandlers\Delivery\SimpleHandler)
+		{
+			$result = true;
+		}
+		else if ($deliveryService instanceof Sale\Delivery\Services\Configurable)
+		{
+			$stores = Sale\Delivery\ExtraServices\Manager::getStoresList($deliveryService->getId());
+			$result = empty($stores);
+		}
+		else
+		{
+			$courier = $this->environment->getCourierRegistry()->resolveCourier($deliveryService->getId());
+			$result = ($courier !== null);
+		}
+
+		return $result;
+	}
+
+	/** @noinspection PhpUnused */
 	protected function matchDeliveryTypePickup(Sale\Delivery\Services\Base $deliveryService)
 	{
 		$deliveryId = $deliveryService->getId();
 		$stores = Sale\Delivery\ExtraServices\Manager::getStoresList($deliveryId);
 
-		return !empty($stores);
+		if (!empty($stores)) { return true; }
+
+		$outlet = $this->environment->getOutletRegistry()->resolveOutlet($deliveryId);
+
+		return $outlet !== null;
 	}
 
+	/** @noinspection PhpUnused */
 	protected function matchDeliveryTypePost(Sale\Delivery\Services\Base $deliveryService)
 	{
 		$result = false;
@@ -506,6 +660,7 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 		return $result;
 	}
 
+	/** @noinspection PhpUnused */
 	protected function testDeliveryTypePostByCode(Sale\Delivery\Services\Base $deliveryService)
 	{
 		if (!($deliveryService instanceof SaleHandlers\Delivery\AdditionalProfile)) { return false; }
@@ -519,6 +674,7 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 		);
 	}
 
+	/** @noinspection PhpUnused */
 	protected function testDeliveryTypePostByServiceType(Sale\Delivery\Services\Base $deliveryService)
 	{
 		$serviceCode = $deliveryService->getCode();
@@ -529,8 +685,50 @@ class Delivery extends Market\Trading\Entity\Reference\Delivery
 	protected function getSuggestImplementedDeliveryTypes()
 	{
 		return [
+			'DELIVERY',
 			'PICKUP',
 			'POST',
 		];
+	}
+
+	public function debugData($deliveryId)
+	{
+		$result = [];
+
+		try
+		{
+			$deliveryId = (int)$deliveryId;
+
+			if ($deliveryId <= 0) { return []; }
+
+			$service = $this->getDeliveryService($deliveryId);
+			$result['name'] = $service::getClassTitle();
+			$result['code'] = $service->getCode();
+
+			if (
+				$service instanceof Sale\Delivery\Services\Configurable
+				&& method_exists($service, 'getConfigValues')
+			)
+			{
+				$config = $service->getConfigValues();
+
+				$result['period'] = [
+					'from' => $config['MAIN']['PERIOD']['FROM'],
+					'to' => $config['MAIN']['PERIOD']['TO'],
+					'unit' => $config['MAIN']['PERIOD']['TYPE'],
+				];
+			}
+		}
+		catch (\Exception $exception)
+		{
+			trigger_error($exception->getMessage(), E_USER_WARNING);
+		}
+		/** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
+		catch (\Throwable $exception)
+		{
+			trigger_error($exception->getMessage(), E_USER_WARNING);
+		}
+
+		return $result;
 	}
 }

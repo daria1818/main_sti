@@ -17,6 +17,16 @@ abstract class Installer
 
 	abstract public function install(TradingEntity\Reference\Environment $environment, $siteId, array $context = []);
 
+	public function postInstall(TradingEntity\Reference\Environment $environment, $siteId, array $context = [])
+	{
+		// nothing by default
+	}
+
+	public function tweak(TradingEntity\Reference\Environment $environment, $siteId, array $context = [])
+	{
+		// nothing by default
+	}
+
 	abstract public function uninstall(TradingEntity\Reference\Environment $environment, $siteId, array $context = []);
 
 	public function migrate(TradingEntity\Reference\Environment $environment, $siteId, Provider $provider = null, array $context = [])

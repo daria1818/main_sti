@@ -16,7 +16,30 @@ class Date
 		return ConvertTimeStamp($timestamp, 'SHORT');
 	}
 
-	public static function sanitize($date)
+	public static function parse($date, $siteId)
+	{
+		$result = null;
+		$formats = static::makeParseFormats($siteId);
+
+		foreach ($formats as $format)
+		{
+			$result = static::sanitize($date, $format);
+
+			if ($result !== null) { break; }
+		}
+
+		return $result;
+	}
+
+	protected static function makeParseFormats($siteId)
+	{
+		return array_unique(array_filter([
+			Site::getCultureValue($siteId, 'FORMAT_DATE'),
+			FORMAT_DATE,
+		]));
+	}
+
+	public static function sanitize($date, $format = FORMAT_DATE)
 	{
 		$result = null;
 
@@ -34,7 +57,7 @@ class Date
 		}
 		else if (is_scalar($date) && (string)$date !== '')
 		{
-			$timestamp = MakeTimeStamp($date, FORMAT_DATE);
+			$timestamp = MakeTimeStamp($date, $format);
 
 			if ($timestamp !== false)
 			{
@@ -120,18 +143,18 @@ class Date
 		return new Main\Type\Date($dateString, $format);
 	}
 
-	public static function convertForService($timestamp, $format = \DateTime::ATOM)
+	public static function convertForService($timestamp, $format = \DateTime::ATOM, $useServiceTimezone = false)
 	{
 		if ($timestamp instanceof Main\Type\Date || $timestamp instanceof \DateTime)
 		{
-			$dateTime = $timestamp;
+			$dateTime = clone $timestamp;
 		}
 		else
 		{
 			$dateTime = Main\Type\DateTime::createFromTimestamp($timestamp);
 		}
 
-		if (static::supportsTimezone($dateTime) && !static::hasFormatTimezone($format))
+		if ($useServiceTimezone && static::supportsTimezone($dateTime) && !static::hasFormatTimezone($format))
 		{
 			$timezone = static::getTimezone();
 			$dateTime->setTimezone($timezone);

@@ -11,13 +11,32 @@ class Description extends Base
 		return [
 			'name' => 'description',
 			'value_type' => Market\Type\Manager::TYPE_HTML,
-			'max_length' => 3000
+			'max_length' => 6000
 		];
 	}
 
 	public function getSourceRecommendation(array $context = [])
 	{
-		$result = [
+		$partials = [
+			$this->getElementRecommendation(),
+			$this->getOfferRecommendation($context),
+		];
+
+		if ($context['EXPORT_SERVICE'] === Market\Export\Xml\Format\Manager::EXPORT_SERVICE_TURBO)
+		{
+			foreach ($partials as &$partial)
+			{
+				$partial = array_reverse($partial);
+			}
+			unset($partial);
+		}
+
+		return array_merge(...$partials);
+	}
+
+	protected function getElementRecommendation()
+	{
+		return [
 			[
 				'TYPE' => Market\Export\Entity\Manager::TYPE_IBLOCK_ELEMENT_FIELD,
 				'FIELD' => 'PREVIEW_TEXT'
@@ -25,22 +44,23 @@ class Description extends Base
 			[
 				'TYPE' => Market\Export\Entity\Manager::TYPE_IBLOCK_ELEMENT_FIELD,
 				'FIELD' => 'DETAIL_TEXT'
-			]
+			],
 		];
+	}
 
-		if (isset($context['OFFER_IBLOCK_ID']))
-		{
-			$result[] = [
+	protected function getOfferRecommendation(array $context)
+	{
+		if (empty($context['HAS_OFFER'])) { return []; }
+
+		return [
+			[
 				'TYPE' => Market\Export\Entity\Manager::TYPE_IBLOCK_OFFER_FIELD,
 				'FIELD' => 'PREVIEW_TEXT'
-			];
-
-			$result[] = [
+			],
+			[
 				'TYPE' => Market\Export\Entity\Manager::TYPE_IBLOCK_OFFER_FIELD,
 				'FIELD' => 'DETAIL_TEXT'
-			];
-		}
-
-		return $result;
+			],
+		];
 	}
 }

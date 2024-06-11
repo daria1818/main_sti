@@ -146,6 +146,13 @@ class Source extends Market\Export\Entity\Reference\Source
 
 	protected function initializeSectionFilter($filter)
 	{
+		$filter = $this->sliceQueryFilter($filter, [
+			'IBLOCK_SECTION_ID',
+			'SECTION_ID',
+			'STRICT_SECTION_ID',
+		]);
+		$filter = $this->groupQueryFilter($filter);
+
 		foreach ($filter as $filterItem)
 		{
 			if (empty($filterItem['VALUE'])) { continue; }
@@ -187,18 +194,70 @@ class Source extends Market\Export\Entity\Reference\Source
 				}
 				else
 				{
-					$this->sectionFilter[] = [
-						$filterItem['COMPARE'] . 'ID' => $filterItem['VALUE'],
-					];
+					$this->pushQueryFilter($this->sectionFilter, $filterItem['COMPARE'], 'ID', $filterItem['VALUE']);
 				}
 			}
 			else if ($filterItem['FIELD'] === 'STRICT_SECTION_ID')
 			{
-				$this->sectionFilter[] = [
-					$filterItem['COMPARE'] . 'ID' => $filterItem['VALUE'],
-				];
+				$this->pushQueryFilter($this->sectionFilter, $filterItem['COMPARE'], 'ID', $filterItem['VALUE']);
 			}
 		}
+	}
+
+	protected function sliceQueryFilter($filter, $include)
+	{
+		$includeMap = array_flip($include);
+		$result = [];
+
+		foreach ($filter as $item)
+		{
+			if (!isset($includeMap[$item['FIELD']])) { continue; }
+
+			$result[] = $item;
+		}
+
+		return $result;
+	}
+
+	protected function groupQueryFilter($filter)
+	{
+		$fieldMap = [];
+		$index = 0;
+		$result = [];
+
+		foreach ($filter as $item)
+		{
+			$sign = $item['COMPARE'] . $item['FIELD'];
+
+			if (!isset($fieldMap[$sign]))
+			{
+				$result[$index] = $item;
+				$fieldMap[$sign] = $index;
+
+				++$index;
+			}
+			else
+			{
+				$previousIndex = $fieldMap[$sign];
+				$previous = &$result[$previousIndex];
+				$newValue = is_array($previous['VALUE']) ? $previous['VALUE'] : [ $previous['VALUE'] ];
+
+				if (is_array($item['VALUE']))
+				{
+					/** @noinspection SlowArrayOperationsInLoopInspection */
+					$newValue = array_merge($newValue, $item['VALUE']);
+				}
+				else
+				{
+					$newValue[] = $item['VALUE'];
+				}
+
+				$previous['VALUE'] = $newValue;
+				unset($previous);
+			}
+		}
+
+		return $result;
 	}
 
 	protected function isChangedSectionFilter()
@@ -312,6 +371,9 @@ class Source extends Market\Export\Entity\Reference\Source
                 'AUTOCOMPLETE' => true,
                 'AUTOCOMPLETE_FIELD' => 'NAME'
 			],
+			'SORT' => [
+				'TYPE' => Market\Export\Entity\Data::TYPE_NUMBER,
+			],
 			'PREVIEW_PICTURE' => [
 				'TYPE' => Market\Export\Entity\Data::TYPE_FILE
 			],
@@ -325,10 +387,12 @@ class Source extends Market\Export\Entity\Reference\Source
 				'TYPE' => Market\Export\Entity\Data::TYPE_STRING
 			],
 			'DETAIL_PAGE_URL' => [
-				'TYPE' => Market\Export\Entity\Data::TYPE_URL
+				'TYPE' => Market\Export\Entity\Data::TYPE_URL,
+				'FILTERABLE' => false,
 			],
 			'CANONICAL_PAGE_URL' => [
-				'TYPE' => Market\Export\Entity\Data::TYPE_URL
+				'TYPE' => Market\Export\Entity\Data::TYPE_URL,
+				'FILTERABLE' => false,
 			],
 			'DATE_CREATE' => [
 				'TYPE' => Market\Export\Entity\Data::TYPE_DATETIME
@@ -344,7 +408,18 @@ class Source extends Market\Export\Entity\Reference\Source
 			],
 			'XML_ID' => [
 				'TYPE' => Market\Export\Entity\Data::TYPE_STRING
-			]
+			],
+			'CHECK_PERMISSIONS' => [
+				'TYPE' => Market\Export\Entity\Data::TYPE_BOOLEAN,
+				'SELECTABLE' => false,
+			],
+			'PERMISSIONS_BY' => [
+				'TYPE' => Market\Export\Entity\Data::TYPE_NUMBER,
+				'SELECTABLE' => false,
+			],
+			'TAGS' => [
+				'TYPE' => Market\Export\Entity\Data::TYPE_STRING,
+			],
 		]);
 	}
 
@@ -695,6 +770,30 @@ class Source extends Market\Export\Entity\Reference\Source
 
 				$result += $rules['SECTION_ACTIVE'];
 				$appliedRules['SECTION_ACTIVE'] = true;
+			}
+			else if ($field === 'CHECK_PERMISSIONS')
+			{
+				$isCompareEqual = (Market\Data\TextString::getPosition($compare, '!') !== 0);
+				$compare = '';
+
+				if (!$isCompareEqual)
+				{
+					$value = ($value === 'Y' ? 'N' : 'Y');
+				}
+
+				if ($value === 'Y' && !isset($result['PERMISSIONS_BY']))
+				{
+					$result['PERMISSIONS_BY'] = 0;
+				}
+			}
+			else if ($field === 'PERMISSIONS_BY')
+			{
+				$isCompareEqual = (Market\Data\TextString::getPosition($compare, '!') !== 0);
+
+				if (!$isCompareEqual) { continue; }
+
+				$compare = '';
+				$result['CHECK_PERMISSIONS'] = 'Y';
 			}
 			else if ($field === 'TIMESTAMP_X' || Market\Data\TextString::getPosition($field, 'DATE_') === 0)
 			{

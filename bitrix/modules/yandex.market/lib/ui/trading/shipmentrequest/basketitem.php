@@ -1,8 +1,6 @@
 <?php
-
 namespace Yandex\Market\Ui\Trading\ShipmentRequest;
 
-use Bitrix\Main;
 use Yandex\Market;
 
 class BasketItem extends Market\Api\Reference\Model
@@ -13,12 +11,66 @@ class BasketItem extends Market\Api\Reference\Model
 		return (string)$this->getRequiredField('ID');
 	}
 
-	/** @return string[] */
-	public function getCis()
+	/** @return string[][] */
+	public function getIdentifiers()
 	{
-		$values = (array)$this->getField('CIS');
-		$values = array_map('trim', $values);
+		return (array)$this->getField('IDENTIFIERS.ITEMS');
+	}
 
-		return array_filter($values, static function($value) { return $value !== ''; });
+	public function getInitialIdentifiersCount()
+	{
+		return (int)$this->getField('IDENTIFIERS.INITIAL_COUNT');
+	}
+
+	/** @return string */
+	public function getIdentifierType()
+	{
+		return $this->getField('IDENTIFIERS.TYPE');
+	}
+
+	/** @return float|null */
+	public function getCount()
+	{
+		return Market\Data\Number::normalize($this->getField('COUNT'));
+	}
+
+	/** @return float|null */
+	public function getInitialCount()
+	{
+		return Market\Data\Number::normalize($this->getField('INITIAL_COUNT'));
+	}
+
+	public function getPartCurrent()
+	{
+		return Market\Data\Number::normalize($this->getField('PARTIAL_CURRENT'));
+	}
+
+	public function getPartTotal()
+	{
+		return Market\Data\Number::normalize($this->getField('PARTIAL_TOTAL'));
+	}
+
+	/** @return bool */
+	public function needDelete()
+	{
+		return $this->getField('DELETE') === 'Y';
+	}
+
+	public function getInitialBox()
+	{
+		return (int)$this->getField('INITIAL_BOX');
+	}
+
+	/** @return Digital|null */
+	public function getDigital()
+	{
+		return $this->getChildModel('DIGITAL');
+	}
+
+	protected function getChildModelReference()
+	{
+		return [
+			'DIGITAL' => Digital::class,
+		];
 	}
 }

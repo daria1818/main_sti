@@ -79,13 +79,40 @@ class Action extends TradingService\Reference\Action\DataAction
 		$request = $this->createSendDeliveryDateRequest($orderId, $date, $reason);
 		$sendResult = $request->send();
 
-		if (!$sendResult->isSuccess())
+		if ($sendResult->isSuccess()) { return; }
+
+		$sendErrors = $sendResult->getErrors();
+		$sendErrors = $this->filterErrorsDeliveryDate($sendErrors);
+
+		if (!empty($sendErrors))
 		{
-			$errorMessage = implode(PHP_EOL, $sendResult->getErrorMessages());
+			$errorMessages = array_map(static function ($error) { return $error->getMessage(); }, $sendErrors);
+			$errorMessage = implode(PHP_EOL, $errorMessages);
 			$exceptionMessage = static::getMessage('SEND_ERROR', [ '#MESSAGE#' => $errorMessage ], $errorMessage);
 
 			throw new Market\Exceptions\Api\Request($exceptionMessage);
 		}
+	}
+
+	protected function filterErrorsDeliveryDate($errors)
+	{
+		if (!$this->request->isAutoSubmit()) { return $errors; }
+
+		$skip = [
+			'New delivery dates are the same as the current!' => true,
+ 		];
+
+		foreach ($errors as $key => $error)
+		{
+			$message = $error->getMessage();
+
+			if (isset($skip[$message]))
+			{
+				unset($errors[$key]);
+			}
+		}
+
+		return $errors;
 	}
 
 	protected function createSendDeliveryDateRequest($orderId, Main\Type\Date $date, $reason)

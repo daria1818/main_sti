@@ -56,7 +56,7 @@ class CASDiblockAction {
 			}
 			?><script type="text/javascript">
 				top.BX.closeWait(); top.BX.WindowManager.Get().AllowClose(); top.BX.WindowManager.Get().Close();
-				window.location.href = '/bitrix/tools/asd.iblock/props_export.php?ID=<? echo $BID; ?>';
+				window.location.href = '/bitrix/tools/asd.iblock/props_export.php?ID=<? echo $BID; ?>&v=' + Math.random();
 			</script><?
 			die();
 		}
@@ -298,6 +298,7 @@ class CASDiblockAction {
 								'DETAIL_TEXT_TYPE' => $arSrc['DETAIL_TEXT_TYPE'],
 								'DETAIL_PICTURE' => $arSrc['DETAIL_PICTURE'],
 								'WF_STATUS_ID' => $arSrc['WF_STATUS_ID'],
+								'IBLOCK_SECTION_ID' => $arSrc['IBLOCK_SECTION_ID'],
 								'CODE' => $arSrc['~CODE'],
 								'TAGS' => $arSrc['~TAGS'],
 								'PROPERTY_VALUES' => array(),

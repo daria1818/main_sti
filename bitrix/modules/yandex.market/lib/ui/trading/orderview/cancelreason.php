@@ -32,7 +32,7 @@ class CancelReason extends AbstractExtension
 		return $reasonFieldUsed;
 	}
 
-	public function initialize()
+	public function initialize(array $orderInfo)
 	{
 		$eventManager = Main\EventManager::getInstance();
 		$eventManager->addEventHandler('main', 'OnEndBufferContent', [$this, 'onEndBufferContent']);

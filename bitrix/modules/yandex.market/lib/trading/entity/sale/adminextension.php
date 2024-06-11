@@ -54,7 +54,7 @@ class AdminExtension extends Market\Trading\Entity\Reference\AdminExtension
 			{
 				if (!$extension->isSupported()) { continue; }
 
-				$extension->initialize();
+				$extension->initialize($orderInfo);
 			}
 
 			$result = $tabSet->initialize();
@@ -84,7 +84,7 @@ class AdminExtension extends Market\Trading\Entity\Reference\AdminExtension
 			{
 				if (!$extension->isSupported()) { continue; }
 
-				$extension->initialize();
+				$extension->initialize($orderInfo);
 			}
 
 			Market\Ui\Assets::loadPlugin('lib.dialog');
@@ -155,6 +155,7 @@ class AdminExtension extends Market\Trading\Entity\Reference\AdminExtension
 		$order = static::getOrder($orderId);
 
 		return $tradingInfo + [
+			'ORDER_ID' => $orderId,
 			'SITE_ID' => $order->getSiteId(),
 		];
 	}

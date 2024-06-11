@@ -12,6 +12,7 @@ class OrderViewTabSet extends Market\Ui\Reference\Page
 	protected $setup;
 	protected $externalId;
 	protected $parameters;
+	protected $template;
 
 	protected static function includeMessages()
 	{
@@ -63,7 +64,7 @@ class OrderViewTabSet extends Market\Ui\Reference\Page
 
 	public function preloadAssets()
 	{
-		Market\Utils\Component\Assets::preloadCss('yandex.market:trading.order.view');
+		Market\Utils\Component\Assets::preloadCss('yandex.market:trading.order.view', $this->template ?: false);
 		Market\Ui\Library::loadConditional('jquery', Main\Page\AssetLocation::AFTER_JS);
 	}
 
@@ -137,15 +138,21 @@ class OrderViewTabSet extends Market\Ui\Reference\Page
 		<?
 	}
 
-	public function getContentsUrl()
+	public function getContentsUrl(array $query = [])
 	{
-		return Market\Ui\Admin\Path::getModuleUrl('trading_order_view', [
+		return Market\Ui\Admin\Path::getModuleUrl('trading_order_view', $query + array_filter([
 			'lang' => LANGUAGE_ID,
 			'view' => 'tab',
 			'id' => $this->externalId,
 			'setup' => $this->setup->getId(),
 			'site' => $this->setup->getSiteId(),
-		]);
+			'template' => $this->template,
+		]));
+	}
+
+	public function setTemplate($name)
+	{
+		$this->template = $name;
 	}
 
 	public function getTitle()

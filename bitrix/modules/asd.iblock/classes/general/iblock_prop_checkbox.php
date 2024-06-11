@@ -78,6 +78,7 @@ class CASDiblockPropCheckbox {
 			isset($strHTMLControlName['MODE'])
 			&& $strHTMLControlName['MODE'] == 'iblock_element_admin'
 			&& CASDiblockVersion::isIblockNewGridv18()
+			&& strncmp($strHTMLControlName['FORM_NAME'], 'form_tbl_iblock_sub_element', 27) !== 0
 		) {
 			$strResult = '<input type="checkbox" name="'.htmlspecialcharsbx($strHTMLControlName['VALUE']).'" id="'.$strHTMLControlName['VALUE'].'_Y" value="'.ASD_UT_CHECKBOX_VAL_TRUE.'" '.($arValue['VALUE'] == ASD_UT_CHECKBOX_VAL_TRUE ? 'checked="checked"' : '').'/>';
 		} else {

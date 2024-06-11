@@ -6,8 +6,16 @@ use Yandex\Market;
 
 /** @var Yandex\Market\Components\AdminGridList $component */
 
-Market\Ui\Assets::loadPlugin('admin', 'css');
-Market\Ui\Assets::loadPlugin('lib.dialog');
+if ($arParams['SUBLIST'])
+{
+	Market\Ui\Assets::loadPlugin('grain', 'css');
+}
+else
+{
+	Market\Ui\Assets::loadPlugin('admin', 'css');
+	Market\Ui\Assets::loadPlugin('grain', 'css');
+	Market\Ui\Assets::loadPlugin('lib.dialog');
+}
 
 $adminList = $component->getViewList();
 
@@ -25,6 +33,16 @@ if ($arResult['REDIRECT'] !== null)
 if ($component->hasErrors())
 {
 	$component->showErrors();
+
+	if ($arResult['EXCEPTION_MIGRATION'])
+	{
+		include __DIR__ . '/partials/migration-form.php';
+	}
+}
+
+if ($component->hasMessages())
+{
+	$component->showMessages();
 }
 
 if ($component->hasWarnings())
@@ -40,6 +58,8 @@ if (isset($_REQUEST['mode']) && $_REQUEST['mode'] === 'loadMore')
 }
 
 $adminList->CheckListMode();
+
+include __DIR__ . '/partials/reload-events.php';
 
 if ($arParams['USE_FILTER'])
 {

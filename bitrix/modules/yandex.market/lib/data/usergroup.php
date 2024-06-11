@@ -35,7 +35,7 @@ class UserGroup
 
 	protected static function loadDefaults()
 	{
-		$result = Main\UserTable::getUserGroupIds(0);
+		$result = Main\UserTable::getUserGroupIds(-1); // bitrix16.0 bug with 0
 
 		Main\Type\Collection::normalizeArrayValuesByInt($result);
 

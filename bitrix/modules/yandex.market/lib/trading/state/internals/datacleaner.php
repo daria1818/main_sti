@@ -16,20 +16,33 @@ class DataCleaner extends Market\Reference\Agent\Regular
 
 	public static function run()
 	{
-		$days = static::getExpireDays();
+		$types = [
+			'data' => DataTable::class,
+			'entity' => EntityTable::class,
+			'status' => StatusTable::class,
+			'push' => PushTable::class,
+		];
 
-		if ($days <= 0) { return; }
+		/** @var Market\Reference\Storage\Table $dataClass */
+		foreach ($types as $type => $dataClass)
+		{
+			$days = static::getExpireDays($type);
 
-		$date = static::buildExpireDate($days);
+			if ($days <= 0) { return; }
 
-		DataTable::deleteBatch([
-			'filter' => [ '<=TIMESTAMP_X' => $date ],
-		]);
+			$date = static::buildExpireDate($days);
+
+			$dataClass::deleteBatch([
+				'filter' => [ '<=TIMESTAMP_X' => $date ],
+			]);
+		}
 	}
 
-	protected static function getExpireDays()
+	public static function getExpireDays($type)
 	{
-		return (int)Market\Config::getOption('trading_data_expire_days', 30);
+		$option = sprintf('trading_%s_expire_days', $type);
+
+		return (int)Market\Config::getOption($option, 30);
 	}
 
 	protected static function buildExpireDate($days)

@@ -96,7 +96,37 @@ class Source extends Market\Export\Entity\Reference\Source
 
 	public function getFields(array $context = [])
 	{
-		return $this->getPropertyFields($context['IBLOCK_ID']);
+		$iblockId = $this->getContextIblockId($context);
+
+		return $this->getPropertyFields($iblockId);
+	}
+
+	public function suggestFields($query, array $context = [])
+	{
+		$iblockId = (int)$this->getContextIblockId($context);
+
+		if ($iblockId <= 0) { return []; }
+
+		$queryFilter = [
+			'LOGIC' => 'OR',
+			[ '%CODE' => $query ],
+			[ '%NAME' => $query ],
+		];
+
+		if (is_numeric($query))
+		{
+			$queryFilter[] = [ '=ID' => $query ];
+		}
+
+		return $this->loadPropertyFields([
+			'=IBLOCK_ID' => $iblockId,
+			$queryFilter,
+		], 50);
+	}
+
+	protected function getContextIblockId(array $context)
+	{
+		return isset($context['IBLOCK_ID']) ? $context['IBLOCK_ID'] : null;
 	}
 
 	public function getPropertyFields($iblockId)
@@ -134,7 +164,7 @@ class Source extends Market\Export\Entity\Reference\Source
 		return $result;
 	}
 
-	protected function loadPropertyFields($filter)
+	protected function loadPropertyFields($filter, $limit = null)
 	{
 		$result = [];
 
@@ -146,6 +176,7 @@ class Source extends Market\Export\Entity\Reference\Source
 			$query = Iblock\PropertyTable::getList([
 				'filter' => $filter,
 				'select' => ['ID', 'NAME', 'PROPERTY_TYPE', 'USER_TYPE', 'USER_TYPE_SETTINGS', 'WITH_DESCRIPTION', 'LINK_IBLOCK_ID', 'MULTIPLE', 'IBLOCK_ID'],
+				'limit' => $limit,
 			]);
 
 			while ($propertyRow = $query->fetch())
@@ -1030,7 +1061,7 @@ class Source extends Market\Export\Entity\Reference\Source
 
 							$elementListByIblock[$elementIblockId][$element['ID']] = $element;
 
-							if ($elementMap !== null)
+							if ($elementMap !== null && !in_array($element[$innerLinkField], $elementMap, true))
 							{
 								$elementMap[$element['ID']] = $element[$innerLinkField];
 							}

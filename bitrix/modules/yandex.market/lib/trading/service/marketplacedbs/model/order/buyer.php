@@ -3,16 +3,10 @@
 namespace Yandex\Market\Trading\Service\MarketplaceDbs\Model\Order;
 
 use Yandex\Market;
-use Bitrix\Main;
 
-class Buyer extends Market\Api\Reference\Model
+class Buyer extends Market\Trading\Service\Marketplace\Model\Order\Buyer
 {
-	use Market\Reference\Concerns\HasLang;
-
-	protected static function includeMessages()
-	{
-		Main\Localization\Loc::loadMessages(__FILE__);
-	}
+	use Market\Reference\Concerns\HasMessage;
 
 	public static function getMeaningfulFields()
 	{
@@ -26,12 +20,12 @@ class Buyer extends Market\Api\Reference\Model
 
 	public static function getMeaningfulFieldTitle($fieldName)
 	{
-		return static::getLang('TRADING_ACTION_MODEL_BUYER_FIELD_' . $fieldName, null, $fieldName);
+		return self::getMessage('FIELD_' . $fieldName, null, parent::getMeaningfulFieldTitle($fieldName));
 	}
 
-	public function getId()
+	public function isPlaceholder()
 	{
-		return (string)$this->getRequiredField('id');
+		return $this->getField('type') === static::TYPE_PERSON && !$this->hasField('id');
 	}
 
 	public function getPhone()
@@ -54,6 +48,18 @@ class Buyer extends Market\Api\Reference\Model
 		return $this->getField('middleName');
 	}
 
+	public function getEmail()
+	{
+		$value = $this->getField('email');
+
+		if ($value === 'noreply-market@support.yandex.ru')
+		{
+			return null;
+		}
+
+		return $value;
+	}
+
 	public function getMeaningfulValues()
 	{
 		return array_filter([
@@ -61,6 +67,12 @@ class Buyer extends Market\Api\Reference\Model
 			'LAST_NAME' => $this->getLastName(),
 			'FIRST_NAME' => $this->getFirstName(),
 			'MIDDLE_NAME' => $this->getMiddleName(),
+		]);
+	}
+
+	public function getCompatibleValues()
+	{
+		return array_filter([
 			'PHONE' => $this->getPhone(),
 		]);
 	}

@@ -2,11 +2,13 @@
 
 namespace Yandex\Market\Export\Xml\Tag;
 
-use Bitrix\Main;
 use Yandex\Market;
 
 class MinQuantity extends Base
 {
+	use Concerns\HasPackUnitDependency;
+	use Concerns\HasPackUnit;
+
 	public function getDefaultParameters()
 	{
 		return [
@@ -28,5 +30,30 @@ class MinQuantity extends Base
 		}
 
 		return $result;
+	}
+
+	public function extendTagDescriptionList(&$tagDescriptionList, array $context)
+	{
+		parent::extendTagDescriptionList($tagDescriptionList, $context);
+		$this->copyPricePackUnitSetting($tagDescriptionList, $context);
+	}
+
+	public function validate($value, array $context, $siblingsValues = null, Market\Result\XmlNode $nodeResult = null, $settings = null)
+	{
+		$this->resolveValueRatio($settings);
+
+		return parent::validate($value, $context, $siblingsValues, $nodeResult, $settings);
+	}
+
+	protected function formatValue($value, array $context = [], Market\Result\XmlNode $nodeResult = null, $settings = null)
+	{
+		$this->resolveValueRatio($settings);
+
+		return parent::formatValue($value, $context, $nodeResult, $settings);
+	}
+
+	protected function isPackRatioInverted()
+	{
+		return true;
 	}
 }

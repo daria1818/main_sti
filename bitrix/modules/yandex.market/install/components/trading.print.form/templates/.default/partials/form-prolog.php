@@ -1,6 +1,8 @@
 <?php
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) { die(); }
 
+/** @var array $arResult */
+
 ?>
 <form action="<?= POST_FORM_ACTION_URI ?>" method="post" target="_blank">
 	<?php

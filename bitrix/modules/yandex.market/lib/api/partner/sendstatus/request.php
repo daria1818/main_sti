@@ -10,6 +10,7 @@ class Request extends Market\Api\Partner\Reference\Request
 	protected $orderId;
 	protected $status;
 	protected $subStatus;
+	protected $payload;
 
 	public function getPath()
 	{
@@ -29,6 +30,7 @@ class Request extends Market\Api\Partner\Reference\Request
 	public function getQuery()
 	{
 		$subStatus = $this->getSubStatus();
+		$payload = $this->getPayload();
 		$result = [
 			'order' => [
 				'status' => $this->getStatus(),
@@ -38,6 +40,11 @@ class Request extends Market\Api\Partner\Reference\Request
 		if ($subStatus !== null)
 		{
 			$result['order']['substatus'] = $this->getSubStatus();
+		}
+
+		if (!empty($payload))
+		{
+			$result['order'] += $this->convertPayload($payload);
 		}
 
 		return $result;
@@ -86,5 +93,20 @@ class Request extends Market\Api\Partner\Reference\Request
 	public function getSubStatus()
 	{
 		return $this->subStatus;
+	}
+
+	public function setPayload($payload)
+	{
+		$this->payload = $payload;
+	}
+
+	public function getPayload()
+	{
+		return $this->payload;
+	}
+
+	protected function convertPayload($payload)
+	{
+		return [];
 	}
 }

@@ -11,12 +11,36 @@ abstract class Platform
 	protected $environment;
 	protected $serviceCode;
 	protected $siteId;
+	protected $setupId;
+	protected $groupSetupIds;
 
 	public function __construct(Environment $environment, $serviceCode, $siteId)
 	{
 		$this->environment = $environment;
 		$this->serviceCode = $serviceCode;
 		$this->siteId = $siteId;
+	}
+
+	public function setSetupId($setupId)
+	{
+		$this->setupId = $setupId !== null ? (int)$setupId : null;
+	}
+
+	/** @return int|null */
+	public function getSetupId()
+	{
+		return $this->setupId;
+	}
+
+	public function setGroupSetupIds(array $setupIds = null)
+	{
+		$this->groupSetupIds = $setupIds;
+	}
+
+	/** @return array|null */
+	public function getGroupSetupIds()
+	{
+		return $this->groupSetupIds;
 	}
 
 	/**

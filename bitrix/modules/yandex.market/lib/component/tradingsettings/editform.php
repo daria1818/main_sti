@@ -116,21 +116,58 @@ class EditForm extends Market\Component\Plain\EditForm
 
 	public function update($primary, $values)
 	{
-		if (!empty($values))
+		try
 		{
-			$fields = $this->getComponentResult('FIELDS');
+			Market\Environment::stamp();
 
-			$values = $this->applyUserFieldsOnBeforeSave($fields, $values);
-			$values = $this->sliceFieldsDependHidden($fields, $values);
+			if (!empty($values))
+			{
+				$fields = $this->getComponentResult('FIELDS');
 
-			$rows = $this->convertValuesToRows($values);
+				$values = $this->applyUserFieldsOnBeforeSave($fields, $values);
+				$values = $this->sliceFieldsDependHidden($fields, $values);
+				$values = $this->takeOptionChanges($primary, $values);
+
+				$rows = $this->convertValuesToRows($values);
+			}
+			else
+			{
+				$rows = [];
+			}
+
+			$updateResult = Market\Trading\Setup\Table::update($primary, [ 'SETTINGS' => $rows ]);
+
+			if ($updateResult->isSuccess())
+			{
+				$setup = Market\Trading\Setup\Model::loadById($primary);
+				$setup->wakeupService();
+				$setup->tweak();
+			}
+
+			return $updateResult;
 		}
-		else
+		catch (Main\SystemException $exception)
 		{
-			$rows = [];
-		}
+			$result = new Main\Entity\UpdateResult();
+			$result->addError(new Main\Error($exception->getMessage()));
 
-		return Market\Trading\Setup\Table::update($primary, [ 'SETTINGS' => $rows ]);
+			return $result;
+		}
+	}
+
+	protected function takeOptionChanges($primary, $values)
+	{
+		$stored = Market\Trading\Setup\Model::loadById($primary);
+		$previous = $stored->wakeupService()->getOptions();
+		$options = clone $previous;
+
+		$options->setValues($values);
+
+		$previous->suppressRequired();
+		$options->suppressRequired();
+		$options->takeChanges($previous);
+
+		return $options->getValues();
 	}
 
 	protected function convertRowsToValues($rows)

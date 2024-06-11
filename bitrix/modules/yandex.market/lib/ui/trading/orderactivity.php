@@ -10,6 +10,8 @@ use Yandex\Market\Trading\Setup as TradingSetup;
 
 class OrderActivity extends Market\Ui\Reference\Page
 {
+	use Market\Reference\Concerns\HasMessage;
+
 	protected function getReadRights()
 	{
 		return Market\Ui\Access::RIGHTS_PROCESS_TRADING;
@@ -24,14 +26,16 @@ class OrderActivity extends Market\Ui\Reference\Page
 	{
 		$setup = $this->getSetup();
 		$type = $this->getType();
-		list($path, $chain) = $this->splitType($type);
-		$action = $this->getAction($setup, $path);
-		$activity = $this->getActionActivity($action);
-		$activity = $this->resolveActivity($activity, $chain);
+		list($path) = $this->splitType($type);
+		$activity = $this->getActivity($setup, $type);
 
 		if ($activity instanceof TradingService\Reference\Action\FormActivity)
 		{
 			$this->showForm($setup, $path, $activity);
+		}
+		else if ($activity instanceof TradingService\Reference\Action\ViewActivity)
+		{
+			$this->showView($setup, $path, $activity);
 		}
 		else if ($activity instanceof TradingService\Reference\Action\CommandActivity)
 		{
@@ -56,6 +60,27 @@ class OrderActivity extends Market\Ui\Reference\Page
 			'FIELDS' => $activity->getFields(),
 			'ALLOW_SAVE' => $this->isAuthorized($this->getWriteRights()),
 			'LAYOUT' => 'raw',
+			'GROUP_PRIMARY' => $this->getOrderIds(),
+			'TRADING_SETUP' => $setup,
+			'TRADING_ACTIVITY' => $activity,
+			'TRADING_PATH' => $path,
+		]);
+	}
+
+	protected function showView(
+		TradingSetup\Model $setup,
+		$path,
+		TradingService\Reference\Action\ViewActivity $activity
+	)
+	{
+		global $APPLICATION;
+
+		$APPLICATION->IncludeComponent('yandex.market:admin.form.edit', '', [
+			'FORM_ID' => $this->getFormId(),
+			'PROVIDER_TYPE' => 'TradingActivityView',
+			'PRIMARY' => $this->getOrderId(),
+			'FIELDS' => $activity->getFields(),
+			'LAYOUT' => 'raw',
 			'TRADING_SETUP' => $setup,
 			'TRADING_ACTIVITY' => $activity,
 			'TRADING_PATH' => $path,
@@ -68,17 +93,50 @@ class OrderActivity extends Market\Ui\Reference\Page
 		TradingService\Reference\Action\CommandActivity $activity
 	)
 	{
+		$hasSuccess = false;
 		$result = new Main\Result();
-		$procedure = null;
 
 		try
 		{
 			$this->checkCommandRequest();
 			$this->checkSessid();
 
-			$primary = $this->getOrderId();
-			$tradingInfo = $this->getTradingInfo($setup, $primary);
-			$payload = $activity->getPayload() + $this->getTradingPayload($tradingInfo);
+			foreach ($this->getOrderIds() as $primary)
+			{
+				$procedureResult = $this->runProcedure($setup, $path, $activity->getPayload(), $primary);
+
+				if ($procedureResult->isSuccess())
+				{
+					$hasSuccess = true;
+				}
+				else
+				{
+					$result->addErrors($procedureResult->getErrors());
+				}
+			}
+
+			if ($hasSuccess)
+			{
+				Market\Trading\State\SessionCache::releaseByType('order');
+			}
+		}
+		catch (\Exception $exception)
+		{
+			$result->addError(new Main\Error($exception->getMessage()));
+		}
+
+		return $result;
+	}
+
+	protected function runProcedure(TradingSetup\Model $setup, $path, $payload, $orderId)
+	{
+		$result = new Main\Result();
+		$procedure = null;
+
+		try
+		{
+			$tradingInfo = $this->getTradingInfo($setup, $orderId);
+			$payload += $this->getTradingPayload($tradingInfo);
 
 			$procedure = new Market\Trading\Procedure\Runner(
 				Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER,
@@ -87,13 +145,19 @@ class OrderActivity extends Market\Ui\Reference\Page
 
 			$procedure->run($setup, $path, $payload);
 		}
-		catch (Market\Exceptions\Trading\NotImplementedAction $exception)
-		{
-			$result->addError(new Main\Error($exception->getMessage()));
-		}
 		catch (Market\Exceptions\Api\Request $exception)
 		{
-			$result->addError(new Main\Error($exception->getMessage()));
+			$exceptionMessage = $exception->getMessage();
+			$message = self::getMessage('PROCEDURE_ERROR', [
+				'#ORDER_ID#' => $orderId,
+				'#MESSAGE#' => $exceptionMessage,
+			], $exceptionMessage);
+
+			$result->addError(new Main\Error($message));
+		}
+		catch (Market\Exceptions\Trading\NotImplementedAction $exception)
+		{
+			throw $exception;
 		}
 		catch (\Exception $exception)
 		{
@@ -102,7 +166,7 @@ class OrderActivity extends Market\Ui\Reference\Page
 				$procedure->logException($exception);
 			}
 
-			$result->addError(new Main\Error($exception->getMessage()));
+			throw $exception;
 		}
 
 		return $result;
@@ -148,16 +212,10 @@ class OrderActivity extends Market\Ui\Reference\Page
 
 	protected function sendCommandResponse(Main\Result $commandResult)
 	{
-		global $APPLICATION;
-
-		$response = [
+		Market\Utils\HttpResponse::sendJson([
 			'status' => $commandResult->isSuccess() ? 'ok' : 'error',
-			'message' => !$commandResult->isSuccess() ? implode(PHP_EOL, $commandResult->getErrorMessages()) : '',
-		];
-
-		$APPLICATION->RestartBuffer();
-		echo Main\Web\Json::encode($response);
-		die();
+			'message' => !$commandResult->isSuccess() ? implode('<br />', $commandResult->getErrorMessages()) : '',
+		]);
 	}
 
 	/** @return TradingSetup\Model */
@@ -176,11 +234,11 @@ class OrderActivity extends Market\Ui\Reference\Page
 		return $result;
 	}
 
-	protected function getAction(TradingSetup\Model $setup, $path)
+	protected function getActivity(TradingSetup\Model $setup, $path)
 	{
 		$environment = $setup->getEnvironment();
 
-		return $setup->getService()->getRouter()->getDataAction($path, $environment);
+		return $setup->getService()->getRouter()->getActivity($path, $environment);
 	}
 
 	protected function getType()
@@ -196,38 +254,6 @@ class OrderActivity extends Market\Ui\Reference\Page
 		return explode('|', $type, 2);
 	}
 
-	protected function getActionActivity(TradingService\Reference\Action\DataAction $action)
-	{
-		if (!($action instanceof TradingService\Reference\Action\HasActivity))
-		{
-			throw new Main\NotSupportedException('action not supported activity');
-		}
-
-		return $action->getActivity();
-	}
-
-	protected function resolveActivity(TradingService\Reference\Action\AbstractActivity $activity, $chain = '')
-	{
-		if ($activity instanceof TradingService\Reference\Action\ComplexActivity)
-		{
-			list($selfChain, $childChain) = explode('.', $chain, 2);
-			$map = $activity->getActivities();
-
-			if (!isset($map[$selfChain]))
-			{
-				throw new Main\ArgumentException(sprintf('cant find %s complex activity', $selfChain));
-			}
-
-			$result = $this->resolveActivity($map[$selfChain], $childChain);
-		}
-		else
-		{
-			$result = $activity;
-		}
-
-		return $result;
-	}
-
 	protected function getFormId()
 	{
 		$type = $this->getType();
@@ -237,11 +263,22 @@ class OrderActivity extends Market\Ui\Reference\Page
 		return 'YANDEX_MARKET_ADMIN_ORDER_ACTIVITY_' . $type;
 	}
 
-	protected function getOrderId()
+	protected function getOrderIds()
 	{
 		$result = $this->request->get('id');
+
 		Assert::notNull($result, 'id');
 
-		return (string)$result;
+		return is_array($result) ? $result : [ $result ];
+	}
+
+	protected function getOrderId()
+	{
+		$ids = $this->getOrderIds();
+		$result = reset($ids) ?: null;
+
+		Assert::notNull($result, 'id');
+
+		return $result;
 	}
 }

@@ -2,6 +2,7 @@
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) { die(); }
 
 /** @var \Yandex\Market\Components\TradingPrintForm $component */
+/** @var array $arResult */
 
 foreach ($arResult['SETTINGS'] as $setting)
 {

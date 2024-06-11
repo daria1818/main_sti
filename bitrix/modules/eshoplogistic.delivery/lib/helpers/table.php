@@ -10,7 +10,7 @@ class Table
     /**
      * @var array|mixed
      */
-    private mixed $items;
+    private $items;
 
     function extra_tablenav()
     {
@@ -51,6 +51,13 @@ class Table
         $records = $this->items;
         $columns = $this->get_columns();
 
+        echo '<thead><tr>';
+        foreach ($columns as $column_name => $column_display_name) {
+            echo '<th>'.$column_display_name.'</th>';
+        }
+        echo '</tr></thead>';
+
+        echo '<tbody class="mainTbody">';
         if (!empty($records)) {
             $i = 0;
             foreach ($records as $key => $rec) {
@@ -72,6 +79,7 @@ class Table
                 $i++;
             }
         }
+        echo '</tbody>';
 
         $this->extra_tablenav();
     }

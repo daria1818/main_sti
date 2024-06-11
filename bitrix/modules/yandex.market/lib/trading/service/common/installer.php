@@ -9,10 +9,20 @@ use Yandex\Market\Trading\Entity as TradingEntity;
 
 abstract class Installer extends Market\Trading\Service\Reference\Installer
 {
+	use Market\Reference\Concerns\HasOnceStatic;
+
 	public function install(TradingEntity\Reference\Environment $environment, $siteId, array $context = [])
 	{
 		$this->installRoute($environment, $siteId, $context);
 		$this->installUserEnvironment($environment, $siteId, $context);
+		$this->installNotification($environment, $siteId, $context);
+	}
+
+	protected static function clearCache()
+	{
+		return static::onceStatic('clearCache', null, static function() {
+			Main\Application::getInstance()->getManagedCache()->cleanDir(Market\Trading\Setup\Table::getTableName());
+		});
 	}
 
 	protected function installRoute(TradingEntity\Reference\Environment $environment, $siteId, array $context)
@@ -92,6 +102,25 @@ abstract class Installer extends Market\Trading\Service\Reference\Installer
 		$attachResult = $user->attachGroup($groupId);
 
 		Market\Result\Facade::handleException($attachResult);
+	}
+
+	protected function installNotification(TradingEntity\Reference\Environment $environment, $siteId, array $context)
+	{
+		$router = $this->provider->getRouter();
+		$mailRepository = new Market\Ui\Trading\Notification\MailRepository();
+
+		foreach ($router->getMap() as $path => $className)
+		{
+			$action = $router->getActionSample($path, $environment);
+
+			if (!($action instanceof TradingService\Reference\Action\HasNotification)) { continue; }
+
+			$notification = $action->getNotification();
+
+			if ($mailRepository->search($notification, $siteId) !== null) { continue; }
+
+			$mailRepository->make($notification, $siteId);
+		}
 	}
 
 	public function uninstall(TradingEntity\Reference\Environment $environment, $siteId, array $context = [])

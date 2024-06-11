@@ -3,55 +3,89 @@
 namespace Yandex\Market\Type;
 
 use Yandex\Market;
-use Bitrix\Main;
-
-Main\Localization\Loc::loadMessages(__FILE__);
 
 class DatePeriodType extends DateType
 {
+	/** @var Market\Type\PeriodType*/
+	protected $periodType;
+	/** @var Market\Result\XmlNode */
+	protected $nodeResultProxy;
+
+	public function __construct()
+	{
+		$this->periodType = Manager::getType(Manager::TYPE_PERIOD);
+	}
+
 	public function validate($value, array $context = [], Market\Export\Xml\Reference\Node $node = null, Market\Result\XmlNode $nodeResult = null)
 	{
-		if ($this->isPeriod($value))
-		{
-			$value = Market\Data\TextString::toUpper(trim($value));
-			$result = false;
+		$proxyResult = $this->makeNodeResultProxy($nodeResult);
+		$isMatch = $this->periodType->validate($value, $context, $node, $proxyResult);
 
-			if (preg_match('/^P(\d+Y)?(\d+M)?(\d+D)?(T(\d+H)?(\d+M)?(\d+S)?)?$/', $value))
-			{
-				$result = true;
-			}
-			else if ($nodeResult)
-			{
-				$nodeResult->registerError(Market\Config::getLang('TYPE_DATEPERIOD_ERROR_INVALID'));
-			}
-		}
-		else
+		if (!$isMatch)
 		{
-			$result = parent::validate($value, $context, $node, $nodeResult);
+			$isMatch = parent::validate($value, $context, $node, $proxyResult);
 		}
 
-		return $result;
+		if (!$isMatch)
+		{
+			$this->copyNodeResultProxy($proxyResult, $nodeResult);
+		}
+
+		return $isMatch;
 	}
 
 	public function format($value, array $context = [], Market\Export\Xml\Reference\Node $node = null, Market\Result\XmlNode $nodeResult = null)
 	{
-		if ($this->isPeriod($value))
+		$proxyResult = $this->makeNodeResultProxy($nodeResult);
+		$result = $this->periodType->format($value, $context, $node, $proxyResult);
+
+		if ($result === '')
 		{
-			$result = Market\Data\TextString::toUpper(trim($value));
+			$proxyResult = $this->makeNodeResultProxy($nodeResult);
+
+			$result = parent::format($value, $context, $node, $proxyResult);
 		}
-		else
-		{
-			$result = parent::format($value, $context, $node, $nodeResult);
-		}
+
+		$this->copyNodeResultProxy($proxyResult, $nodeResult);
 
 		return $result;
 	}
 
+	/** @deprecated */
 	protected function isPeriod($value)
 	{
-		return (
-			is_string($value)
-			&& Market\Data\TextString::getPositionCaseInsensitive(ltrim($value), 'P') === 0
-		);
+		return $this->periodType->isPrepared($value);
+	}
+
+	protected function makeNodeResultProxy(Market\Result\XmlNode $nodeResult = null)
+	{
+		if ($nodeResult === null) { return null; }
+
+		if ($this->nodeResultProxy === null || !$this->nodeResultProxy->isSuccess())
+		{
+			$this->nodeResultProxy = new Market\Result\XmlNode();
+		}
+
+		return $this->nodeResultProxy;
+	}
+
+	protected function copyNodeResultProxy(Market\Result\XmlNode $from = null, Market\Result\XmlNode $to = null)
+	{
+		if ($from === null || $to === null) { return; }
+
+		$errors = $from->getErrors();
+		$canSkip = [
+			'NUMBER_NOT_FOUND' => true,
+		];
+
+		foreach ($errors as $error)
+		{
+			$code = $error->getCode();
+
+			if ($code !== null && isset($canSkip[$code]) && count($errors) > 1) { continue; }
+
+			$to->registerError($error->getMessage(), $code);
+			break;
+		}
 	}
 }

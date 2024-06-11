@@ -19,6 +19,8 @@ class Controller
 		/** @var Table $className */
 		foreach ($classList as $className)
 		{
+			if (is_subclass_of($className, TableDeprecated::class)) { continue; }
+
 			$entity = $className::getEntity();
 			$connection = $entity->getConnection();
 			$tableName = $entity->getDBTableName();
@@ -26,6 +28,7 @@ class Controller
 			if ($connection->isTableExists($tableName))
 			{
 				$className::migrate($connection);
+				$connection->clearCaches();
 			}
 			else
 			{
@@ -35,16 +38,27 @@ class Controller
 		}
 	}
 
-	public static function dropTable()
+	public static function dropTable($classList = null)
 	{
 		$className = Table::getClassName();
-		$classList = static::getClassList($className);
+		$dropped = [];
+
+		if ($classList === null)
+		{
+			$classList = static::getClassList($className);
+		}
 
 		/** @var Table $className */
 		foreach ($classList as $className)
 		{
+			$tableName = $className::getTableName();
+
+			if (isset($dropped[$tableName])) { continue; }
+
 			$entity = $className::getEntity();
 			static::internalDropTable($entity);
+
+			$dropped[$tableName] = true;
 		}
 	}
 

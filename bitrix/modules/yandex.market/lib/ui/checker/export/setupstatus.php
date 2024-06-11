@@ -169,26 +169,10 @@ class SetupStatus extends Checker\Reference\AbstractTest
 
 	protected function getUnprocessedChangesCount(ExportSetup\Model $setup, Main\Type\DateTime $date)
 	{
-		$result = 0;
-		$filter = [
-			'=SETUP_ID' => $setup->getId(),
-			'<=TIMESTAMP_X' => $date,
-		];
+		$state = new Market\Watcher\Track\StampState(Market\Glossary::SERVICE_EXPORT, $setup->getId());
+		$date = Market\Data\DateTime::toCanonical($date);
 
-		$query = ExportRun\Storage\ChangesTable::getList([
-			'filter' => $filter,
-			'select' => [ 'CNT' ],
-			'runtime' => [
-				new Main\Entity\ExpressionField('CNT', 'COUNT(*)')
-			],
-		]);
-
-		if ($row = $query->fetch())
-		{
-			$result = (int)$row['CNT'];
-		}
-
-		return $result;
+		return Market\Watcher\Track\ChangesRepository::unprocessedCount($state, $date);
 	}
 
 	protected function getUnprocessedWarningDate(Main\Type\DateTime $limitDate = null)
@@ -203,7 +187,7 @@ class SetupStatus extends Checker\Reference\AbstractTest
 
 	protected function makeUnprocessedDate($interval, Main\Type\DateTime $limitDate = null)
 	{
-		$result = new Main\Type\DateTime();
+		$result = new Market\Data\Type\CanonicalDateTime();
 		$result->add($interval);
 
 		if ($limitDate !== null && Market\Data\DateTime::compare($limitDate, $result) === -1)

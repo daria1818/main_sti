@@ -29,6 +29,8 @@ class Order extends Market\Trading\Entity\Reference\Order
 	protected $calculatable;
 	/** @var Internals\BasketDataPreserver */
 	protected $basketDataPreserver;
+	/** @var Internals\AccountNumberSetter */
+	protected $accountNumberSetter;
 	/** @var int|null */
 	protected $tradingSetupId;
 
@@ -64,9 +66,14 @@ class Order extends Market\Trading\Entity\Reference\Order
 
 			case Market\Trading\Entity\Operation\Order::BOX:
 			case Market\Trading\Entity\Operation\Order::CIS:
+			case Market\Trading\Entity\Operation\Order::DIGITAL:
 				$result =
 					$this->hasStatusRights($userId, 'update')
 					|| $this->hasShipmentRights($userId, ['update', 'delivery', 'deduction']);
+			break;
+
+			case Market\Trading\Entity\Operation\Order::ITEM:
+				$result = $this->hasStatusRights($userId, 'update');
 			break;
 
 			default:
@@ -145,6 +152,11 @@ class Order extends Market\Trading\Entity\Reference\Order
 	public function getAccountNumber()
 	{
 		return OrderRegistry::getOrderAccountNumber($this->internalOrder);
+	}
+
+	public function getCreationDate()
+	{
+		return $this->internalOrder->getDateInsert();
 	}
 
 	public function getCurrency()
@@ -236,6 +248,12 @@ class Order extends Market\Trading\Entity\Reference\Order
 		$this->getBasket(); // initialize basket (fix clear shipmentCollection)
 	}
 
+	public function fillAccountNumber($accountNumber)
+	{
+		$this->accountNumberSetter = new Internals\AccountNumberSetter($this->internalOrder, $accountNumber);
+		$this->accountNumberSetter->install();
+	}
+
 	public function fillXmlId($externalId, EntityReference\Platform $platform)
 	{
 		$xmlId = $platform->getOrderXmlId($externalId);
@@ -254,7 +272,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 		$this->linkTradeBinding($setupId, $platform);
 	}
 
-	public function fillProperties(array $values)
+	public function fillProperties(array $values, $onlyEmpty = false)
 	{
 		$propertyCollection = $this->internalOrder->getPropertyCollection();
 		$result = new Main\Result();
@@ -267,6 +285,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 			$propertyId = $property->getPropertyId();
 
 			if ($propertyId === null || !array_key_exists($propertyId, $values)) { continue; }
+			if ($onlyEmpty && !Market\Utils\Value::isEmpty($property->getValue())) { continue; }
 
 			$value = $values[$propertyId];
 			$sanitizedValue = $this->sanitizePropertyValue($property, $value);
@@ -308,16 +327,41 @@ class Order extends Market\Trading\Entity\Reference\Order
 	{
 		$isValueMultiple = is_array($value);
 		$sanitizeValues = $isValueMultiple ? $value : [ $value ];
+		$propertyFields = $property->getProperty();
+		$propertyType = isset($propertyFields['TYPE']) ? $propertyFields['TYPE'] : null;
 
 		foreach ($sanitizeValues as &$sanitizeValue)
 		{
-			if ($sanitizeValue instanceof Main\Type\DateTime)
+			// value
+
+			if (
+				$sanitizeValue instanceof Main\Type\DateTime
+				&& (
+					$propertyType !== 'DATE'
+					|| !isset($propertyFields['TIME'])
+					|| $propertyFields['TIME'] !== 'N'
+				)
+			)
 			{
-				$sanitizeValue = ConvertTimeStamp($sanitizeValue->getTimestamp(), 'FULL');
+				$sanitizeValue = ConvertTimeStamp($sanitizeValue->getTimestamp(), 'FULL', $this->internalOrder->getSiteId());
 			}
 			else if ($sanitizeValue instanceof Main\Type\Date)
 			{
-				$sanitizeValue = ConvertTimeStamp($sanitizeValue->getTimestamp(), 'SHORT');
+				$sanitizeValue = ConvertTimeStamp($sanitizeValue->getTimestamp(), 'SHORT', $this->internalOrder->getSiteId());
+			}
+			else if ($value instanceof Market\Data\Type\EnumValue)
+			{
+				$propertyData = $property->getProperty();
+				$propertyType = isset($propertyData['TYPE']) ? $propertyData['TYPE'] : 'STRING';
+
+				$sanitizeValue = $propertyType === 'ENUM' ? $value->code : (string)$value;
+			}
+
+			// property
+
+			if ($propertyType === 'NUMBER' && is_string($sanitizeValue) && preg_match('/^\s*(\d+)(?:[.,](\d+))?(\s|$)/', $sanitizeValue, $matches))
+			{
+				$sanitizeValue = (float)($matches[1] . (isset($matches[2]) && $matches[2] !== '' ? '.' . $matches[2] : ''));
 			}
 		}
 		unset($sanitizeValue);
@@ -496,6 +540,11 @@ class Order extends Market\Trading\Entity\Reference\Order
 			if ($basketFields['AVAILABLE_QUANTITY'] < $basketFields['QUANTITY'])
 			{
 				$basketFields['QUANTITY'] = $basketFields['AVAILABLE_QUANTITY'];
+
+				$result->addError(new Main\Error(static::getLang('TRADING_ENTITY_SALE_ENTITY_ORDER_BASKET_ITEM_INSUFFICIENT_QUANTITY', [
+					'#REQUIRED#' => $basketFields['QUANTITY'],
+					'#AVAILABLE#' => $basketFields['AVAILABLE_QUANTITY'],
+				])));
 			}
 		}
 
@@ -530,7 +579,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 
 		$providerResult = $this->getBasketItemProviderData($basket, $basketItem, $basketFields);
 
-		if ($result->isSuccess())
+		if ($providerResult->isSuccess())
 		{
 			$providerData = (array)$providerResult->getData();
 
@@ -554,9 +603,11 @@ class Order extends Market\Trading\Entity\Reference\Order
 		if (isset($basketFields['NAME']))
 		{
 			$basketItem->setField('NAME', $basketFields['NAME']);
-			$alreadySetFields += [
-				'NAME' => true,
-			];
+
+			if ($this->useBasketItemNameFromProvider())
+			{
+				$alreadySetFields['NAME'] = true;
+			}
 		}
 
 		// set quantity
@@ -591,6 +642,11 @@ class Order extends Market\Trading\Entity\Reference\Order
 		]);
 
 		return $result;
+	}
+
+	protected function useBasketItemNameFromProvider()
+	{
+		return Market\Config::getOption('trading_basket_name_original') === 'Y';
 	}
 
 	protected function getBasketItemProviderData(Sale\BasketBase $basket, Sale\BasketItemBase $basketItem, $basketFields)
@@ -681,6 +737,107 @@ class Order extends Market\Trading\Entity\Reference\Order
 		return $result;
 	}
 
+	public function fillMarking(array $basketMarkings)
+	{
+		$result = new Main\Result();
+		$allChanges = [];
+
+		foreach ($basketMarkings as $basketCode => $itemMarkings)
+		{
+			$basketItem = $this->getBasket()->getItemByBasketCode($basketCode);
+
+			if ($basketItem === null) { continue; }
+			if (!method_exists($basketItem, 'isSupportedMarkingCode') || !$basketItem->isSupportedMarkingCode()) { continue; }
+
+			$type = $this->basketItemMarkingType($basketItem) ?: Market\Data\Trading\MarkingRegistry::CIS;
+			$filled = array_column($this->collectBasketItemInstances($basketItem), $type);
+			$filled = array_filter($filled);
+			$new = $type === Market\Data\Trading\MarkingRegistry::UIN
+				? Market\Data\Trading\Uin::diff($itemMarkings, $filled)
+				: Market\Data\Trading\Cis::diff($itemMarkings, $filled);
+			$itemChanges = [];
+
+			if (empty($new)) { continue; }
+
+			/** @var Sale\Shipment $shipment */
+			foreach ($this->internalOrder->getShipmentCollection() as $shipment)
+			{
+				if ($shipment->isSystem()) { continue; }
+
+				$shipmentItem = $shipment->getShipmentItemCollection()->getItemByBasketCode($basketItem->getBasketCode());
+
+				if ($shipmentItem === null) { continue; }
+
+				$storeItemCollection = $shipmentItem->getShipmentItemStoreCollection();
+
+				if ($storeItemCollection === null) { continue; }
+
+				/** @var Sale\ShipmentItemStore $shipment */
+				foreach ($storeItemCollection as $storeItem)
+				{
+					if (!method_exists($storeItem, 'getMarkingCode')) { continue; }
+
+					$storedCode = (string)$storeItem->getMarkingCode();
+
+					if ($storedCode !== '') { continue; }
+
+					$code = array_shift($new);
+
+					$storeItem->setField('MARKING_CODE', $code);
+					$itemChanges[] = $code;
+
+					if (empty($new)) { break; }
+				}
+
+				foreach ($new as $code)
+				{
+					if ($storeItemCollection->count() >= $shipmentItem->getQuantity()) { break; }
+
+					$itemChanges[] = $code;
+					$shipmentItemStore = $storeItemCollection->createItem($basketItem);
+					$shipmentItemStore->setFields([
+						'MARKING_CODE' => $code,
+						'QUANTITY' => 1,
+					]);
+				}
+			}
+
+			if (!empty($itemChanges))
+			{
+				$allChanges[$basketCode] = $itemChanges;
+			}
+		}
+
+		if (!empty($allChanges))
+		{
+			Listener::addInternalChange(
+				$this->internalOrder->getId(),
+				'SHIPMENT.ITEM.STORE.MARKING_CODE',
+				Listener::STRICT_INTERNAL_CHANGE
+			);
+		}
+
+		$result->setData([
+			'CHANGES' => $allChanges,
+		]);
+
+		return $result;
+	}
+
+	public function getExistsBasketItemCodes()
+	{
+		$basket = $this->getBasket();
+		$result = [];
+
+		/** @var Sale\BasketItem $basketItem */
+		foreach ($basket as $basketItem)
+		{
+			$result[] = $basketItem->getBasketCode();
+		}
+
+		return $result;
+	}
+
 	public function getBasketItemCode($value, $field = 'PRODUCT_ID')
 	{
 		$basket = $this->getBasket();
@@ -689,10 +846,67 @@ class Order extends Market\Trading\Entity\Reference\Order
 		/** @var Sale\BasketItem $basketItem */
 		foreach ($basket as $basketItem)
 		{
-			if ((string)$basketItem->getField($field) === (string)$value)
+			$itemValue = (string)$basketItem->getField($field);
+
+			if ($field === 'XML_ID' && $itemValue !== '')
+			{
+				$hashPosition = Market\Data\TextString::getPosition($itemValue, '_R');
+
+				if ($hashPosition > 0)
+				{
+					$itemValue = Market\Data\TextString::getSubstring($itemValue, 0, $hashPosition);
+				}
+			}
+
+			if ($itemValue === (string)$value)
 			{
 				$result = $basketItem->getBasketCode();
 				break;
+			}
+		}
+
+		return $result;
+	}
+
+	public function debugBasketItem($basketCode, array $expected = [])
+	{
+		$basketItem = $this->getBasket()->getItemByBasketCode($basketCode);
+
+		if ($basketItem === null) { return []; }
+
+		$result = [];
+		$current = $basketItem->getFields()->getValues();
+		$expected += [
+			'PRODUCT_PROVIDER_CLASS' => $this->getProductDefaultProvider(),
+		];
+
+		foreach ($expected as $name => $expectedValue)
+		{
+			if (!isset($current[$name]) && !array_key_exists($name, $current)) { continue; }
+
+			$currentValue = $current[$name];
+
+			if ($name === 'QUANTITY')
+			{
+				$isEqual = Market\Data\Quantity::equal($expectedValue, $current['QUANTITY']);
+			}
+			else
+			{
+				$expectedSanitized = Market\Data\TextString::toLower($expectedValue);
+				$currentSanitized = Market\Data\TextString::toLower($currentValue);
+
+				if ($name === 'PRODUCT_PROVIDER_CLASS')
+				{
+					$expectedSanitized = ltrim($expectedSanitized, '\\');
+					$currentSanitized = ltrim($currentSanitized, '\\');
+				}
+
+				$isEqual = ($expectedSanitized === $currentSanitized);
+			}
+
+			if (!$isEqual)
+			{
+				$result[$name] = $currentValue;
 			}
 		}
 
@@ -713,9 +927,12 @@ class Order extends Market\Trading\Entity\Reference\Order
 		else
 		{
 			$result->setData([
+				'PRODUCT_ID' => $basketItem->getField('PRODUCT_ID'),
 				'NAME' => $basketItem->getField('NAME'),
 				'PRICE' => $basketItem->getPrice(),
+				'DISCOUNT_PRICE' => $basketItem->getDiscountPrice(),
 				'QUANTITY' => $basketItem->canBuy() ? $basketItem->getQuantity() : 0,
+				'XML_ID' => $basketItem->getField('XML_ID'),
 				'MEASURE_NAME' => $basketItem->getField('MEASURE_NAME'),
 				'DETAIL_PAGE_URL' => $basketItem->getField('DETAIL_PAGE_URL'),
 				'VAT_RATE' => $basketItem->getVatRate() * 100,
@@ -723,6 +940,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 				'MARKING_GROUP' => method_exists($basketItem, 'getMarkingCodeGroup')
 					? $basketItem->getMarkingCodeGroup()
 					: null,
+				'MARKING_TYPE' => $this->basketItemMarkingType($basketItem),
 			]);
 		}
 
@@ -732,6 +950,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 	protected function collectBasketItemInstances(Sale\BasketItemBase $basketItem)
 	{
 		$basketItemCode = $basketItem->getBasketCode();
+		$markingType = $this->basketItemMarkingType($basketItem) ?: Market\Data\Trading\MarkingRegistry::CIS;
 		$result = [];
 
 		/** @var Sale\Shipment $shipment */
@@ -751,14 +970,21 @@ class Order extends Market\Trading\Entity\Reference\Order
 					: '';
 
 				$result[] = [
-					'CIS' => $markingCode !== ''
-						? Market\Data\Trading\Cis::fromMarkingCode($markingCode)
-						: null,
+					$markingType => $markingCode !== '' ? $markingCode : null,
 				];
 			}
 		}
 
 		return $result;
+	}
+
+	protected function basketItemMarkingType(Sale\BasketItemBase $basketItem)
+	{
+		if (!method_exists($basketItem, 'getMarkingCodeGroup')) { return null; }
+
+		return $this->environment->getProduct()->getMarkingGroupType(
+			$basketItem->getMarkingCodeGroup()
+		);
 	}
 
 	public function setBasketItemPrice($basketCode, $price)
@@ -782,6 +1008,10 @@ class Order extends Market\Trading\Entity\Reference\Order
 			if (!$setResult->isSuccess())
 			{
 				$result->addErrors($setResult->getErrors());
+			}
+			else if ((float)$basketItem->getField('BASE_PRICE') < $price)
+			{
+				$basketItem->setField('BASE_PRICE', $price);
 			}
 		}
 
@@ -807,6 +1037,12 @@ class Order extends Market\Trading\Entity\Reference\Order
 		{
 			$basketItem->setFieldNoDemand('QUANTITY', $quantity);
 
+			Listener::addInternalChange(
+				$this->internalOrder->getId(),
+				sprintf('BASKET.%s.QUANTITY', $basketCode),
+				$quantity
+			);
+
 			if ($this->supportsShipmentItemOverheadQuantity())
 			{
 				$this->syncShipmentItemQuantity($basketItem, true);
@@ -818,11 +1054,41 @@ class Order extends Market\Trading\Entity\Reference\Order
 
 			if ($setResult->isSuccess())
 			{
+				Listener::addInternalChange(
+					$this->internalOrder->getId(),
+					sprintf('BASKET.%s.QUANTITY', $basketCode),
+					$quantity
+				);
+
 				$this->syncShipmentItemQuantity($basketItem);
 			}
 			else
 			{
 				$result->addErrors($setResult->getErrors());
+			}
+		}
+
+		return $result;
+	}
+
+	public function setBasketStore(array $stores)
+	{
+		$result = new Main\Result();
+		$storeId = reset($stores);
+
+		if (!is_numeric($storeId) || count($stores) !== 1 || !Sale\Configuration::useStoreControl())
+		{
+			return $result;
+		}
+
+		/** @var Sale\BasketItem $basketItem */
+		foreach ($this->getBasket() as $basketItem)
+		{
+			$itemResult = $this->setBasketItemStore($basketItem->getBasketCode(), $storeId);
+
+			if (!$itemResult->isSuccess())
+			{
+				$result->addErrors($itemResult->getErrors());
 			}
 		}
 
@@ -864,10 +1130,23 @@ class Order extends Market\Trading\Entity\Reference\Order
 
 			if (Sale\Configuration::useStoreControl())
 			{
-				$storeItem = $shipmentItem->getShipmentItemStoreCollection()->createItem($basketItem);
+				if (method_exists($basketItem, 'isSupportedMarkingCode') && $basketItem->isSupportedMarkingCode())
+				{
+					foreach (range(1, $basketItem->getQuantity()) as $unused)
+					{
+						$storeItem = $shipmentItem->getShipmentItemStoreCollection()->createItem($basketItem);
 
-				$storeItem->setField('STORE_ID', $storeId);
-				$storeItem->setField('QUANTITY', $basketItem->getQuantity());
+						$storeItem->setField('STORE_ID', $storeId);
+						$storeItem->setField('QUANTITY', 1);
+					}
+				}
+				else
+				{
+					$storeItem = $shipmentItem->getShipmentItemStoreCollection()->createItem($basketItem);
+
+					$storeItem->setField('STORE_ID', $storeId);
+					$storeItem->setField('QUANTITY', $basketItem->getQuantity());
+				}
 			}
 		}
 		catch (Main\SystemException $exception)
@@ -888,7 +1167,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 		}
 		else if ($basketItemShipment->getStoreId() <= 0)
 		{
-			$basketItemShipment->setStoreId($storeId);
+			$basketItemShipment->setStoreId((int)$storeId);
 			$result = $basketItemShipment;
 		}
 		else if ($basketItemShipment->getStoreId() !== (int)$storeId)
@@ -978,7 +1257,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 			$result = $originalShipment;
 		}
 
-		$result->setStoreId($storeId);
+		$result->setStoreId((int)$storeId);
 
 		return $result;
 	}
@@ -1014,14 +1293,46 @@ class Order extends Market\Trading\Entity\Reference\Order
 		return $shipmentItem;
 	}
 
+	public function deleteBasketItem($basketCode)
+	{
+		$result = new Main\Result();
+		$basket = $this->getBasket();
+		$basketItem = $basket->getItemByBasketCode($basketCode);
+
+		if ($basketItem === null)
+		{
+			$errorMessage = static::getLang('TRADING_ENTITY_SALE_BASKET_ITEM_NOT_FOUND');
+			$result->addError(new Main\Error($errorMessage));
+		}
+		else
+		{
+			$deleteResult = $basketItem->delete();
+
+			if ($deleteResult->isSuccess())
+			{
+				Listener::addInternalChange($this->internalOrder->getId(), 'BASKET.DELETE', $basketCode);
+			}
+			else
+			{
+				$result->addErrors($deleteResult->getErrors());
+			}
+		}
+
+		return $result;
+	}
+
 	public function getBasketPrice()
 	{
 		return $this->getBasket()->getPrice();
 	}
 
-	/**
-	 * @return Sale\OrderBase
-	 */
+	/** @return Sale\OrderBase */
+	public function getInternal()
+	{
+		return $this->internalOrder;
+	}
+
+	/** @return Sale\OrderBase */
 	public function getCalculatable()
 	{
 		if ($this->calculatable === null)
@@ -1048,6 +1359,13 @@ class Order extends Market\Trading\Entity\Reference\Order
 		}
 
 		return $order;
+	}
+
+	public function getDeliveryId()
+	{
+		$shipment = $this->getNotSystemShipment();
+
+		return $shipment !== null ? $shipment->getDeliveryId() : null;
 	}
 
 	public function createShipment($deliveryId, $price = null, array $data = null)
@@ -1192,10 +1510,23 @@ class Order extends Market\Trading\Entity\Reference\Order
 			$result->addError(new Main\Error(
 				sprintf('cant find shipment with delivery service %s', $deliveryId)
 			));
+
+			return $result;
 		}
-		else
+
+		// always set for event handlers
+
+		$shipment->setStoreId((int)$storeId);
+
+		// test delivery support
+
+		$storeExtraService = Sale\Delivery\ExtraServices\Manager::getStoresFields($shipment->getDeliveryId());
+
+		if (empty($storeExtraService))
 		{
-			$shipment->setStoreId($storeId);
+			$result->addError(new Main\Error(
+				sprintf('delivery service %s hasn\'t support for store selection', $deliveryId)
+			));
 		}
 
 		return $result;
@@ -1209,6 +1540,8 @@ class Order extends Market\Trading\Entity\Reference\Order
 		/** @var Sale\Shipment $shipment */
 		foreach ($this->internalOrder->getShipmentCollection() as $shipment)
 		{
+			if ($shipment->isSystem()) { continue; }
+
 			if ((int)$shipment->getDeliveryId() === $deliveryId)
 			{
 				$result = $shipment;
@@ -1267,6 +1600,20 @@ class Order extends Market\Trading\Entity\Reference\Order
 		}
 
 		return $result;
+	}
+
+	public function getPaySystemId()
+	{
+		$paymentCollection = $this->internalOrder->getPaymentCollection();
+		$payments = $this->filterPaymentCollection($paymentCollection, [
+			'SUBSIDY' => false,
+		]);
+
+		if (empty($payments)) { return null; }
+
+		$firstPayment = reset($payments);
+
+		return $firstPayment->getPaymentSystemId();
 	}
 
 	public function createPayment($paySystemId, $price = null, array $data = null)
@@ -1439,6 +1786,30 @@ class Order extends Market\Trading\Entity\Reference\Order
 		return $result;
 	}
 
+	public function getMarkers($codePrefix)
+	{
+		if ($this->internalOrder->getField('MARKED') !== 'Y') { return []; }
+
+		$marker = $this->environment->getMarker();
+		$result = [];
+
+		if ($marker->hasExternalEntity())
+		{
+			foreach ($marker->getActive($this->internalOrder->getId()) as $row)
+			{
+				if (Market\Data\TextString::getPosition($row['CODE'], $codePrefix) !== 0) { continue; }
+
+				$result[] = $row['MESSAGE'];
+			}
+		}
+		else
+		{
+			$result[] = $this->internalOrder->getField('REASON_MARKED');
+		}
+
+		return $result;
+	}
+
 	public function addMarker($message, $code)
 	{
 		$message = $this->truncateMarkerText($message);
@@ -1447,7 +1818,10 @@ class Order extends Market\Trading\Entity\Reference\Order
 
 		if ($marker->hasExternalEntity())
 		{
-			$marker->addMarker($this->internalOrder, $this->internalOrder, $message, $code);
+			if (!$marker->hasSameMarker($this->internalOrder, $message))
+			{
+				$marker->addMarker($this->internalOrder, $this->internalOrder, $message, $code);
+			}
 		}
 		else
 		{
@@ -1561,6 +1935,10 @@ class Order extends Market\Trading\Entity\Reference\Order
 				$result = $this->cancelOrder($payload);
 			break;
 
+			case Status::STATUS_SUBSIDY:
+				$result = $this->setPaid(true, [ 'SUBSIDY' => true ]);
+			break;
+
 			case Status::STATUS_PAYED:
 				$result = $this->setPaid(true, $payload);
 			break;
@@ -1574,7 +1952,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 			break;
 
 			default:
-				$result = $this->internalOrder->setField('STATUS_ID', $status);
+				$result = $this->fillStatus($status, $payload);
 			break;
 		}
 
@@ -1585,6 +1963,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 	{
 		$shipmentCollection = $this->internalOrder->getShipmentCollection();
 		$result = new Main\Result();
+		$changes = [];
 
 		/** @var Sale\Shipment $shipment */
 		foreach ($shipmentCollection as $shipment)
@@ -1593,11 +1972,19 @@ class Order extends Market\Trading\Entity\Reference\Order
 
 			$allowResult = $shipment->allowDelivery();
 
-			if (!$allowResult->isSuccess())
+			if ($allowResult->isSuccess())
+			{
+				$changes[] = $shipment->getId();
+			}
+			else
 			{
 				$result->addErrors($allowResult->getErrors());
 			}
 		}
+
+		$result->setData([
+			'CHANGES' => $changes,
+		]);
 
 		return $result;
 	}
@@ -1606,6 +1993,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 	{
 		$shipmentCollection = $this->internalOrder->getShipmentCollection();
 		$result = new Main\Result();
+		$changes = [];
 
 		/** @var Sale\Shipment $shipment */
 		foreach ($shipmentCollection as $shipment)
@@ -1614,11 +2002,19 @@ class Order extends Market\Trading\Entity\Reference\Order
 
 			$deductResult = $shipment->setField('DEDUCTED', 'Y');
 
-			if (!$deductResult->isSuccess())
+			if ($deductResult->isSuccess())
+			{
+				$changes[] = $shipment->getId();
+			}
+			else
 			{
 				$result->addErrors($deductResult->getErrors());
 			}
 		}
+
+		$result->setData([
+			'CHANGES' => $changes,
+		]);
 
 		return $result;
 	}
@@ -1627,26 +2023,34 @@ class Order extends Market\Trading\Entity\Reference\Order
 	{
 		$result = new Main\Result();
 
-		if (!$this->internalOrder->isCanceled())
+		if ($this->internalOrder->isCanceled()) { return $result; }
+
+		$this->cancelShipment($this->internalOrder);
+		$this->cancelPayment($this->internalOrder);
+
+		$setResult = $this->internalOrder->setField('CANCELED', 'Y');
+
+		if ($setResult->isSuccess())
 		{
-			$this->cancelShipment($this->internalOrder);
-			$this->cancelPayment($this->internalOrder);
+			$changes = [
+				'CANCELED',
+			];
+			
+			Listener::addInternalChange($this->internalOrder->getId(), 'ORDER.CANCELED', 'Y');
 
-			$setResult = $this->internalOrder->setField('CANCELED', 'Y');
-
-			if ($setResult->isSuccess())
+			if ((string)$reason !== '')
 			{
-				Listener::addInternalChange($this->internalOrder->getId(), 'ORDER.CANCELED', 'Y');
+				$changes[] = 'REASON_CANCELED';
+				$this->internalOrder->setField('REASON_CANCELED', $reason);
+			}
 
-				if ((string)$reason !== '')
-				{
-					$this->internalOrder->setField('REASON_CANCELED', $reason);
-				}
-			}
-			else
-			{
-				$result->addErrors($setResult->getErrors());
-			}
+			$result->setData([
+				'CHANGES' => $changes,
+			]);
+		}
+		else
+		{
+			$result->addErrors($setResult->getErrors());
 		}
 
 		return $result;
@@ -1657,16 +2061,28 @@ class Order extends Market\Trading\Entity\Reference\Order
 		/** @var Sale\Shipment $shipment */
 		foreach ($order->getShipmentCollection() as $shipment)
 		{
-			if ($shipment->isSystem()) { continue; }
-
 			if ($shipment->isShipped())
 			{
-				$shipment->setField('DEDUCTED', 'N');
+				if ($shipment->isSystem())
+				{
+					$shipment->setFieldNoDemand('DEDUCTED', 'N');
+				}
+				else
+				{
+					$shipment->setField('DEDUCTED', 'N');
+				}
 			}
 
 			if ($shipment->isAllowDelivery())
 			{
-				$shipment->disallowDelivery();
+				if ($shipment->isSystem())
+				{
+					$shipment->setFieldNoDemand('ALLOW_DELIVERY', 'N');
+				}
+				else
+				{
+					$shipment->disallowDelivery();
+				}
 			}
 		}
 	}
@@ -1676,10 +2092,9 @@ class Order extends Market\Trading\Entity\Reference\Order
 		/** @var Sale\Payment $payment */
 		foreach ($order->getPaymentCollection() as $payment)
 		{
-			if ($payment->isPaid())
-			{
-				$payment->setPaid('N');
-			}
+			if (!$payment->isPaid()) { continue; }
+
+			$payment->setPaid('N');
 		}
 	}
 
@@ -1688,18 +2103,44 @@ class Order extends Market\Trading\Entity\Reference\Order
 		$paymentCollection = $this->internalOrder->getPaymentCollection();
 		$result = new Sale\Result();
 		$value = (bool)$value;
+		$changes = [];
+		$needSyncPayment = false;
 
 		foreach ($this->filterPaymentCollection($paymentCollection, $payload) as $payment)
 		{
 			if ((bool)$payment->isPaid() === $value) { continue; }
 
-			$paymentResult = $payment->setPaid($value ? 'Y' : 'N');
+			$paymentValue = $value ? 'Y' : 'N';
 
-			if (!$paymentResult->isSuccess())
+			if ($paymentValue === 'Y' && $this->isPaymentSystemInner($payment))
+			{
+				$needSyncPayment = true;
+				$payment->setFieldNoDemand('PAID', $paymentValue);
+				$paymentResult = new Sale\Result();
+			}
+			else
+			{
+				$paymentResult = $payment->setPaid($paymentValue);
+			}
+
+			if ($paymentResult->isSuccess())
+			{
+				$changes[] = $payment->getId();
+			}
+			else
 			{
 				$result->addErrors($paymentResult->getErrors());
 			}
 		}
+
+		if ($needSyncPayment)
+		{
+			$this->syncOrderPaidSum();
+		}
+
+		$result->setData([
+			'CHANGES' => $changes,
+		]);
 
 		return $result;
 	}
@@ -1839,6 +2280,63 @@ class Order extends Market\Trading\Entity\Reference\Order
 		return $result;
 	}
 
+	protected function isPaymentSystemInner(Sale\Payment $payment)
+	{
+		$paySystem = $payment->getPaySystem();
+
+		return ($paySystem !== null && $paySystem->getField('ACTION_FILE') === 'inner');
+	}
+
+	protected function fillStatus($status, $payload = null)
+	{
+		$result = new Sale\Result();
+
+		if ($this->internalOrder->getField('STATUS_ID') === $status) { return $result; }
+
+		$setResult = $this->internalOrder->setField('STATUS_ID', $status);
+
+		if ($setResult->isSuccess())
+		{
+			$result->setData([
+				'CHANGES' => [ 'STATUS_ID' ],
+			]);
+		}
+		else
+		{
+			$result->addErrors($setResult->getErrors());
+		}
+
+		return $result;
+	}
+
+	public function resetCashbox()
+	{
+		if (!class_exists(Sale\Cashbox\Internals\Pool::class)) { return; }
+
+		$internalId = $this->internalOrder->getInternalId();
+
+		// immediate reset for new bitrix
+
+		Sale\Cashbox\Internals\Pool::resetDocs($internalId);
+
+		// delayed reset for old bitrix
+
+		if (!CheckVersion(Main\ModuleManager::getVersion('sale'), '20.0.675'))
+		{
+			Main\EventManager::getInstance()->addEventHandler('sale', 'OnSalePaymentEntitySaved', static function(Main\Event $event) use ($internalId) {
+				/** @var Sale\Payment $payment */
+				/** @var Sale\PaymentCollection $paymentCollection */
+				$payment = $event->getParameter('ENTITY');
+				$paymentCollection = $payment->getCollection();
+				$order = $paymentCollection ? $paymentCollection->getOrder() : null;
+
+				if (!$order || $order->getInternalId() !== $internalId) { return; }
+
+				Sale\Cashbox\Internals\Pool::resetDocs($internalId);
+			});
+		}
+	}
+
 	public function add($externalId, EntityReference\Platform $platform)
 	{
 		$result = new Main\Result();
@@ -1854,6 +2352,11 @@ class Order extends Market\Trading\Entity\Reference\Order
 		}
 		else
 		{
+			if ($this->accountNumberSetter !== null)
+			{
+				$this->accountNumberSetter->release();
+			}
+
 			$orderId = $orderResult->getId();
 			$tradingResult = $this->addTradingTable($orderId, $externalId, $platform);
 
@@ -1878,6 +2381,21 @@ class Order extends Market\Trading\Entity\Reference\Order
 		}
 
 		return $result;
+	}
+
+	protected function syncOrderPaidSum()
+	{
+		$paymentCollection = $this->internalOrder->getPaymentCollection();
+
+		if ($paymentCollection === null) { return; }
+
+		$calculated = $paymentCollection->getPaidSum();
+		$current = $this->internalOrder->getSumPaid();
+
+		if (Market\Data\Price::round($calculated) !== Market\Data\Price::round($current))
+		{
+			$this->internalOrder->setFieldNoDemand('SUM_PAID', $calculated);
+		}
 	}
 
 	protected function syncOrderPrice()
@@ -1906,7 +2424,7 @@ class Order extends Market\Trading\Entity\Reference\Order
 			{
 				$paymentSum += $payment->getSum();
 
-				if (!$payment->isPaid() && !$payment->isInner() && !$this->isSubsidyPayment($payment))
+				if (!$payment->isPaid() && !$this->isPaymentSystemInner($payment) && !$this->isSubsidyPayment($payment))
 				{
 					$lastPayment = $payment;
 				}
@@ -1956,27 +2474,10 @@ class Order extends Market\Trading\Entity\Reference\Order
 		}
 		else if ($this->eventProcessing === Listener::STATE_SAVING) // on after order row saved
 		{
-			$result = new Main\Result();
-
-			if ($this->internalOrder instanceof Sale\Order)
-			{
-				$changedValues = $this->internalOrder->getFields()->getChangedValues();
-				$diffValues = array_diff($changedValues, $this->initialChangedValues);
-				$saveValues = array_intersect_key(
-					$diffValues,
-					Sale\Internals\OrderTable::getEntity()->getFields()
-				);
-
-				if (!empty($saveValues))
-				{
-					$updateResult = Sale\OrderTable::update($this->internalOrder->getId(), $saveValues);
-
-					if (!$updateResult->isSuccess())
-					{
-						$result->addErrors($updateResult->getErrors());
-					}
-				}
-			}
+			$result = Market\Result\Facade::merge([
+				$this->updateOrderRow(),
+				$this->updateOrderProperties(),
+			]);
 		}
 		else
 		{
@@ -1984,6 +2485,31 @@ class Order extends Market\Trading\Entity\Reference\Order
 		}
 
 		return $result;
+	}
+
+	protected function updateOrderRow()
+	{
+		if (!($this->internalOrder instanceof Sale\Order)) { return new Main\Result(); }
+
+		$changedValues = $this->internalOrder->getFields()->getChangedValues();
+		$diffValues = array_diff($changedValues, $this->initialChangedValues);
+		$saveValues = array_intersect_key(
+			$diffValues,
+			Sale\Internals\OrderTable::getEntity()->getFields()
+		);
+
+		if (empty($saveValues)) { return new Main\Result(); }
+
+		return Sale\OrderTable::update($this->internalOrder->getId(), $saveValues);
+	}
+
+	protected function updateOrderProperties()
+	{
+		$propertyCollection = $this->internalOrder->getPropertyCollection();
+
+		if (!$propertyCollection->isChanged()) { return new Main\Result(); }
+
+		return $propertyCollection->save();
 	}
 
 	protected function supportsTradeBinding(EntityReference\Platform $platform)

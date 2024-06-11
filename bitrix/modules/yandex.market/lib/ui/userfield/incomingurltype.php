@@ -23,10 +23,10 @@ class IncomingUrlType extends StringType
 			: '&nbsp;';
 	}
 
-	public static function GetEditFormHTML($arUserField, $arHtmlControl)
+	public static function GetEditFormHTML($userField, $htmlControl)
 	{
-		$result = parent::GetEditFormHTML($arUserField, $arHtmlControl);
-		$result .= ' ' . static::getCheckButton($arUserField, $arHtmlControl);
+		$result = parent::GetEditFormHTML($userField, $htmlControl);
+		$result .= ' ' . static::getCheckButton($userField, $htmlControl);
 
 		return $result;
 	}

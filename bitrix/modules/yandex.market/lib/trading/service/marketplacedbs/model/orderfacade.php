@@ -16,4 +16,9 @@ class OrderFacade extends Market\Api\Model\OrderFacade
 	{
 		return new TradingService\MarketplaceDbs\Api\Order\Request();
 	}
+
+	protected static function createSubmitStatusRequest()
+	{
+		return  new TradingService\MarketplaceDbs\Api\SendStatus\Request();
+	}
 }

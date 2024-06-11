@@ -3,6 +3,7 @@
 namespace Yandex\Market\Trading\Service\MarketplaceDbs\Options;
 
 use Bitrix\Main;
+use Yandex\Market\Data;
 use Yandex\Market\Trading\Service as TradingService;
 
 /** @method ScheduleOption current() */
@@ -65,6 +66,37 @@ class ScheduleOptions extends IntervalOptions
 			{
 				$result[] = $option;
 			}
+		}
+
+		return $result;
+	}
+
+	public function firstUntilTime()
+	{
+		/** @var TradingService\MarketplaceDbs\Options\ScheduleOption|null $firstOption */
+		$firstOption = $this->offsetGet(0);
+
+		if ($firstOption === null) { return [24, 0]; }
+
+		$result = Data\Time::parse($firstOption->getToTime());
+
+		foreach ($this->collection as $option)
+		{
+			if ($option->getFromWeekday() !== $firstOption->getFromWeekday()) { break; }
+
+			$optionTime = Data\Time::parse($option->getToTime());
+
+			if ($optionTime === null) { continue; }
+
+			if ($result === null || Data\Time::compare($result, $optionTime) === -1)
+			{
+				$result = $optionTime;
+			}
+		}
+
+		if ($result === null || ($result[0] === 0 && $result[1] === 0))
+		{
+			$result = [24, 0];
 		}
 
 		return $result;

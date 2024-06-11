@@ -56,10 +56,12 @@ abstract class AbstractAction
 
 	protected function getPlatform()
 	{
-		$platformRegistry = $this->environment->getPlatformRegistry();
-		$serviceCode = $this->provider->getCode();
-		$siteId = $this->getSiteId();
+		$platform = $this->environment->getPlatformRegistry()->getPlatform(
+			$this->provider->getCode(),
+			$this->getSiteId()
+		);
+		$platform->setSetupId($this->provider->getOptions()->getSetupId());
 
-		return $platformRegistry->getPlatform($serviceCode, $siteId);
+		return $platform;
 	}
 }

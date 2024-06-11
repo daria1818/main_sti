@@ -25,6 +25,7 @@ class Manager
 	const EXPORT_FORMAT_MEDICINE = 'medicine';
 	const EXPORT_FORMAT_TOUR = 'tour';
 	const EXPORT_FORMAT_ALCO = 'alco';
+	const EXPORT_FORMAT_ON_DEMAND = 'on.demand';
 	const EXPORT_FORMAT_PRICE = 'price';
 
 	protected static $customServiceList;
@@ -68,14 +69,15 @@ class Manager
 		{
 			case static::EXPORT_SERVICE_YANDEX_MARKET:
 				$result = [
-					static::EXPORT_FORMAT_VENDOR_MODEL,
 					static::EXPORT_FORMAT_SIMPLE,
+					static::EXPORT_FORMAT_VENDOR_MODEL,
 					static::EXPORT_FORMAT_BOOK,
 					static::EXPORT_FORMAT_AUDIOBOOK,
 					static::EXPORT_FORMAT_ARTIST_TITLE,
 					static::EXPORT_FORMAT_EVENT_TICKET,
 					static::EXPORT_FORMAT_MEDICINE,
 					static::EXPORT_FORMAT_TOUR,
+					static::EXPORT_FORMAT_ON_DEMAND,
 					static::EXPORT_FORMAT_ALCO
 				];
 			break;

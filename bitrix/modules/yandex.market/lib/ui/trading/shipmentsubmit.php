@@ -36,7 +36,6 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 	{
 		$this->checkAccess();
 		$submitResults = $this->submit();
-		$this->savePreferences();
 		$this->flushOrderCache();
 
 		return $this->collectResponse($submitResults);
@@ -101,6 +100,7 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 	{
 		$replaces = [
 			'#ACTIONS#' => $this->combineActionTitles($actions, 'PREPOSITIONAL'),
+			'#FOLLOWING#' => $this->makeFollowingInstructions(),
 		];
 
 		return [
@@ -129,6 +129,13 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 			static::getLang('ADMIN_SHIPMENT_SUBMIT_ACTION_TITLE_GLUE', null, ', '),
 			$titles
 		);
+	}
+
+	protected function makeFollowingInstructions()
+	{
+		return $this->getRequestOrder()->useAutoFinish()
+			? static::getLang('ADMIN_SHIPMENT_SUBMIT_FOLLOWING_AUTO')
+			: static::getLang('ADMIN_SHIPMENT_SUBMIT_FOLLOWING_COMMON');
 	}
 
 	protected function getActionTitle($action, $variant = '')
@@ -167,6 +174,7 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 		return $this->once('loadOrderEntity');
 	}
 
+	/** @noinspection PhpUnused */
 	protected function loadOrderEntity()
 	{
 		$setup = $this->getSetup();
@@ -185,47 +193,280 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 		return $orderRegistry->loadOrder($internalId);
 	}
 
-	protected function savePreferences()
-	{
-		$this->saveUseDimensionsFlag();
-	}
-
-	protected function saveUseDimensionsFlag()
-	{
-		global $USER;
-
-		$userId = ($USER instanceof \CUser ? (int)$USER->GetID() : 0);
-		$stored = (\CUserOptions::GetOption('yamarket_order_view', 'use_dimensions', 'N', $userId) === 'Y');
-		$requested = $this->getRequestOrder()->useDimensions();
-
-		if ($stored !== $requested)
-		{
-			\CUserOptions::SetOption('yamarket_order_view', 'use_dimensions', $requested ? 'Y' : 'N', false, $userId);
-		}
-	}
-
 	protected function submit()
 	{
+		if ($this->needSubmitFallback())
+		{
+			return [
+				$this->isItemsChanged() ? $this->submitItems() : $this->submitIdentifiers(),
+				$this->submitBoxes(),
+				$this->submitDigitalGoods(),
+			];
+		}
+
 		return [
-			$this->submitCis(),
-			$this->submitShipments(),
+			$this->submitOrderBoxes(),
+			$this->submitDigitalGoods(),
 		];
 	}
 
-	protected function submitCis()
+	protected function needSubmitFallback()
 	{
-		$path = 'send/cis';
+		$basketConfirm = $this->getRequestOrder()->getBasketConfirm();
+
+		return (
+			$basketConfirm !== null
+			&& ($basketConfirm->isAllowRemove() && $basketConfirm->getReason())
+		);
+	}
+
+	protected function submitOrderBoxes()
+	{
+		$path = 'send/order/boxes';
 
 		try
 		{
-			$order = $this->getRequestOrder();
-			$items = $this->makeCisItems();
+			$boxes = $this->makeOrderBoxes();
+
+			if (
+				!$this->isBoxesCountChanged($boxes)
+				&& !$this->isItemsChanged()
+				&& !$this->isBoxItemsChanged()
+				&& !$this->isBoxInstancesChanged()
+			)
+			{
+				return new Market\Result\Base();
+			}
+
+			$basketConfirm = $this->getRequestOrder()->getBasketConfirm();
+
+			$result = $this->callProcedure($path, $this->getProcedureTradingData() + [
+				'boxes' => $boxes,
+				'allowRemove' => $basketConfirm !== null && $basketConfirm->isAllowRemove(),
+			]);
+		}
+		catch (Market\Exceptions\Api\ObjectPropertyException $exception)
+		{
+			$result = $this->makeObjectPropertyEmptyResult($path, $exception);
+		}
+
+		return $result;
+	}
+
+	protected function makeOrderBoxes()
+	{
+		$result = [];
+
+		foreach ($this->getRequestOrder()->getBoxCollection() as $box)
+		{
+			$items = [];
+
+			/** @var ShipmentRequest\BasketItem $basketItem */
+			foreach ($box->getBasket() as $basketItem)
+			{
+				if ($basketItem->needDelete()) { continue; }
+
+				$instances = $this->makeItemInstances($basketItem);
+				$item = [
+					'id' => $basketItem->getId(),
+				];
+
+				if ($basketItem->getPartCurrent() !== null)
+				{
+					$item['partialCount'] = [
+						'current' => $basketItem->getPartCurrent(),
+						'total' => $basketItem->getPartTotal(),
+					];
+				}
+				else
+				{
+					$item['fullCount'] = $basketItem->getCount();
+				}
+
+				if (!empty($instances))
+				{
+					$item['instances'] = $instances;
+				}
+
+				$items[] = $item;
+			}
+
+			if (empty($items)) { continue; }
+
+			$result[] = [
+				'items' => $items,
+			];
+		}
+
+		return $result;
+	}
+
+	protected function isBoxItemsChanged()
+	{
+		$result = false;
+		$boxIndex = 0;
+
+		/** @var ShipmentRequest\Box $box */
+		foreach ($this->getRequestOrder()->getBoxCollection() as $box)
+		{
+			/** @var ShipmentRequest\BasketItem $basketItem */
+			foreach ($box->getBasket() as $basketItem)
+			{
+				if ($basketItem->getInitialBox() !== $boxIndex)
+				{
+					$result = true;
+					break;
+				}
+			}
+
+			if ($result) { break; }
+
+			++$boxIndex;
+		}
+
+		return $result;
+	}
+
+	protected function isBoxInstancesChanged()
+	{
+		$result = false;
+
+		/** @var ShipmentRequest\Box $box */
+		foreach ($this->getRequestOrder()->getBoxCollection() as $box)
+		{
+			/** @var ShipmentRequest\BasketItem $basketItem */
+			foreach ($box->getBasket() as $basketItem)
+			{
+				if ($basketItem->getInitialIdentifiersCount() > 0)
+				{
+					$result = true;
+					break;
+				}
+
+				$instances = $this->makeItemInstances($basketItem);
+
+				if (!empty($instances))
+				{
+					$result = true;
+					break;
+				}
+			}
+
+			if ($result) { break; }
+		}
+
+		return $result;
+	}
+
+	protected function isItemsChanged()
+	{
+		$result = false;
+
+		/** @var ShipmentRequest\Box $box */
+		foreach ($this->getRequestOrder()->getBoxCollection() as $box)
+		{
+			/** @var ShipmentRequest\BasketItem $basketItem */
+			foreach ($box->getBasket() as $basketItem)
+			{
+				$initialCount = $basketItem->getInitialCount();
+
+				if (
+					$basketItem->needDelete()
+					|| (
+						$initialCount !== null
+						&& (int)$initialCount !== (int)$basketItem->getCount()
+					)
+				)
+				{
+					$result = true;
+					break;
+				}
+			}
+
+			if ($result) { break; }
+		}
+
+		return $result;
+	}
+
+	protected function submitItems()
+	{
+		$path = 'send/items';
+
+		try
+		{
+			$items = $this->makeItems();
+			$basketConfirm = $this->getRequestOrder()->getBasketConfirm();
+
+			$result = $this->callProcedure($path, $this->getProcedureTradingData() + [
+				'items' => $items,
+				'reason' => $basketConfirm !== null ? $basketConfirm->getReason() : null,
+			]);
+		}
+		catch (Market\Exceptions\Api\ObjectPropertyException $exception)
+		{
+			$result = $this->makeObjectPropertyEmptyResult($path, $exception);
+		}
+
+		return $result;
+	}
+
+	protected function makeItems()
+	{
+		$result = [];
+
+		/** @var ShipmentRequest\Box $box */
+		foreach ($this->getRequestOrder()->getBoxCollection() as $box)
+		{
+			/** @var ShipmentRequest\BasketItem $basketItem */
+			foreach ($box->getBasket() as $basketItem)
+			{
+				if ($basketItem->needDelete()) { continue; }
+
+				$id = $basketItem->getId();
+				$instances = $this->makeItemInstances($basketItem);
+
+				if (isset($result[$id]))
+				{
+					$result[$id]['count'] += $basketItem->getCount();
+
+					if (!empty($instances))
+					{
+						$result[$id]['instances'] = isset($result[$id]['instances'])
+							? array_merge($result[$id]['instances'], $instances)
+							: $instances;
+					}
+					continue;
+				}
+
+				$item = [
+					'id' => $id,
+					'count' => $basketItem->getCount(),
+				];
+
+				if (!empty($instances))
+				{
+					$item['instances'] = $instances;
+				}
+
+				$result[$id] = $item;
+			}
+		}
+
+		return array_values($result);
+	}
+
+	protected function submitIdentifiers()
+	{
+		$path = 'send/identifiers';
+
+		try
+		{
+			$items = $this->makeIdentifiers();
 
 			if (empty($items)) { return new Market\Result\Base(); }
 
-			$result = $this->callProcedure($path, [
-				'orderId' => $order->getId(),
-				'orderNum' => $order->getAccountNumber(),
+			$result = $this->callProcedure($path, $this->getProcedureTradingData() + [
 				'items' => $items,
 			]);
 		}
@@ -237,58 +478,90 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 		return $result;
 	}
 
-	protected function makeCisItems()
+	protected function makeIdentifiers()
 	{
 		$result = [];
 
-		/** @var ShipmentRequest\BasketItem $basketItem */
-		foreach ($this->getRequestOrder()->getBasket() as $basketItem)
+		/** @var ShipmentRequest\Box $box */
+		foreach ($this->getRequestOrder()->getBoxCollection() as $box)
 		{
-			$itemCis = $basketItem->getCis();
+			/** @var ShipmentRequest\BasketItem $basketItem */
+			foreach ($box->getBasket() as $basketItem)
+			{
+				$instances = $this->makeItemInstances($basketItem);
 
-			if (empty($itemCis)) { continue; }
+				if (empty($instances)) { continue; }
 
-			$result[] = [
-				'id' => $basketItem->getId(),
-				'instances' => array_map(
-					static function($cis) { return [ 'cis' => $cis ]; },
-					$itemCis
-				),
- 			];
+				$id = $basketItem->getId();
+
+				if (isset($result[$id]))
+				{
+					array_push($result[$id]['instances'], ...$instances);
+					continue;
+				}
+
+				$result[$id] = [
+					'id' => $id,
+					'instances' => $instances,
+	            ];
+			}
 		}
+
+		return array_values($result);
+	}
+
+	protected function makeItemInstances(ShipmentRequest\BasketItem $basketItem)
+	{
+		$result = [];
+		$keysMap = [];
+
+		if ($basketItem->getIdentifierType() !== null)
+		{
+			$keysMap[Market\Data\Trading\MarkingRegistry::CIS] = mb_strtolower($basketItem->getIdentifierType());
+		}
+
+		foreach ($basketItem->getIdentifiers() as $index => $instances)
+		{
+			if (!is_array($instances)) { continue; }
+
+			foreach ($instances as $type => $value)
+			{
+				$key = isset($keysMap[$type]) ? $keysMap[$type] : mb_strtolower($type);
+				$value = trim($value);
+
+				if ($value === '') { continue; }
+
+				if ($type === Market\Data\Trading\MarkingRegistry::CIS)
+				{
+					$value = Market\Data\Trading\Cis::formatMarkingCode($value);
+				}
+				else if ($type === Market\Data\Trading\MarkingRegistry::UIN)
+				{
+					$value = Market\Data\Trading\Uin::formatMarkingCode($value);
+				}
+
+				$result[$index][$key] = $value;
+			}
+		}
+
+		if (empty($result)) { return null; }
 
 		return $result;
 	}
 
-	protected function submitShipments()
-	{
-		$submitResults = [];
-		$requestOrder = $this->getRequestOrder();
-
-		/** @var ShipmentRequest\Shipment $shipment */
-		foreach ($requestOrder->getShipments() as $shipment)
-		{
-			$submitResults[] = $this->submitBoxes($shipment, $requestOrder->useDimensions());
-		}
-
-		return !empty($submitResults)
-			? Market\Result\Facade::merge($submitResults)
-			: new Market\Result\Base();
-	}
-
-	protected function submitBoxes(ShipmentRequest\Shipment $shipment, $useDimensions = true)
+	protected function submitBoxes()
 	{
 		$path = 'send/boxes';
 
 		try
 		{
-			$order = $this->getRequestOrder();
+			$boxes = $this->makeBoxes();
 
-			$result = $this->callProcedure($path, [
-				'orderId' => $order->getId(),
-				'orderNum' => $order->getAccountNumber(),
-				'shipmentId' => $shipment->getId(),
-				'boxes' => $this->makeBoxes($shipment, $useDimensions),
+			if (!$this->isBoxesCountChanged($boxes)) { return new Market\Result\Base(); }
+
+			$result = $this->callProcedure($path, $this->getProcedureTradingData() + [
+				'shipmentId' => $this->getRequestOrder()->getShipmentId(),
+				'boxes' => $this->makeBoxes(),
 			]);
 		}
 		catch (Market\Exceptions\Api\ObjectPropertyException $exception)
@@ -299,31 +572,106 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 		return $result;
 	}
 
-	protected function makeBoxes(ShipmentRequest\Shipment $requestShipment, $useDimensions = true)
+	protected function isBoxesCountChanged(array $boxes)
+	{
+		return (count($boxes) !== $this->getRequestOrder()->getInitialBoxCount());
+	}
+
+	protected function makeBoxes()
+	{
+		$result = [];
+		$orderId = $this->getRequestOrder()->getId();
+		$index = 1;
+
+		foreach ($this->getRequestOrder()->getBoxCollection() as $ignored)
+		{
+			$result[] = [
+				'fulfilmentId' => ($orderId . '-' . $index),
+			];
+
+			++$index;
+		}
+
+		return $result;
+	}
+
+	protected function submitDigitalGoods()
+	{
+		$path = 'send/digital';
+
+		try
+		{
+			$digitalGoods = $this->makeDigitalGoods();
+
+			if (empty($digitalGoods)) { return new Market\Result\Base(); }
+
+			$result = $this->callProcedure($path, $this->getProcedureTradingData() + [
+				'items' => $digitalGoods,
+			]);
+		}
+		catch (Market\Exceptions\Api\ObjectPropertyException $exception)
+		{
+			$result = $this->makeObjectPropertyEmptyResult($path, $exception);
+		}
+
+		return $result;
+	}
+
+	protected function makeDigitalGoods()
 	{
 		$result = [];
 
 		/** @var ShipmentRequest\Box $box */
-		foreach ($requestShipment->getBoxes() as $box)
+		foreach ($this->getRequestOrder()->getBoxCollection() as $box)
 		{
-			$outgoingBox = [
-				'fulfilmentId' => $box->getFulfilmentId(),
-			];
-
-			if ($useDimensions)
+			/** @var ShipmentRequest\BasketItem $basketItem */
+			foreach ($box->getBasket() as $basketItem)
 			{
-				$outgoingBox += [
-					'weight' => $box->getSize('WEIGHT'),
-					'width' => $box->getSize('WIDTH'),
-					'height' => $box->getSize('HEIGHT'),
-					'depth' => $box->getSize('DEPTH'),
-				];
-			}
+				if ($basketItem->needDelete()) { continue; }
 
-			$result[] = $outgoingBox;
+				$digital = $basketItem->getDigital();
+
+				if ($digital === null) { continue; }
+
+				$digitalItems = [];
+
+				/** @var ShipmentRequest\DigitalItem $digitalItem */
+				foreach ($digital->getItems() as $digitalItem)
+				{
+					if (count($digitalItems) === (int)$basketItem->getCount()) { break; }
+
+					$code = $digitalItem->getCode();
+
+					if ($code === '') { continue; }
+
+					$digitalItems[] = [
+						'id' => $basketItem->getId(),
+						'code' => $code,
+						'slip' => $digital->getSlip(),
+						'activate_till' => $digitalItem->getActivateTill(),
+					];
+				}
+
+				if (empty($digitalItems)) { continue; }
+
+				array_push($result, ...$digitalItems);
+			}
 		}
 
 		return $result;
+	}
+
+	protected function getProcedureTradingData()
+	{
+		$order = $this->getRequestOrder();
+
+		return [
+			'internalId' => $order->getInternalId(),
+			'orderId' => $order->getId(),
+			'orderNum' => $order->getAccountNumber(),
+			'immediate' => true,
+			'autoSubmit' => false,
+		];
 	}
 
 	protected function callProcedure($path, $data)
@@ -369,6 +717,7 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 		return $this->once('loadSetup');
 	}
 
+	/** @noinspection PhpUnused */
 	protected function loadSetup()
 	{
 		$setupId = $this->getRequestOrder()->getSetupId();
@@ -382,6 +731,7 @@ class ShipmentSubmit extends Market\Ui\Reference\Page
 		return $this->once('createRequestOrder');
 	}
 
+	/** @noinspection PhpUnused */
 	protected function createRequestOrder()
 	{
 		$data = $this->request->getPost('YAMARKET_ORDER');

@@ -28,6 +28,7 @@ include __DIR__ . '/check-javascript.php';
 $formActionUri = !empty($arParams['FORM_ACTION_URI'])
 	? $arParams['FORM_ACTION_URI']
 	: htmlspecialcharsbx($APPLICATION->GetCurPageParam());
+$useNotifyUnsaved = (!isset($arParams['NOTIFY_UNSAVED']) || $arParams['NOTIFY_UNSAVED'] !== 'N');
 
 ?>
 <form
@@ -35,8 +36,18 @@ $formActionUri = !empty($arParams['FORM_ACTION_URI'])
 	method="POST"
 	action="<?= $formActionUri; ?>"
 	enctype="multipart/form-data"
-	data-plugin="Ui.Form.NotifyUnsaved"
-	<?= $arResult['HAS_REQUEST'] ? 'data-changed="true"' : ''; ?>
+	novalidate
+	<?php
+	if ($useNotifyUnsaved)
+	{
+		echo 'data-plugin="Ui.Form.NotifyUnsaved"';
+
+		if ($arResult['HAS_REQUEST'])
+		{
+			echo ' data-changed="true"';
+		}
+	}
+	?>
 >
 	<?php
 	if ($arParams['FORM_BEHAVIOR'] === 'steps')
@@ -56,6 +67,7 @@ $formActionUri = !empty($arParams['FORM_ACTION_URI'])
 	Market\Ui\Library::load('jquery');
 
 	Market\Ui\Assets::loadPlugin('admin', 'css');
+	Market\Ui\Assets::loadPlugin('grain', 'css');
 	Market\Ui\Assets::loadPlugin('base', 'css');
 
 	Market\Ui\Assets::loadPluginCore();

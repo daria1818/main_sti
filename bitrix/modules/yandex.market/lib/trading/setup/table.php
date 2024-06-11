@@ -55,6 +55,14 @@ class Table extends Market\Reference\Storage\Table
 				'required' => true,
 				'validation' => [__CLASS__, 'validateExternalId'],
 			]),
+
+			new Main\Entity\ReferenceField('SETTINGS', Market\Trading\Settings\Table::class, [
+				'=this.ID' => 'ref.SETUP_ID'
+			]),
+			new Main\Entity\ReferenceField('BUSINESS', Market\Trading\Business\Table::class, [
+				'=this.SETTINGS.NAME' => [ '?', 'BUSINESS_ID' ],
+				'=ref.ID' => 'this.SETTINGS.VALUE',
+			]),
 		];
 	}
 

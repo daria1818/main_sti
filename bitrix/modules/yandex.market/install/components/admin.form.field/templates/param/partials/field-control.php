@@ -181,7 +181,7 @@ else
 		{
 			?>
 			<option value=""><?= $lang['SELECT_PLACEHOLDER']; ?></option>
-			<?
+			<?php
 		}
 
 		if ($selectedTypeId === $arResult['RECOMMENDATION_TYPE'])
@@ -192,7 +192,7 @@ else
 
 				?>
 				<option value="<?= $fieldEnum['ID'] ?>" <?= $isSelected ? 'selected': ''; ?>><?= Market\Utils::htmlEscape($fieldEnum['VALUE']); ?></option>
-				<?
+				<?php
 			}
 		}
 		else
@@ -207,13 +207,15 @@ else
 				{
 					$isSelected = ($fieldInputName !== null && $fieldEnum['ID'] === $sourceFieldAttributes['value']);
 
+					if (!empty($fieldEnum['DEPRECATED']) && !$isSelected) { continue; }
+
 					?>
 					<option value="<?= $fieldEnum['ID'] ?>" <?= $isSelected ? 'selected': ''; ?>><?= Market\Utils::htmlEscape($fieldEnum['VALUE']); ?></option>
-					<?
+					<?php
 				}
 			}
 		}
 		?>
 	</select>
-	<?
+	<?php
 }

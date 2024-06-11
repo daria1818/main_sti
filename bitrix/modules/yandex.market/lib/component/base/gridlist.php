@@ -1,12 +1,20 @@
 <?php
-
 namespace Yandex\Market\Component\Base;
 
+use Bitrix\Main;
+
+/** @property \Yandex\Market\Components\AdminGridList $component */
 abstract class GridList extends AbstractProvider
 {
-	abstract public function getDefaultSort();
+	public function getDefaultSort()
+	{
+		return [];
+	}
 
-	abstract public function getDefaultFilter();
+	public function getDefaultFilter()
+	{
+		return [];
+	}
 
 	abstract public function getFields(array $select = []);
 
@@ -14,9 +22,15 @@ abstract class GridList extends AbstractProvider
 
 	abstract public function loadTotalCount(array $queryParameters = []);
 
-	abstract public function deleteItem($id);
+	public function deleteItem($id)
+	{
+		throw new Main\NotSupportedException();
+	}
 
-	abstract public function filterActions($item, $actions);
+	public function filterActions($item, $actions)
+	{
+		return $actions;
+	}
 
 	public function getContextMenu()
 	{

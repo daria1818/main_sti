@@ -80,7 +80,11 @@ class Table extends Market\Reference\Storage\Table
 	{
 		$result = true;
 
-		if (array_key_exists('SOURCE_FIELD', $data) && trim($data['SOURCE_FIELD']) === '')
+		if (array_key_exists('ID', $data) && empty($data['ID']) && count($data) === 1)
+		{
+			$result = false;
+		}
+		else if (array_key_exists('SOURCE_FIELD', $data) && trim($data['SOURCE_FIELD']) === '')
 		{
 			$result = false;
 		}

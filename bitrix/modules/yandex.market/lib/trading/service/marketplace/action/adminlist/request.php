@@ -41,7 +41,10 @@ class Request extends TradingService\Reference\Action\DataRequest
 			'toDate' => true,
 			'fromShipmentDate' => true,
 			'toShipmentDate' => true,
+			'updatedAtFrom' => true,
+			'updatedAtTo' => true,
 			'fake' => true,
+			'hasCis' => true,
 			'page' => true,
 			'pageSize' => true,
 		]);

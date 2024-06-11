@@ -10,7 +10,12 @@ class Price extends Catalog
 {
 	public function getDocumentationLink()
 	{
-		return 'https://yandex.ru/support/marketplace/catalog/yml-elements.html';
+		return null;
+	}
+
+	public function useOfferHashCollision()
+	{
+		return false;
 	}
 
 	public function getContext()
@@ -26,7 +31,7 @@ class Price extends Catalog
 
 		if ($shop === null) { return; }
 
-		$this->removeChildTags($shop, [ 'cpa', 'enable_auto_discounts', 'categories', 'gifts', 'promos' ]);
+		$this->removeChildTags($shop, [ 'cpa', 'enable_auto_discounts', 'categories', 'gifts', 'promos', 'collections' ]);
 	}
 
 	public function getCurrency()
@@ -35,6 +40,16 @@ class Price extends Catalog
 	}
 
 	public function getCategory()
+	{
+		return null;
+	}
+
+	public function getCollection()
+	{
+		return null;
+	}
+
+	public function getCollectionId()
 	{
 		return null;
 	}
@@ -49,8 +64,8 @@ class Price extends Catalog
 				new Xml\Attribute\Id(['required' => true]),
 			],
 			'children' => [
-				new Xml\Tag\ShopSku(['required' => true]),
-				new Xml\Tag\Base(['name' => 'market-sku', 'visible' => true]),
+				new Xml\Tag\ShopSku(['deprecated' => true]),
+				new Xml\Tag\Base(['name' => 'market-sku', 'deprecated' => true]),
 				new Xml\Tag\Price(['required' => true]),
 				new Xml\Tag\OldPrice(['visible' => true]),
 				new Xml\Tag\Vat(['visible' => true]),

@@ -3,9 +3,14 @@
 namespace Yandex\Market\Export\Promo;
 
 use Yandex\Market;
+use Yandex\Market\Export\Glossary;
+use Yandex\Market\Watcher;
 use Bitrix\Main;
 
 class Model extends Market\Reference\Storage\Model
+	implements
+		Market\Export\Run\Data\EntityExportable,
+		Watcher\Agent\EntityWithActiveDates
 {
     /** @var Discount\AbstractProvider|null */
     protected $discount;
@@ -132,6 +137,11 @@ class Model extends Market\Reference\Storage\Model
         ];
     }
 
+	public function getName()
+	{
+		return $this->getField('NAME');
+	}
+
     public function isActive()
     {
         $result = true;
@@ -169,39 +179,28 @@ class Model extends Market\Reference\Storage\Model
         return $result;
     }
 
-    /**
-     * —ледующа€ дата изменени€ активности после текущей
-     *
-     * @param $now int|null
-     *
-     * @return Main\Type\Date|null
-     */
-    public function getNextActiveDate($now = null)
+    public function getNextActiveDate()
     {
-        $result = null;
-        $resultTimestamp = null;
-        $dateList = [
-            $this->getPromoField('START_DATE'),
-            $this->getPromoField('FINISH_DATE')
-        ];
+	    $result = null;
+	    $now = new Main\Type\DateTime();
+	    $dates = [
+		    $this->getPromoField('START_DATE'),
+		    $this->getPromoField('FINISH_DATE'),
+	    ];
 
-        foreach ($dateList as $date)
-        {
-            if (!empty($date) && $date instanceof Main\Type\Date)
-            {
-                $dateTimestamp = $date->getTimestamp();
+	    foreach ($dates as $date)
+	    {
+		    if (
+				$date instanceof Main\Type\Date
+				&& Market\Data\DateTime::compare($date, $now) !== -1
+		    )
+		    {
+			    $result = $date;
+			    break;
+		    }
+	    }
 
-                if ($now === null) { $now = time(); }
-
-                if ($now < $dateTimestamp && ($resultTimestamp === null || $dateTimestamp < $resultTimestamp))
-                {
-                    $resultTimestamp = $dateTimestamp;
-                    $result = $date;
-                }
-            }
-        }
-
-        return $result;
+	    return $result;
     }
 
     public function isExportForAll()
@@ -302,25 +301,36 @@ class Model extends Market\Reference\Storage\Model
 
     public function isListenChanges()
     {
-        return ($this->isActive() && $this->isActiveDate() && $this->hasAutoUpdateSetup());
+        return ($this->isActive() && $this->hasAutoUpdateSetup());
     }
 
     public function handleChanges($direction = null)
     {
-        $entityType = Market\Export\Track\Table::ENTITY_TYPE_PROMO;
-        $entityId = $this->getId();
-
         if ($direction === null) { $direction = $this->isListenChanges(); }
+
+		$installer = new Watcher\Track\Installer(Glossary::SERVICE_SELF, Glossary::ENTITY_PROMO, $this->getId());
 
         if ($direction)
         {
-            $trackSourceList = $this->getTrackSourceList();
+			if ($this->isActiveDate())
+			{
+				$sources = $this->getTrackSourceList();
+				$entities = array_merge(
+					$this->getExternalBindEntities(),
+					$this->getSelfBindEntities()
+				);
+			}
+			else
+			{
+				$sources = [];
+				$entities = $this->getSelfBindEntities();
+			}
 
-            Market\Export\Track\Registry::addEntitySources($entityType, $entityId, $trackSourceList);
+	        $installer->install($sources, $entities);
         }
         else
         {
-            Market\Export\Track\Registry::removeEntitySources($entityType, $entityId);
+	        $installer->uninstall();
         }
     }
 
@@ -332,26 +342,16 @@ class Model extends Market\Reference\Storage\Model
     public function handleActiveDate($direction = null)
     {
         $nextDate = $this->getNextActiveDate();
-        $agentParams = [
-            'method' => 'entityChange',
-            'arguments' => [
-                Market\Export\Track\Table::ENTITY_TYPE_PROMO,
-                $this->getId()
-            ]
-        ];
 
         if ($direction === null) { $direction = $this->isListenActiveDate(); }
 
         if ($direction && $nextDate)
         {
-            $agentParams['next_exec'] = $nextDate->toString();
-			$agentParams['update'] = Market\Reference\Agent\Controller::UPDATE_RULE_STRICT;
-
-            Market\Export\Track\Agent::register($agentParams);
+            Watcher\Track\EntityChange::schedule(Glossary::SERVICE_SELF, Glossary::ENTITY_PROMO, $this->getId(), $nextDate);
         }
         else
         {
-            Market\Export\Track\Agent::unregister($agentParams);
+	        Watcher\Track\EntityChange::release(Glossary::SERVICE_SELF, Glossary::ENTITY_PROMO, $this->getId());
         }
     }
 
@@ -380,6 +380,43 @@ class Model extends Market\Reference\Storage\Model
 
         return !empty($resultParts) ? array_merge(...$resultParts) : [];
     }
+
+	protected function getSelfBindEntities()
+	{
+		if ($this->getPromoField('START_DATE') === null && $this->getPromoField('FINISH_DATE') === null) { return []; }
+
+		$result = [];
+
+		foreach ($this->getSetupCollection() as $setup)
+		{
+			if (!$setup->isAutoUpdate() || !$setup->isFileReady()) { continue; }
+
+			$result[] = new Market\Watcher\Track\BindEntity(Market\Export\Glossary::ENTITY_PROMO, $this->getId(), null, $setup->getId());
+		}
+
+		return $result;
+	}
+
+	protected function getExternalBindEntities()
+	{
+		if (!$this->isSupportGift()) { return []; }
+
+		$partials = [];
+
+		/** @var Market\Export\PromoGift\Model $promoGift */
+		foreach ($this->getGiftCollection() as $promoGift)
+		{
+			/** @var Market\Export\Setup\Model $setup */
+			foreach ($this->getSetupCollection() as $setup)
+			{
+				if (!$setup->isAutoUpdate() || !$setup->isFileReady()) { continue; }
+
+				$partials[] = $promoGift->getSetupBindEntities($setup);
+			}
+		}
+
+		return !empty($partials) ? array_merge(...$partials) : [];
+	}
 
 	public function getContext($isOnlySelf = false)
 	{

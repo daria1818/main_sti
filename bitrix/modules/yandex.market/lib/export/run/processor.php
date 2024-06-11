@@ -4,24 +4,24 @@ namespace Yandex\Market\Export\Run;
 
 use Bitrix\Main;
 use Yandex\Market;
+use Yandex\Market\Data;
+use Yandex\Market\Reference\Concerns;
 
-class Processor
+class Processor implements Data\Run\Processor
 {
+	use Concerns\HasMessage;
+
 	/** @var \Yandex\Market\Export\Setup\Model */
 	protected $setup;
 	/** @var Writer\Base */
 	protected $writer;
 	/** @var bool */
 	protected $isWriterLocked;
-	/** @var bool */
-	protected $hasPublicFile;
 	/** @var string */
 	protected $publicFilePath;
-	/** @var Writer\Base */
-	protected $publicWriter;
 	/** @var array */
 	protected $parameters;
-	/** @var ResourceLimit */
+	/** @var Data\Run\ResourceLimit */
 	protected $resourceLimit;
 	/** @var array */
 	protected $conflictList;
@@ -31,11 +31,24 @@ class Processor
 	public function __construct(Market\Export\Setup\Model $setup, $parameters = [])
 	{
 		$this->setup = $setup;
-		$this->parameters = $parameters;
-		$this->resourceLimit = new ResourceLimit([
+		$this->parameters = $this->extendParameters($parameters);
+		$this->resourceLimit = new Data\Run\ResourceLimit([
 			'startTime' => $this->getParameter('startTime'),
 			'timeLimit' => $this->getParameter('timeLimit')
 		]);
+	}
+
+	protected function extendParameters($parameters)
+	{
+		if (isset($parameters['initTime']) && $parameters['initTime'] instanceof Main\Type\DateTime)
+		{
+			$canonicalTime = Market\Data\DateTime::toCanonical($parameters['initTime']);
+			$canonicalTime->setDefaultTimeZone();
+
+			$parameters['initTimeUTC'] = $canonicalTime;
+		}
+
+		return $parameters;
 	}
 
 	public function clear($isStrict = false)
@@ -52,124 +65,54 @@ class Processor
 		}
 	}
 
-	/**
-	 * @param $action string
-	 *
-	 * @return \Yandex\Market\Result\StepProcessor
-	 * @throws \Bitrix\Main\SystemException
-	 */
-	public function run($action = 'full')
+	public function run($action = self::ACTION_FULL)
 	{
-		$result = new Market\Result\StepProcessor();
-		$steps = Manager::getSteps();
-		$stepsWeightList = Manager::getStepsWeight();
 		$requestStep = $this->getParameter('step');
-		$hasRequestStep = (in_array($requestStep, $steps));
-		$isFoundRequestStep = false;
+		$requestOffset = $this->getParameter('stepOffset');
 
-		$result->setTotal(array_sum($stepsWeightList));
+		if (!$this->lockWriter())
+		{
+			$result = new Market\Result\StepProcessor();
+			$result->setStep($requestStep);
+			$result->setStepOffset($requestOffset);
+			$result->setTotal(1);
+
+			return $result;
+		}
 
 		$this->loadModules();
 
-		if ($requestStep === null && $action === 'full') // is start full export
+		if ($requestStep === null && $action === static::ACTION_FULL) // is start full export
 		{
 			$this->clear();
+			$this->resolveWriterIndex();
 		}
 
-		foreach ($steps as $stepName)
+		if ($action !== static::ACTION_FULL) // check is file index valid
 		{
-			$isRequestStep = (
-				(!$hasRequestStep && !$isFoundRequestStep)
-				|| $requestStep === $stepName
-			);
-			$stepWeight = $stepsWeightList[$stepName];
-
-			if ($isRequestStep || $isFoundRequestStep)
-			{
-				$isFoundRequestStep = true;
-				$stepOffset = null;
-
-				if ($isRequestStep)
-				{
-					$requestStepOffset = trim($this->getParameter('stepOffset'));
-
-					if (preg_match('/^(.*?)\|(\d+)$/', $requestStepOffset, $matches))
-					{
-						$requestStepOffset = $matches[1];
-						$pointerOffset = (int)$matches[2];
-
-						$this->getWriter()->setPointer($pointerOffset);
-					}
-
-					if ($requestStepOffset !== '')
-					{
-						$stepOffset = $requestStepOffset;
-					}
-				}
-
-				// if no lock file or time expired, then break loop
-
-				if (
-					!$this->lockWriter()
-					|| (!$isRequestStep && $this->isTimeExpired())
-				)
-				{
-					$offsetWithPointer = $stepOffset . '|' . $this->getWriter()->getPointer();
-
-					$result->setStep($stepName);
-					$result->setStepOffset($offsetWithPointer);
-
-					break;
-				}
-
-				// process step
-
-				$step = $this->getStep($stepName);
-
-				if ($step->validateAction($action))
-				{
-					$stepResult = $step->run($action, $stepOffset);
-
-					// if step not finished, then break loop
-
-					if (!$stepResult->isFinished())
-					{
-						$offsetWithPointer = $stepResult->getOffset() . '|' . $this->getWriter()->getPointer();
-
-						$result->setStep($stepName);
-						$result->setStepOffset($offsetWithPointer);
-						$result->increaseProgress($stepResult->getProgressRatio() * $stepWeight);
-
-						if ($this->getParameter('progressCount') === true)
-						{
-							$result->setStepReadyCount($stepResult->getReadyCount());
-						}
-
-						break;
-					}
-
-					// finalize step
-
-					if ($action === 'change')
-					{
-						$step->removeInvalid();
-					}
-					else if ($action === 'refresh')
-					{
-						$step->removeOld();
-					}
-				}
-			}
-
-			$result->increaseProgress($stepWeight);
+			$this->testWriter();
 		}
+
+		if (preg_match('/^(.*?)\|(\d+)$/', (string)$requestOffset, $matches))
+		{
+			$requestOffset = $matches[1];
+			$pointerOffset = (int)$matches[2];
+
+			$this->getWriter()->setPointer($pointerOffset);
+		}
+
+		$stepper = new Data\Run\Stepper($this->getSteps(), $this->resourceLimit);
+		$result = $stepper->process($action, $requestStep, $requestOffset);
 
 		if ($result->isFinished())
 		{
 			$this->finalize($action);
 		}
+		else
+		{
+			$result->setStepOffset($result->getStepOffset() . '|' . $this->getWriter()->getPointer());
+		}
 
-		$this->releasePublicWriter();
 		$this->releaseWriter();
 
 		return $result;
@@ -186,6 +129,18 @@ class Processor
 		}
 
 		$rootStep->updateDate();
+	}
+
+	protected function getSteps()
+	{
+		$result = [];
+
+		foreach (Manager::getSteps() as $name)
+		{
+			$result[$name] = $this->getStep($name);
+		}
+
+		return $result;
 	}
 
 	public function getStep($name)
@@ -208,10 +163,25 @@ class Processor
 		return $this->setup;
 	}
 
+	protected function resolveWriterIndex()
+	{
+		$setup = $this->getSetup();
+		$changed = Writer\IndexFacade::resolve($setup->getId(), $setup->getFileName());
+
+		if (!$changed) { return; }
+
+		$locked = $this->isWriterLocked;
+
+		$this->releaseWriter();
+
+		if ($locked)
+		{
+			$this->lockWriter();
+		}
+	}
+
 	public function publishFile()
 	{
-		$this->releasePublicWriter();
-
 		if ($this->publicFilePath !== null)
 		{
 			$writer = $this->getWriter();
@@ -219,43 +189,12 @@ class Processor
 			$writer->move($this->publicFilePath);
 
 			$this->publicFilePath = null;
-			$this->hasPublicFile = null;
 		}
 	}
 
-	/**
-	 * @return bool
-	 */
-	public function hasPublicFile()
+	public function getPublicFilePath()
 	{
-		if ($this->publicFilePath !== null && $this->hasPublicFile === null)
-		{
-			$this->hasPublicFile = file_exists($this->publicFilePath);
-		}
-
-		return $this->hasPublicFile;
-	}
-
-	/**
-	 * @return Writer\Base|null
-	 */
-	public function getPublicWriter()
-	{
-		if ($this->publicWriter === null && $this->hasPublicFile())
-		{
-			$this->publicWriter = $this->loadWriter(true);
-		}
-
-		return $this->publicWriter;
-	}
-
-	public function releasePublicWriter()
-	{
-		if ($this->publicWriter !== null)
-		{
-			$this->publicWriter->destroy();
-			$this->publicWriter = null;
-		}
+		return $this->publicFilePath;
 	}
 
 	/**
@@ -282,11 +221,17 @@ class Processor
 	 */
 	protected function loadWriter($isIgnoreTemp = false)
 	{
-		$filePath = $this->getSetup()->getFileAbsolutePath();
+		$setup = $this->getSetup();
+		$filePath = $setup->getFileAbsolutePath();
+		$useIndex = false;
 
 		if (!$isIgnoreTemp)
 		{
 			$tmpFilePath = $filePath . '.tmp';
+			$useIndex = (
+				Writer\IndexFacade::isAllowed()
+				&& Writer\IndexFacade::search($setup->getId(), $setup->getFileName())
+			);
 
 			if ($this->getParameter('usePublic') === false || file_exists($tmpFilePath))
 			{
@@ -297,8 +242,15 @@ class Processor
 		}
 
 		$parameters = [
-			'filePath' => $filePath
+			'filePath' => $filePath,
 		];
+
+		if ($useIndex)
+		{
+			return new Writer\FileIndexed($parameters + [
+				'setupId' => $setup->getId(),
+			]);
+		}
 
 		return new Writer\File($parameters);
 	}
@@ -319,6 +271,29 @@ class Processor
 		return $this->isWriterLocked;
 	}
 
+	protected function testWriter()
+	{
+		$writer = $this->getWriter();
+
+		if (
+			!($writer instanceof Writer\FileIndexed)
+			|| $writer->test()
+		)
+		{
+			return;
+		}
+
+		$logger = new Market\Logger\Logger();
+		$logger->warning(self::getMessage('FILE_INDEXED_CHANGED'), [
+			'ENTITY_TYPE' => Market\Logger\Table::ENTITY_TYPE_EXPORT_RUN_ROOT,
+			'ENTITY_PARENT' => $this->getSetup()->getId(),
+		]);
+
+		Writer\IndexFacade::reset($this->getSetup()->getId());
+
+		$this->writer = $this->loadWriter();
+	}
+
 	/**
 	 * Выгружаем из памяти класс писателя
 	 */
@@ -330,6 +305,7 @@ class Processor
 			{
 				$this->isWriterLocked = false;
 				$this->writer->unlock();
+				$this->writer->commit();
 			}
 
 			$this->writer->destroy();
@@ -433,7 +409,6 @@ class Processor
 		foreach ($conflictSources as $tagName => $sourceList)
 		{
 			$fieldTypeList = [];
-			$conflictData = null;
 
 			if (count($sourceList) > 1)
 			{
@@ -478,14 +453,9 @@ class Processor
 				}
 			}
 
-			if (count($fieldTypeList) > 1)
+			if ($tagName === 'categoryId' && count($fieldTypeList) > 1)
 			{
-				switch ($tagName)
-				{
-					case 'categoryId':
-						$this->resolveConflictForCategoryId($result, $fieldTypeList);
-					break;
-				}
+				$this->resolveConflictForCategoryId($result, $fieldTypeList);
 			}
 		}
 
@@ -529,7 +499,7 @@ class Processor
 
 		if (Main\Loader::includeModule('iblock'))
 		{
-			$queryLastsection = \CIBlockSection::GetList(
+			$queryLastSection = \CIBlockSection::GetList(
 				[ 'ID' => 'DESC' ],
 				[],
 				false,
@@ -537,7 +507,7 @@ class Processor
 				[ 'nTopCount' => 1 ]
 			);
 
-			if ($lastSection = $queryLastsection->Fetch())
+			if ($lastSection = $queryLastSection->Fetch())
 			{
 				$result = (int)$lastSection['ID'];
 			}

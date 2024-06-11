@@ -18,9 +18,24 @@ abstract class AbstractActivity
 
 	abstract public function getTitle();
 
+	public function getSourceType()
+	{
+		return TradingEntity\Registry::ENTITY_TYPE_ORDER;
+	}
+
 	/** @return array|null */
 	public function getFilter()
 	{
 		return null;
+	}
+
+	public function getSort()
+	{
+		return 500;
+	}
+
+	public function useGroup()
+	{
+		return false;
 	}
 }

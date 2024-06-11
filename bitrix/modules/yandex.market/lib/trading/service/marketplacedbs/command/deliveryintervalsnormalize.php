@@ -65,6 +65,7 @@ class DeliveryIntervalsNormalize
 				$dayGroupWithTime = $this->mergeByDuration($dayGroupWithTime);
 				$dayGroupWithTime = $this->splitByDuration($dayGroupWithTime);
 				$dayGroupWithTime = $this->mergeByMaxTimesCount($dayGroupWithTime);
+				$dayGroupWithTime = $this->sliceInvalid($dayGroupWithTime);
 
 				$dayGroup = $dayGroupWithTime;
 			}
@@ -110,12 +111,41 @@ class DeliveryIntervalsNormalize
 
 	protected function sanitize(array $dayGroup)
 	{
-		return array_filter($dayGroup, static function($interval) {
-			return (
-				isset($interval['fromTime'], $interval['toTime'])
-				&& $interval['fromTime'] < $interval['toTime']
-			);
-		});
+		$result = [];
+
+		foreach ($dayGroup as $interval)
+		{
+			if (!isset($interval['fromTime'], $interval['toTime'])) { continue; }
+
+			$interval['fromTime'] = $this->roundTime($interval['fromTime'], false);
+			$interval['toTime'] = $this->roundTime($interval['toTime'], true);
+
+			if ($interval['toTime'] === '00:00' && $interval['fromTime'] >= $interval['toTime'])
+			{
+				$interval['toTime'] = '23:59';
+			}
+
+			if ($interval['fromTime'] >= $interval['toTime']) { continue; }
+
+			$result[] = $interval;
+		}
+
+		return $result;
+	}
+
+	protected function roundTime($time, $direction)
+	{
+		list($hour, $minutes) = explode(':', $time);
+
+		if ($minutes === '00') { return $time; }
+		if ($hour === '23' && $minutes === '59') { return $time; }
+
+		if ($direction)
+		{
+			$hour = (++$hour % 24);
+		}
+
+		return Market\Data\Time::format($hour . ':00');
 	}
 
 	protected function sort($dayGroup)
@@ -163,6 +193,8 @@ class DeliveryIntervalsNormalize
 
 	protected function mergeByDuration(array $dayGroup)
 	{
+		if ($this->minDuration === null) { return $dayGroup; }
+
 		$newGroup = $dayGroup;
 
 		foreach ($dayGroup as $index => $interval)
@@ -288,6 +320,8 @@ class DeliveryIntervalsNormalize
 
 	protected function splitByDuration(array $dayGroup)
 	{
+		if ($this->maxDuration === null) { return $dayGroup; }
+
 		$newGroup = [];
 
 		foreach ($dayGroup as $interval)
@@ -322,6 +356,24 @@ class DeliveryIntervalsNormalize
 		}
 
 		return $newGroup;
+	}
+
+	protected function sliceInvalid(array $dayGroup)
+	{
+		$result = [];
+
+		foreach ($dayGroup as $interval)
+		{
+			$fromTime = Market\Data\Time::toNumber($interval['fromTime']);
+			$toTime = Market\Data\Time::toNumber($interval['toTime']);
+
+			if ($fromTime < $toTime)
+			{
+				$result[] = $interval;
+			}
+		}
+
+		return $result;
 	}
 
 	protected function makeDayGroups()

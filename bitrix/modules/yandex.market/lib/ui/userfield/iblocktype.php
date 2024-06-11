@@ -50,44 +50,87 @@ class IblockType extends EnumerationType
 	}
 
 	/**
-	 * @param $arUserField
-	 * @param $arHtmlControl
+	 * @param $userField
+	 * @param $htmlControl
 	 *
 	 * @return string
 	 * @throws \Bitrix\Main\ArgumentException
 	 * @throws \Bitrix\Main\LoaderException
 	 */
-	public static function GetEditFormHTMLMulty($arUserField, $arHtmlControl)
+	public static function GetEditFormHTMLMulty($userField, $htmlControl)
 	{
-		$result = '';
-		$isFirstOption = true;
+		// options
+
 		$activeGroup = null;
-		$baseId = Helper\Attributes::convertNameToId($arHtmlControl['NAME']);
+		$groups = [];
+		$baseId = Helper\Attributes::convertNameToId($htmlControl['NAME']);
 		$queryOptions = call_user_func(
-			[ $arUserField['USER_TYPE']['CLASS_NAME'], 'getList' ],
-			$arUserField
+			[ $userField['USER_TYPE']['CLASS_NAME'], 'getList' ],
+			$userField
 		);
 
 		while ($option = $queryOptions->Fetch())
 		{
 			if (isset($option['GROUP']) && $option['GROUP'] !== $activeGroup)
 			{
-				$result .= '<div class="adm-iblock-section-' . ($isFirstOption ? 'catalog' : 'other') . '">' . $option['GROUP'] . '</div>';
-
 				$activeGroup = $option['GROUP'];
+				$groups[$activeGroup] = [
+					'TITLE' => $option['GROUP'],
+					'CONTENT' => '',
+					'CHECKED' => false,
+				];
+			}
+			else if ($activeGroup === null)
+			{
+				$activeGroup = 0;
+				$groups[$activeGroup] = [
+					'CONTENT' => '',
+					'CHECKED' => false,
+				];
 			}
 
 			$optionHtmlId = $baseId . '_' . $option['ID'];
-			$isChecked = !empty($arHtmlControl['VALUE']) && in_array($option['ID'], $arHtmlControl['VALUE']);
+			$isChecked = !empty($htmlControl['VALUE']) && in_array($option['ID'], $htmlControl['VALUE']);
 
-			$result .=
+			$groups[$activeGroup]['HTML'] .=
 				'<div>'
-				. '<input class="adm-designed-checkbox" type="checkbox" name="' . $arHtmlControl['NAME'] . '" value="' . $option['ID'] . '" ' . ($isChecked ? 'checked' : '') . ' id="' . $optionHtmlId . '">'
+				. '<input class="adm-designed-checkbox" type="checkbox" name="' . $htmlControl['NAME'] . '" value="' . $option['ID'] . '" ' . ($isChecked ? 'checked' : '') . ' id="' . $optionHtmlId . '">'
 				. '<label class="adm-designed-checkbox-label" for="' . $optionHtmlId . '"></label>'
 				. '<label for="' . $optionHtmlId . '"> ' . $option['VALUE'] . '</label>'
 				. '</div>';
 
-			$isFirstOption = false;
+			if ($isChecked)
+			{
+				$groups[$activeGroup]['CHECKED'] = true;
+			}
+		}
+
+		// groups
+
+		$hasChecked = count(array_filter(array_column($groups, 'CHECKED'))) > 0;
+		$isFirstGroup = true;
+		$result = '';
+
+		foreach ($groups as $group)
+		{
+			if (!isset($group['TITLE']))
+			{
+				$result .= $group['HTML'];
+				continue;
+			}
+
+			/** @noinspection HtmlUnknownAttribute */
+			$result .= sprintf(
+				'<details class="adm-iblock-section" %s>
+					<summary class="adm-iblock-section-title">%s</summary>
+					%s	
+				</details>',
+				$group['CHECKED'] || ($isFirstGroup && !$hasChecked) ? 'open' : '',
+				$group['TITLE'],
+				$group['HTML']
+			);
+
+			$isFirstGroup = false;
 		}
 
 		return $result;

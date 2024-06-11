@@ -7,8 +7,13 @@ use Bitrix\Main;
 use Yandex\Market\Trading\Entity as TradingEntity;
 use Yandex\Market\Trading\Service as TradingService;
 
+/**
+ * @property TradingService\Common\Provider $provider
+*/
 class Action extends TradingService\Common\Action\Cart\Action
 {
+	use TradingService\Common\Concerns\Action\HasTasks;
+
 	/** @var Request */
 	protected $request;
 	/** @var TradingEntity\Reference\User */
@@ -32,19 +37,12 @@ class Action extends TradingService\Common\Action\Cart\Action
 
 	public function process()
 	{
-		$orderId = $this->searchOrder();
+		$locker = $this->createLocker();
 
-		if ($orderId !== null)
+		try
 		{
-			$this->loadOrder($orderId);
+			if ($this->testExistOrder()) { return; }
 
-			$orderNum = $this->getOrderNum();
-			$hasWarnings = $this->isExistOrderMarker();
-
-			$this->collectOrder($orderNum, $hasWarnings);
-		}
-		else
-		{
 			$this->testBrokenOrder();
 
 			$this->createUser();
@@ -67,6 +65,16 @@ class Action extends TradingService\Common\Action\Cart\Action
 					$this->markOrder($checkResult);
 				}
 
+				$locker->lock();
+
+				if ($this->testExistOrder())
+				{
+					$locker->release();
+					return;
+				}
+
+				$this->writeCache();
+
 				$this->addOrder();
 				$this->completeOrder();
 
@@ -74,13 +82,62 @@ class Action extends TradingService\Common\Action\Cart\Action
 
 				$this->logOrder($orderNum);
 				$this->collectOrder($orderNum, $hasWarnings);
+				$this->registerTasks();
+				$this->saveState();
+				$this->saveData();
+
+				$locker->release();
 			}
 			else
 			{
+				$locker->lock();
+
+				if ($this->testExistOrder())
+				{
+					$locker->release();
+					return;
+				}
+
 				$this->collectDecline($checkResult);
 				$this->logDecline($checkResult);
+
+				$locker->release();
 			}
 		}
+		catch (\Exception $exception)
+		{
+			$locker->release();
+			throw $exception;
+		}
+		/** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
+		catch (\Throwable $exception)
+		{
+			$locker->release();
+			throw $exception;
+		}
+	}
+
+	protected function createLocker()
+	{
+		$sign = Market\Config::getLangPrefix() . 'ORDER_ACCEPT_' . $this->request->getOrder()->getId();
+
+		return new Market\Trading\State\Locker($sign, 60);
+	}
+
+	protected function testExistOrder()
+	{
+		$orderId = $this->searchOrder();
+
+		if ($orderId === null) { return false; }
+
+		$this->loadOrder($orderId);
+
+		$orderNum = $this->getOrderNum();
+		$hasWarnings = $this->isExistOrderMarker();
+
+		$this->collectOrder($orderNum, $hasWarnings);
+
+		return true;
 	}
 
 	protected function searchOrder()
@@ -140,6 +197,7 @@ class Action extends TradingService\Common\Action\Cart\Action
 
 	protected function fillOrder()
 	{
+		$this->fillAccountNumber();
 		$this->fillXmlId();
 		$this->fillStatus();
 		$this->fillProfile();
@@ -147,11 +205,27 @@ class Action extends TradingService\Common\Action\Cart\Action
 		$this->fillProperties();
 		$this->fillBasket();
 		$this->fillDelivery();
+		$this->fillPaySystem();
 		$this->fillBasketStore();
 		$this->fillOutlet();
-		$this->fillPaySystem();
 		$this->fillRelatedProperties();
 		$this->fillNotes();
+	}
+
+	protected function fillAccountNumber()
+	{
+		$options = $this->provider->getOptions();
+
+		if (!$options->useAccountNumberTemplate()) { return; }
+
+		$this->order->fillAccountNumber(str_replace(
+			[ '{id}', '{campaignId}' ],
+			[
+				$this->request->getOrder()->getId(),
+				$options instanceof TradingService\Marketplace\Options ? $options->getCampaignId() : '',
+			],
+			$options->getAccountNumberTemplate()
+		));
 	}
 
 	protected function fillXmlId()
@@ -242,9 +316,8 @@ class Action extends TradingService\Common\Action\Cart\Action
 	{
 		/** @var TradingService\Common\Options $options */
 		$options = $this->provider->getOptions();
-		$status = (string)$options->getStatusIn(TradingService\Common\Status::VIRTUAL_CREATED);
 
-		if ($status !== '')
+		foreach ($options->getStatusIn(TradingService\Common\Status::VIRTUAL_CREATED) as $status)
 		{
 			$this->order->setStatus($status);
 		}
@@ -275,9 +348,7 @@ class Action extends TradingService\Common\Action\Cart\Action
 
 		if (!$validationResult->isSuccess())
 		{
-			$isAllowModify = $this->provider->getOptions()->isAllowModifyBasket();
-
-			if ($isAllowModify)
+			if ($this->isAllowModifyBasket())
 			{
 				$modifyResult = $this->modifyBasket();
 
@@ -299,6 +370,11 @@ class Action extends TradingService\Common\Action\Cart\Action
 		return $result;
 	}
 
+	protected function isAllowModifyBasket()
+	{
+		return $this->provider->getOptions()->isAllowModifyBasket();
+	}
+
 	protected function modifyBasket()
 	{
 		$items = $this->request->getOrder()->getItems();
@@ -308,7 +384,8 @@ class Action extends TradingService\Common\Action\Cart\Action
 		foreach ($items as $itemIndex => $item)
 		{
 			$offerId = $item->getOfferId();
-			$count = $item->getCount();
+			$ratio = isset($this->basketPackRatio[$itemIndex]) ? $this->basketPackRatio[$itemIndex] : 1;
+			$count = $item->getCount() * $ratio;
 			$basketCode = null;
 
 			if (isset($this->basketMap[$itemIndex]))
@@ -317,8 +394,8 @@ class Action extends TradingService\Common\Action\Cart\Action
 			}
 			else
 			{
-				$productId = isset($this->basketInvalidProducts[$itemIndex])
-					? $this->basketInvalidProducts[$itemIndex]
+				$productId = isset($this->basketProducts[$itemIndex])
+					? $this->basketProducts[$itemIndex]
 					: $offerId;
 				$basketData = isset($this->basketInvalidData[$itemIndex])
 					? $this->basketInvalidData[$itemIndex]
@@ -360,7 +437,7 @@ class Action extends TradingService\Common\Action\Cart\Action
 			$allowModifyPrice = $this->provider->getOptions()->isAllowModifyPrice();
 			$checkPriceData = $validationResult->getData();
 
-			if ($checkPriceData['SIGN'] > 0) // requested price more then basket price
+			if ($checkPriceData['SIGN'] > 0) // requested price more than basket price
 			{
 				$allowModifyPrice = true;
 			}
@@ -418,7 +495,8 @@ class Action extends TradingService\Common\Action\Cart\Action
 			if (isset($this->basketMap[$itemIndex]))
 			{
 				$basketCode = $this->basketMap[$itemIndex];
-				$price = $this->getItemPrice($item);
+				$ratio = isset($this->basketPackRatio[$itemIndex]) ? $this->basketPackRatio[$itemIndex] : 1;
+				$price = $this->getItemPrice($item) / $ratio;
 				$basketResult = $this->order->setBasketItemPrice($basketCode, $price);
 
 				if (!$basketResult->isSuccess())
@@ -473,12 +551,20 @@ class Action extends TradingService\Common\Action\Cart\Action
 
 	/**
 	 * @deprecated
-	 *
-	 * @return string
+	 * @noinspection PhpUnused
 	 */
 	protected function getMarkerPrefix()
 	{
 		return $this->provider->getDictionary()->getErrorPrefix();
+	}
+
+	protected function writeCache()
+	{
+		Market\Trading\State\HitCache::set(
+			'order',
+			$this->request->getOrder()->getId(),
+			$this->request->getOrder()->getFields()
+		);
 	}
 
 	protected function addOrder()
@@ -567,12 +653,40 @@ class Action extends TradingService\Common\Action\Cart\Action
 		$logger = $this->provider->getLogger();
 		$message = implode(PHP_EOL, $result->getErrorMessages());
 
-		$logger->error($message);
+		$logger->error($message, $this->makeErrorsContext($result));
 	}
 
 	protected function collectDecline(Market\Result\Base $result)
 	{
+		if ($this->request->isDownload())
+		{
+			Market\Result\Facade::handleException($result);
+		}
+
 		$this->response->setField('order.accepted', false);
 		$this->response->setField('order.reason', 'OUT_OF_DATE');
+	}
+
+	protected function saveState()
+	{
+		$serviceKey = $this->provider->getUniqueKey();
+		$orderId = $this->request->getOrder()->getId();
+
+		Market\Trading\State\OrderStatus::setValue($serviceKey, $orderId, TradingService\Common\Status::VIRTUAL_CREATED);
+		Market\Trading\State\OrderStatus::commit($serviceKey, $orderId);
+	}
+
+	protected function saveData()
+	{
+		$serviceKey = $this->provider->getUniqueKey();
+		$orderId = $this->request->getOrder()->getId();
+		$data = $this->makeData();
+
+		Market\Trading\State\OrderData::setValues($serviceKey, $orderId, $data);
+	}
+
+	protected function makeData()
+	{
+		return [];
 	}
 }

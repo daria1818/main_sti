@@ -2,14 +2,15 @@
 
 namespace Yandex\Market\Trading\Service\Common\Command;
 
-use Yandex\Market;
 use Yandex\Market\Trading\Service as TradingService;
 use Yandex\Market\Trading\Entity as TradingEntity;
+use Yandex\Market\Export;
 
 class OfferMap
 {
 	protected $provider;
 	protected $environment;
+	protected $feedPrimary;
 
 	public function __construct(
 		TradingService\Common\Provider $provider,
@@ -18,9 +19,18 @@ class OfferMap
 	{
 		$this->provider = $provider;
 		$this->environment = $environment;
+		$this->feedPrimary = new FeedPrimary();
 	}
 
 	public function make(array $offerIds)
+	{
+		$offerMap = $this->mapOffers($offerIds);
+		$offerMap = $this->resolveFeedDuplicates($offerMap);
+
+		return $offerMap;
+	}
+
+	protected function mapOffers(array $offerIds)
 	{
 		$options = $this->provider->getOptions();
 		$skuMap = $options->getProductSkuMap();
@@ -45,19 +55,27 @@ class OfferMap
 
 	protected function mapOfferWithPrefix($offerIds, $prefix)
 	{
-		$prefixLength = Market\Data\TextString::getLength($prefix);
+		$prefixLength = mb_strlen($prefix);
 		$result = [];
 
 		foreach ($offerIds as $offerId)
 		{
-			$productId = $offerId;
-
-			if (Market\Data\TextString::getPosition($offerId, $prefix) === 0)
+			if (mb_strpos($offerId, $prefix) === 0)
 			{
-				$productId = Market\Data\TextString::getSubstring($offerId, $prefixLength);
-			}
+				$unPrefixed = mb_substr($offerId, $prefixLength);
 
-			$result[$offerId] = $productId;
+				if (isset($result[$unPrefixed])) { unset($result[$unPrefixed]); }
+
+				$result[$offerId] = $unPrefixed;
+			}
+			else
+			{
+				$prefixed = $prefix . $offerId;
+
+				if (isset($result[$prefixed])) { continue; }
+
+				$result[$offerId] = $offerId;
+			}
 		}
 
 		return $result;
@@ -82,5 +100,38 @@ class OfferMap
 		}
 
 		return $result;
+	}
+
+	protected function resolveFeedDuplicates(array $offerMap = null)
+	{
+		if (empty($offerMap)) { return $offerMap; }
+		if (!($this->provider instanceof TradingService\Marketplace\Provider)) { return $offerMap; }
+
+		$feeds = $this->provider->getOptions()->getProductFeeds();
+		$exported = $this->feedPrimary->exported(array_keys($offerMap), $feeds);
+
+		list($newMap, $replaced) = $this->unsetSkuWithOtherElement($offerMap, $exported);
+
+		if (empty($replaced) || !$this->feedPrimary->canUsePrimaryAsSku($feeds)) { return $offerMap; }
+
+		return $newMap;
+	}
+
+	protected function unsetSkuWithOtherElement(array $offerMap, array $exported)
+	{
+		$replaced = [];
+
+		foreach ($offerMap as $sku => $productId)
+		{
+			if (!isset($exported[$sku])) { continue; }
+
+			if (!in_array((int)$productId, $exported[$sku], true))
+			{
+				$replaced[] = $sku;
+				$offerMap[$sku] = $exported[$sku][0];
+			}
+		}
+
+		return [$offerMap, $replaced];
 	}
 }

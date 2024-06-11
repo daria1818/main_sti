@@ -7,9 +7,35 @@ use Yandex\Market;
 
 $rowAttributes = [];
 $fieldControl = $component->getFieldHtml($field, null, true);
+$fieldValign = $fieldControl !== null && $fieldControl['VALIGN'] ? $fieldControl['VALIGN'] : 'middle';
+$fieldPushTitle = null;
 $hasDescription = isset($field['DESCRIPTION']);
 $hasNote = isset($field['NOTE']);
 $hasAdditionalRow = ($hasDescription || $hasNote);
+
+if (!empty($field['SETTINGS']['VALIGN']))
+{
+	$fieldValign = $field['SETTINGS']['VALIGN'];
+}
+
+if ($fieldValign === 'top')
+{
+	if (!empty($field['SETTINGS']['VALIGN_PUSH']))
+	{
+		$fieldPushTitle = $field['SETTINGS']['VALIGN_PUSH'] === true ? 'top' : $field['SETTINGS']['VALIGN_PUSH'];
+	}
+	else if ($field['CONTROL'] !== null)
+	{
+		$controlCount = (
+			mb_substr_count($field['CONTROL'], ' type="text"')
+			+ mb_substr_count($field['CONTROL'], ' type="number"')
+			+ mb_substr_count($field['CONTROL'], '<select')
+			+ mb_substr_count($field['CONTROL'], '<textarea')
+		);
+
+		$fieldPushTitle = ($controlCount === 1) ? 'top' : null;
+	}
+}
 
 if (isset($field['DEPEND']))
 {
@@ -38,13 +64,25 @@ if (isset($field['INTRO']))
 }
 ?>
 <tr <?= Market\Ui\UserField\Helper\Attributes::stringify($rowAttributes); ?>>
-	<td class="adm-detail-content-cell-l <?= $hasAdditionalRow ? 'pos-inner--bottom' : ''; ?>" width="40%" align="right" valign="<?= $fieldControl !== null && $fieldControl['VALIGN'] ? $fieldControl['VALIGN'] : 'middle'; ?>">
+	<td class="adm-detail-content-cell-l <?= $hasAdditionalRow ? 'pos-inner--bottom' : '' ?> <?= $fieldPushTitle ? 'push--' . $fieldPushTitle : '' ?>" width="40%" align="right" valign="<?= $fieldValign ?>">
 		<?php
 		include __DIR__ . '/field-title.php';
 		?>
 	</td>
 	<td class="adm-detail-content-cell-r <?= $hasAdditionalRow ? 'pos-inner--bottom' : ''; ?>" width="60%">
-		<?= $fieldControl !== null ? $fieldControl['CONTROL'] : ''; ?>
+		<?php
+		if ($fieldControl !== null)
+		{
+			echo $fieldControl['CONTROL'];
+		}
+
+		if (!empty($field['SETTINGS']['BUTTONS']))
+		{
+			$buttons = $field['SETTINGS']['BUTTONS'];
+
+			include __DIR__ . '/field-buttons.php';
+		}
+		?>
 	</td>
 </tr>
 <?php

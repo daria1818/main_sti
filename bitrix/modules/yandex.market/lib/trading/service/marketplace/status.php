@@ -10,7 +10,10 @@ class Status extends TradingService\Common\Status
 {
 	use Market\Reference\Concerns\HasLang;
 
+	const VIRTUAL_PAID = 'PAID';
+
 	const STATUS_UNPAID = 'UNPAID';
+	const STATUS_PENDING = 'PENDING';
 	const STATUS_CANCELLED = 'CANCELLED';
 	const STATUS_DELIVERED = 'DELIVERED';
 	const STATUS_DELIVERY = 'DELIVERY';
@@ -42,10 +45,18 @@ class Status extends TradingService\Common\Status
 		return static::getLang('TRADING_SERVICE_MARKETPLACE_STATUS_' . $statusKey . $versionSuffix, null, $status);
 	}
 
+	public function getHelp($status)
+	{
+		$statusKey = Market\Data\TextString::toUpper($status);
+
+		return static::getLang('TRADING_SERVICE_MARKETPLACE_STATUS_' . $statusKey . '_HELP', null, '') ?: null;
+	}
+
 	public function getVariants()
 	{
 		return [
 			static::STATUS_CANCELLED,
+			static::STATUS_PENDING,
 			static::STATE_STARTED,
 			static::STATE_READY_TO_SHIP,
 			static::STATE_SHIPPED,
@@ -57,21 +68,26 @@ class Status extends TradingService\Common\Status
 
 	public function getIncomingVariants()
 	{
-		return [
-			static::VIRTUAL_CREATED,
-			static::STATUS_CANCELLED,
-			static::STATUS_PROCESSING,
-			static::STATUS_DELIVERY,
-			static::STATUS_PICKUP,
-			static::STATUS_DELIVERED,
-		];
+		$isExpert = Market\Config::isExpertMode();
+
+		return array_keys(array_filter([
+			static::VIRTUAL_CREATED => true,
+			static::STATUS_PENDING => true,
+			static::STATUS_CANCELLED => true,
+			static::STATUS_PROCESSING => true,
+			static::STATUS_PROCESSING . '_' . static::STATE_SHIPPED => $isExpert,
+			static::STATUS_DELIVERY => true,
+			static::STATUS_PICKUP => true,
+			static::VIRTUAL_PAID => true,
+			static::STATUS_DELIVERED => true,
+			static::VIRTUAL_RETURN => true,
+		]));
 	}
 
 	public function getIncomingRequired()
 	{
 		return [
 			static::STATUS_CANCELLED,
-			static::STATUS_PROCESSING,
 			static::STATUS_DELIVERED,
 		];
 	}
@@ -80,7 +96,8 @@ class Status extends TradingService\Common\Status
 	{
 		return [
 			Market\Data\Trading\MeaningfulStatus::CREATED => static::VIRTUAL_CREATED,
-			Market\Data\Trading\MeaningfulStatus::PAYED => static::STATUS_PROCESSING,
+			Market\Data\Trading\MeaningfulStatus::PAYED => static::VIRTUAL_PAID,
+			Market\Data\Trading\MeaningfulStatus::PROCESSING => static::STATUS_PROCESSING,
 			Market\Data\Trading\MeaningfulStatus::CANCELED => static::STATUS_CANCELLED,
 			Market\Data\Trading\MeaningfulStatus::FINISHED => static::STATUS_DELIVERED,
 		];
@@ -90,7 +107,6 @@ class Status extends TradingService\Common\Status
 	{
 		return [
 			static::STATE_READY_TO_SHIP,
-			static::STATE_SHIPPED,
 			static::STATE_SHOP_FAILED,
 		];
 	}
@@ -99,7 +115,6 @@ class Status extends TradingService\Common\Status
 	{
 		return [
 			static::STATE_READY_TO_SHIP,
-			static::STATE_SHIPPED,
 			static::STATE_SHOP_FAILED,
 		];
 	}
@@ -115,14 +130,16 @@ class Status extends TradingService\Common\Status
 	{
 		return [
 			Market\Data\Trading\MeaningfulStatus::ALLOW_DELIVERY => static::STATE_READY_TO_SHIP,
-			Market\Data\Trading\MeaningfulStatus::DEDUCTED => static::STATE_SHIPPED,
 			Market\Data\Trading\MeaningfulStatus::CANCELED => static::STATE_SHOP_FAILED,
 		];
 	}
 
-	public function isCanceled($status)
+	public function isCanceled($status, $subStatus = null)
 	{
-		return $status === static::STATUS_CANCELLED;
+		return (
+			$status === static::STATUS_CANCELLED
+			|| $subStatus === static::STATE_SHOP_FAILED
+		);
 	}
 
 	public function isProcessing($status)
@@ -143,34 +160,32 @@ class Status extends TradingService\Common\Status
 		);
 	}
 
+	public function isOrderDelivered($status)
+	{
+		return $status === static::STATUS_DELIVERED;
+	}
+
 	public function isLeftProcessing($status)
 	{
 		return $this->getStatusOrder($status) > $this->getStatusOrder(static::STATUS_PROCESSING);
 	}
 
-	public function getStatusOrder($status)
-	{
-		$order = $this->getProcessOrder();
-
-		return isset($order[$status]) ? $order[$status] : null;
-	}
-
 	public function getProcessOrder()
 	{
 		return [
-			static::STATUS_PROCESSING => 1,
-			static::STATUS_DELIVERY => 2,
-			static::STATUS_PICKUP => 3,
-			static::STATUS_DELIVERED => 4,
-			static::STATUS_CANCELLED => 4,
+			static::STATUS_UNPAID => 0,
+			static::STATUS_PENDING => 1,
+			static::STATUS_PROCESSING => 2,
+			static::STATUS_DELIVERY => 3,
+			static::STATUS_PICKUP => 4,
+			static::STATUS_DELIVERED => 5,
+			static::STATUS_CANCELLED => 5,
 		];
 	}
 
-	public function getSubStatusOrder($subStatus)
+	public function hasSubstatus($status)
 	{
-		$order = $this->getSubStatusProcessOrder();
-
-		return isset($order[$subStatus]) ? $order[$subStatus] : null;
+		return $status === static::STATUS_PROCESSING;
 	}
 
 	public function getSubStatusProcessOrder()
@@ -201,8 +216,7 @@ class Status extends TradingService\Common\Status
 
 	public function isChanged($orderId, $status, $substatus = null)
 	{
-		$serviceKey = $this->provider->getUniqueKey();
-		$storedStatusEncoded = Market\Trading\State\OrderStatus::getValue($serviceKey, $orderId);
+		$storedStatusEncoded = $this->getStored($orderId);
 		$result = false;
 
 		if ($storedStatusEncoded === null)
@@ -232,8 +246,8 @@ class Status extends TradingService\Common\Status
 				$storedSubStatusOrder = $this->getSubStatusOrder($storedSubStatus);
 
 				$result = (
-					$submitSubStatusOrder === null
-					|| $submitSubStatusOrder > $storedSubStatusOrder
+					$submitSubStatusOrder !== null
+					&& $submitSubStatusOrder > $storedSubStatusOrder
 				);
 			}
 		}

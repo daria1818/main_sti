@@ -155,7 +155,7 @@ abstract class Request
 
 	protected function buildClient()
 	{
-		$result = new Main\Web\HttpClient([
+		$result = new Internals\HttpClient([
 			'version' => '1.1',
 			'socketTimeout' => 30,
 			'streamTimeout' => 30,
@@ -289,6 +289,8 @@ abstract class Request
 	{
 		try
 		{
+			if ($httpResponse === '') { return []; }
+
 			$result = Main\Web\Json::decode($httpResponse);
 		}
 		catch (\Exception $exception)

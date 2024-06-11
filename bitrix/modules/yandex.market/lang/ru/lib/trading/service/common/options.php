@@ -6,28 +6,31 @@ $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_GROUP_COMPANY_INFO'] = 'Информ
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_GROUP_SERVICE_REQUEST'] = 'Обмен данными через API';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_CAMPAIGN_ID'] = 'Номер кампании';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_CAMPAIGN_ID_PLACEHOLDER'] = '21579827';
-$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_CAMPAIGN_ID_DESCRIPTION'] = 'Зайдите в <a href="http://partner.market.yandex.ru/" target="_blank">личный кабинет</a> и кликните на стрелку рядом с названием магазина — откроется выпадающая строка. Справа от названия будет номер рекламной кампании в формате № XX-12345678 — скопируйте сюда восемь цифр после дефиса.';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_CAMPAIGN_ID_DESCRIPTION'] = 'Зайдите в раздел <a href="https://partner.market.yandex.ru/" target="_blank">личного кабинета</a> &laquo;Настройки&raquo; и скопируйте сюда номер кампании на странице &laquo;Настройки API&raquo;.';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_TAX_SYSTEM'] = 'Система налогообложения магазина';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_YANDEX_TOKEN'] = 'Токен для запросов';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_YANDEX_TOKEN_PLACEHOLDER'] = '3D000001B86C3C97';
-$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_YANDEX_TOKEN_DESCRIPTION'] = 'Зайдите в раздел <a href="http://partner.market.yandex.ru/" target="_blank">личного кабинета</a> &laquo;Настройки&raquo; и скопируйте сюда авторизационный токен на странице &laquo;Настройки API&raquo;.';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_YANDEX_TOKEN_DESCRIPTION'] = 'Скопируйте сюда &laquo;Авторизационный токен&raquo; с той же страницы (Настройки &rarr; Настройки API, вкладка Получение запросов от Маркета).';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_YANDEX_INCOMING_URL'] = 'Адрес для запросов';
-$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_YANDEX_INCOMING_URL_DESCRIPTION'] = 'Укажите значение отсюда в URL API на той же странице.';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_YANDEX_INCOMING_URL_DESCRIPTION'] = 'Укажите значение отсюда в &laquo;URL для запросов API&raquo; на той же странице (Настройки &rarr; Настройки API, вкладка Получение запросов от Маркета).';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_YANDEX_INCOMING_URL_NOTE_HTTPS'] = 'Запросы выполняются только по&nbsp;протоколу https.<br /> Проверьте настройки <nobr>SSL-сертификата</nobr>';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_ID_INTRO'] = '
-Теперь зарегистрируйте приложение на сервере <a href="https://oauth.yandex.ru/" target="_blank">oauth.yandex.ru</a> — укажите там любое удобное название приложения, а также следующие значения:
+Теперь зарегистрируйте приложение на сервисе <a href="https://oauth.yandex.ru/client/new" target="_blank">oauth.yandex.ru/client/new</a> — укажите там любое удобное название приложения, а также следующие значения:
 <ul>
-	<li>Платформы &mdash; Веб-сервисы;</li>
-	<li>Callback URI &mdash; <a href="#CALLBACK_URI#" target="_blank">#CALLBACK_URI#</a>;</li>
-	<li>Доступы &mdash; Яндекс.Маркет &rarr; API Яндекс.Маркета для партнеров.</li>
+	<li>Платформы приложения &mdash; Веб-сервисы</li>
+	<li>Redirect URI &mdash; <a href="#CALLBACK_URI#" target="_blank">#CALLBACK_URI#</a></li>
+	<li>Доступ к данным &mdash; API Яндекс.Маркета / Поиска по товарам для партнеров</li>
 </ul>
 Затем скопируйте сюда полученную информацию:
 ';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_TOKEN'] = 'Токен для запросов магазина';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_TOKEN_HELP'] = 'Нажмите &laquo;Запросить&raquo;, выберите аккаунт, который имеет доступ к&nbsp;кампании Маркета.';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_ID'] = 'Идентификатор приложения';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_ID_PLACEHOLDER'] = '48b1b3b233ae46eb8dc3272f95cdbc4e';
-$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_PASSWORD'] = 'Пароль приложения';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_ID_HELP'] = 'Скопируйте значение в блоке ClientID';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_PASSWORD'] = 'Секретный ключ';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_PASSWORD_PLACEHOLDER'] = '4h9d81d12ef04e1c9125342abc04ea36';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_OAUTH_CLIENT_PASSWORD_HELP'] = 'Скопируйте значение в блоке Client secret';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_LOG_LEVEL'] = 'Содержание журнала событий';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_LOG_LEVEL_DESCRIPTION'] = 'Выберите вариант &laquo;Информация&raquo; — тогда в журнале событий будут отображаться ошибки и любые действия с заказами.';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_GROUP_ORDER'] = 'Оплата и доставка';
@@ -39,6 +42,11 @@ $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_ACCEPT_OLD_PRICE'] = 'Есл�
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_ACCEPT_OLD_PRICE_DECLINE'] = 'Не оформлять заказ';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_ACCEPT_OLD_PRICE_MODIFY'] = 'Оформлять заказ со старой ценой';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_GROUP_PROPERTY'] = 'Свойства заказа';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_EXTERNAL_ID_FIELDS'] = 'Поля заказа';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_EXTERNAL_ID_FIELD_ACCOUNT_NUMBER'] = 'Номер заказа';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_EXTERNAL_ID_PROPERTIES'] = 'Свойства заказа';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_ACCOUNT_NUMBER_TEMPLATE'] = 'Шаблон номера';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_ACCOUNT_NUMBER_TEMPLATE_HELP'] = 'Для подстановки номера заказа используйте&nbsp;&mdash; {id}. Номер кампании&nbsp;&mdash; {campaignId}';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_COMPANY_LEGAL_NAME'] = 'Название организации';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_COMPANY_LEGAL_NAME_PLACEHOLDER'] = 'ИП Витгенштейн Людвиг Карлович';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_COMPANY_LEGAL_NAME_HELP'] = 'Оно должно совпадать с названием, которое указано в учредительных документах и на странице &laquo;Юридические данные&raquo; в личном кабинете.';
@@ -51,7 +59,20 @@ $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_TAB_STORE'] = 'Данные о&nbsp;
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_SKU_FIELD'] = 'Откуда брать ваши SKU';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_SKU_FIELD_DESCRIPTION'] = 'Для каждого из&nbsp;каталогов выберите поля, в&nbsp;которых хранятся ваши SKU. Они будут использоваться для обмена информацией о&nbsp;заказах и&nbsp;остатках.';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_STORE_TRACE'] = 'Ограничивать по фактическому наличию';
-$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_SKU_ADV_PREFIX'] = 'Использовать префикс ADV';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_RATIO_SOURCE'] = 'Коэффициент упаковки';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_RATIO_SOURCE_HELP'] = 'Выберите свойство, в котором храните количество единиц в упаковке. Остаток товара будет разделен на значение выбранного коэффициента.';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_USE_SKU_PREFIX'] = 'Использовать префикс SKU';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_USE_SKU_PREFIX_HELP'] = '
+<p>Если к&nbsp;значению SKU добавлена приставка, отметьте чекбокс &laquo;Использовать префикс SKU&raquo; и укажите приставку в&nbsp;поле &laquo;Префикс значения SKU&raquo;.</p>
+<p>Например:</p>
+<ul>
+<li>В&nbsp;каталоге <nobr>1С-Битрикс</nobr> присутствует элемент с&nbsp;идентификатором 101;</li>
+<li>В&nbsp;личном кабинете маркетплейса вы&nbsp;добавили этот товар, использовав SKU adv101;</li>
+<li>Укажите &laquo;Префикс значения SKU&raquo; равным adv</li>
+</ul>
+';
+
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_SKU_PREFIX'] = 'Префикс значения SKU';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_STORE'] = 'Откуда брать данные об остатках';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_STORE_DESCRIPTION'] = '
 Теперь выберите поля, из&nbsp;которых маркетплейс будет получать данные об&nbsp;остатках ваших товаров:
@@ -66,6 +87,8 @@ $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_PRICE_SOURCE_NO_VALUE
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_PRICE_TYPE'] = 'Типы цен';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_PRODUCT_PRICE_DISCOUNT'] = 'Рассчитывать скидки';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_GROUP_STATUS_OUT'] = 'Вы можете передавать Турбо-страницам статусы:';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_SYNC_STATUS_OUT'] = 'Загружать изменения из Маркета';
+$MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_SYNC_STATUS_OUT_HELP'] = 'Если изменяете статусы в&nbsp;приложении или личном кабинете Маркета, отметьте опцию, чтобы в&nbsp;заказе 1С-Битрикс автоматически были установлены статусы из&nbsp;группы &laquo;#GROUP#&raquo;';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_TAB_STATUS'] = 'Статусы заказов';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_GROUP_STATUS_IN'] = 'Турбо-страницы могут передавать вам статусы:';
 $MESS['YANDEX_MARKET_TRADING_SERVICE_COMMON_OPTION_LOG_LEVEL_ERROR'] = 'Ошибки';

@@ -319,13 +319,86 @@ class EditForm extends Market\Component\Model\EditForm
 	{
 		$result = parent::getFields($select, $item);
 
-		if (!isset($result['EXPORT_SERVICE'], $result['EXPORT_FORMAT'])) { return $result; }
+		if (isset($result['NAME']))
+		{
+			$result['NAME'] = $this->modifyNameField($result['NAME']);
+		}
 
-		$result['EXPORT_SERVICE'] = $this->getRepository()->modifyExportServiceField($result['EXPORT_SERVICE']);
-		$result['EXPORT_FORMAT'] = $this->getRepository()->modifyExportServiceField($result['EXPORT_FORMAT']);
-		$result = $this->getRepository()->makeServiceDependFields($result);
+		if (isset($result['HTTPS']))
+		{
+			$result['HTTPS'] = $this->modifyHttpsField($result['HTTPS']);
+		}
+
+		if (isset($result['DOMAIN']))
+		{
+			$result['DOMAIN'] = $this->modifyDomainField($result['DOMAIN']);
+		}
+
+		if (isset($result['EXPORT_SERVICE'], $result['EXPORT_FORMAT']))
+		{
+			$result['EXPORT_SERVICE'] = $this->getRepository()->modifyExportServiceField($result['EXPORT_SERVICE']);
+			$result['EXPORT_FORMAT'] = $this->getRepository()->modifyExportServiceField($result['EXPORT_FORMAT']);
+
+			$result = $this->getRepository()->makeServiceDependFields($result);
+		}
 
 		return $result;
+	}
+
+	protected function modifyNameField(array $field)
+	{
+		$field['SETTINGS']['DEFAULT_VALUE'] = $this->getUiService()->getTitle();
+
+		return $field;
+	}
+
+	protected function modifyHttpsField(array $field)
+	{
+		$request = Main\Context::getCurrent()->getRequest();
+
+		$field['SETTINGS']['DEFAULT_VALUE'] = $request->isHttps()
+			? Market\Ui\UserField\BooleanType::VALUE_Y
+			: Market\Ui\UserField\BooleanType::VALUE_N;
+
+		return $field;
+	}
+
+	protected function modifyDomainField(array $field)
+	{
+		$host = Main\Context::getCurrent()->getRequest()->getHttpHost();
+		$siteId = Market\Data\SiteDomain::getSite($host);
+
+		if ($siteId !== null && !Market\Data\Site::isCrm($siteId))
+		{
+			$field['SETTINGS']['DEFAULT_VALUE'] = $host . $this->siteDomainDirectory($siteId);
+		}
+		else
+		{
+			$found = null;
+
+			foreach (Market\Data\Site::getVariants() as $variant)
+			{
+				if (Market\Data\Site::isCrm($variant)) { continue; }
+
+				$variantHost = (string)Market\Data\SiteDomain::getHost($variant);
+
+				if ($variantHost === '') { continue; }
+
+				$found = $variantHost . $this->siteDomainDirectory($variant);
+				break;
+			}
+
+			$field['SETTINGS']['DEFAULT_VALUE'] = $found !== null ? $found : $host;
+		}
+
+		return $field;
+	}
+
+	protected function siteDomainDirectory($siteId)
+	{
+		list(, $dir) = Market\Data\Site::getDocumentRoot($siteId);
+
+		return $dir !== '/' ? $dir : '';
 	}
 
 	public function extend($data, array $select = [])

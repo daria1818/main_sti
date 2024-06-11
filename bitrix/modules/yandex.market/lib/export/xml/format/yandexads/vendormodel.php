@@ -2,9 +2,11 @@
 
 namespace Yandex\Market\Export\Xml\Format\YandexAds;
 
+use Yandex\Market\Export\Xml\Format\Reference\FormatDeprecated;
 use Yandex\Market\Export\Xml\Format\YandexMarket;
 
 class VendorModel extends YandexMarket\VendorModel
+	implements FormatDeprecated
 {
 	use Concerns\TagRules;
 

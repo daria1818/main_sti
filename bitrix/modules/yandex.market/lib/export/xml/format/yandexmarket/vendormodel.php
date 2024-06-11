@@ -2,16 +2,16 @@
 
 namespace Yandex\Market\Export\Xml\Format\YandexMarket;
 
-use Bitrix\Main;
-use Yandex\Market\Export\PromoGift;
 use Yandex\Market\Export\Xml;
 use Yandex\Market\Type;
-use Yandex\Market\Export\Promo;
-use Yandex\Market\Export\PromoProduct;
-use Yandex\Market\Utils;
 
 class VendorModel extends Xml\Format\Reference\Base
 {
+	use Xml\Format\Reference\HasCategory;
+	use Xml\Format\Reference\HasCollection;
+	use Xml\Format\Reference\HasCurrency;
+	use Xml\Format\Reference\HasPromo;
+
 	public function getDocumentationLink()
 	{
 		return 'https://yandex.ru/support/partnermarket/export/vendor-model.html';
@@ -31,24 +31,9 @@ class VendorModel extends Xml\Format\Reference\Base
 		return 'vendor.model';
 	}
 
-	public function getContext()
-	{
-		return [];
-	}
-
 	public function isSupportDeliveryOptions()
 	{
 		return true;
-	}
-
-	public function getHeader()
-	{
-		$encoding = Utils\Encoding::getCharset();
-
-		$result = '<?xml version="1.0" encoding="' . $encoding . '"?>';
-		$result .= '<!DOCTYPE yml_catalog SYSTEM "shops.dtd">';
-
-		return $result;
 	}
 
 	public function getRoot()
@@ -77,6 +62,7 @@ class VendorModel extends Xml\Format\Reference\Base
 						new Xml\Tag\Root([ 'name' => 'categories' ]),
 						new Xml\Tag\EnableAutoDiscounts([ 'global' => true ]),
 						new Xml\Tag\Root([ 'name' => 'offers' ]),
+						new Xml\Tag\Base([ 'name' => 'collections' ]),
 						new Xml\Tag\Base([ 'name' => 'gifts' ]),
 						new Xml\Tag\Base([ 'name' => 'promos' ]),
 					],
@@ -86,8 +72,8 @@ class VendorModel extends Xml\Format\Reference\Base
 
 		if ($this->isSupportDeliveryOptions())
 		{
-			$rootChidren = $result->getChildren();
-			$shopTag = reset($rootChidren);
+			$rootChildren = $result->getChildren();
+			$shopTag = reset($rootChildren);
 
 			$shopTag->addChild(new Xml\Tag\DeliveryOptions([
 				'multiple' => true,
@@ -96,7 +82,7 @@ class VendorModel extends Xml\Format\Reference\Base
 					new Xml\Attribute\Base(['name' => 'days', 'required' => true, 'value_type' => Type\Manager::TYPE_DAYS]),
 					new Xml\Attribute\Base(['name' => 'order-before', 'visible' => true, 'value_type' => Type\Manager::TYPE_NUMBER]),
 				]
-			]), -4);
+			]), -5);
 			$shopTag->addChild(new Xml\Tag\PickupOptions([
 				'multiple' => false,
 				'attributes' => [
@@ -104,213 +90,18 @@ class VendorModel extends Xml\Format\Reference\Base
 					new Xml\Attribute\Base(['name' => 'days', 'required' => true, 'value_type' => Type\Manager::TYPE_DAYS]),
 					new Xml\Attribute\Base(['name' => 'order-before', 'visible' => true, 'value_type' => Type\Manager::TYPE_NUMBER]),
 				]
-			]), -4);
+			]), -5);
 		}
 
 		return $result;
 	}
-
-	public function getCategoryParentName()
-	{
-		return 'categories';
-	}
-
-	public function getCategory()
-	{
-		return new Xml\Tag\Base([
-			'name' => 'category',
-			'attributes' => [
-				new Xml\Attribute\Base(['name' => 'id', 'required' => true, 'primary' => true]),
-				new Xml\Attribute\Base(['name' => 'parentId']),
-			],
-		]);
-	}
-
-	public function getCurrencyParentName()
-	{
-		return 'currencies';
-	}
-
-	public function getCurrency()
-	{
-		return new Xml\Tag\Base([
-			'name' => 'currency',
-			'empty_value' => true,
-			'attributes' => [
-				new Xml\Attribute\Base(['name' => 'id', 'value_type' => 'currency', 'required' => true, 'primary' => true]),
-				new Xml\Attribute\Base(['name' => 'rate', 'required' => true]),
-			],
-		]);
-	}
-
-	public function getPromoParentName()
-    {
-        return 'promos';
-    }
-
-    public function getPromo($type = null)
-    {
-        $result = new Xml\Tag\Base([
-            'name' => 'promo',
-            'empty_value' => true,
-            'attributes' => [
-                new Xml\Attribute\Base(['name' => 'id', 'required' => true, 'primary' => true]),
-                new Xml\Attribute\Base(['name' => 'type', 'required' => true])
-            ],
-            'children' => []
-        ]);
-        $isDateRequired = ($type === Promo\Table::PROMO_TYPE_FLASH_DISCOUNT || $type === Promo\Table::PROMO_TYPE_BONUS_CARD);
-
-        // overview
-
-        $result->addChild(new Xml\Tag\Base(['name' => 'start-date', 'value_type' => Type\Manager::TYPE_DATE, 'required' => $isDateRequired]));
-        $result->addChild(new Xml\Tag\Base(['name' => 'end-date', 'value_type' => Type\Manager::TYPE_DATE, 'required' => $isDateRequired]));
-        $result->addChild(new Xml\Tag\Base(['name' => 'description', 'value_type' => Type\Manager::TYPE_HTML, 'max_length' => 500]));
-        $result->addChild(new Xml\Tag\Base(['name' => 'url', 'value_type' => Type\Manager::TYPE_URL, 'required' => true]));
-
-        // promocode rules
-
-        if ($type === Promo\Table::PROMO_TYPE_PROMO_CODE)
-        {
-            $result->addChild(new Xml\Tag\Base(['name' => 'promo-code', 'required' => true, 'max_length' => 20]));
-            $result->addChild(new Xml\Tag\Base([
-                'name' => 'discount',
-                'value_type' => Type\Manager::TYPE_NUMBER,
-                'value_positive' => true,
-                'required' => true,
-                'attributes' => [
-                    new Xml\Attribute\DiscountUnit(['name' => 'unit', 'required' => true]),
-                    new Xml\Attribute\DiscountCurrency(['name' => 'currency', 'value_type' => Type\Manager::TYPE_CURRENCY, 'required' => true]),
-                ]
-            ]));
-        }
-
-        // purchase
-
-        $purchase = new Xml\Tag\Base([
-            'name' => 'purchase',
-            'required' => true,
-            'children' => []
-        ]);
-
-        if ($type === Promo\Table::PROMO_TYPE_GIFT_N_PLUS_M)
-        {
-            $purchase->addChild(new Xml\Tag\Base(['name' => 'required-quantity', 'value_type' => Type\Manager::TYPE_NUMBER, 'value_positive' => true, 'required' => true]));
-            $purchase->addChild(new Xml\Tag\Base(['name' => 'free-quantity', 'value_type' => Type\Manager::TYPE_NUMBER, 'value_positive' => true, 'required' => true]));
-        }
-        else if ($type === Promo\Table::PROMO_TYPE_GIFT_WITH_PURCHASE)
-        {
-            $purchase->addChild(new Xml\Tag\Base(['name' => 'required-quantity', 'value_type' => Type\Manager::TYPE_NUMBER, 'value_positive' => true]));
-        }
-
-        $purchase->addChild(new Xml\Tag\Plain(['name' => 'product', 'multiple' => true, 'required' => true]));
-
-        $result->addChild($purchase);
-
-        // gift
-
-        if ($type === Promo\Table::PROMO_TYPE_GIFT_WITH_PURCHASE)
-        {
-            $result->addChild(new Xml\Tag\Base([
-                'name' => 'promo-gifts',
-                'required' => true,
-                'children' => [
-                    new Xml\Tag\Plain(['name' => 'promo-gift', 'multiple' => true, 'required' => true])
-                ]
-            ]));
-        }
-
-        return $result;
-    }
-
-    public function getPromoProductParentName()
-    {
-        return 'purchase';
-    }
-
-    public function getPromoProduct($type = null)
-    {
-        $result = new Xml\Tag\Base([
-            'name' => 'product',
-            'empty_value' => true
-        ]);
-
-        if ($type === PromoProduct\Table::PROMO_PRODUCT_TYPE_CATEGORY)
-        {
-            $result->addAttribute(new Xml\Attribute\Base(['name' => 'category-id', 'required' => true, 'primary' => true]));
-        }
-        else
-        {
-            $result->addAttribute(new Xml\Attribute\Base(['name' => 'offer-id', 'required' => true, 'primary' => true]));
-
-            if ($type === PromoProduct\Table::PROMO_PRODUCT_TYPE_OFFER_WITH_DISCOUNT)
-            {
-                $result->addChild(new Xml\Tag\Base([
-                    'name' => 'discount-price',
-                    'value_type' => Type\Manager::TYPE_NUMBER,
-                    'required' => true,
-                    'attributes' => [
-                        new Xml\Attribute\Base(['name' => 'currency', 'value_type' => Type\Manager::TYPE_CURRENCY, 'required' => true])
-                    ]
-                ]));
-            }
-        }
-
-        return $result;
-    }
-
-    public function getPromoGiftParentName()
-    {
-        return 'promo-gifts';
-    }
-
-    public function getPromoGift($type = null)
-    {
-        $result = new Xml\Tag\Base([
-            'name' => 'promo-gift',
-            'empty_value' => true,
-            'attributes' => [],
-        ]);
-
-        if ($type === PromoGift\Table::PROMO_GIFT_TYPE_GIFT)
-        {
-            $result->addAttribute(new Xml\Attribute\Base(['name' => 'gift-id', 'required' => true, 'primary' => true]));
-        }
-        else
-        {
-            $result->addAttribute(new Xml\Attribute\Base(['name' => 'offer-id', 'required' => true, 'primary' => true]));
-        }
-
-        return $result;
-    }
-
-    public function getGiftParentName()
-    {
-        return 'gifts';
-    }
-
-    public function getGift()
-    {
-        return new Xml\Tag\Base([
-            'name' => 'gift',
-            'attributes' => [
-                new Xml\Attribute\Base(['name' => 'id', 'required' => true, 'primary' => true])
-            ],
-            'children' => [
-                new Xml\Tag\Base(['name' => 'name', 'required' => true]),
-                new Xml\Tag\Base(['name' => 'picture', 'value_type' => Type\Manager::TYPE_FILE, 'required' => true])
-            ]
-        ]);
-    }
 
 	public function getOfferParentName()
 	{
 		return 'offers';
 	}
 
-	/**
-	 * @return Xml\Tag\Base
-	 */
+	/** @return Xml\Tag\Base */
 	public function getOffer()
 	{
 		return new Xml\Tag\Offer([
@@ -320,9 +111,9 @@ class VendorModel extends Xml\Format\Reference\Base
 			'attributes' => [
 				new Xml\Attribute\Id(['required' => true]),
 				new Xml\Attribute\Type(['required' => true]),
-				new Xml\Attribute\Available(['value_type' => 'boolean', 'visible' => true]),
+				new Xml\Attribute\Available(['value_type' => 'boolean', 'visible' => true, 'preselect' => true]),
 				new Xml\Attribute\Base(['name' => 'bid', 'value_type' => 'number']),
-				new Xml\Attribute\Base(['name' => 'group_id', 'value_type' => 'number']),
+				new Xml\Attribute\GroupId(['preselect' => true]),
 			],
 			'children' => array_merge(
 				$this->getOfferDefaultChildren('prolog', [
@@ -332,7 +123,7 @@ class VendorModel extends Xml\Format\Reference\Base
 					new Xml\Tag\Vendor(['required' => true]),
 					new Xml\Tag\Model(['required' => true]),
 					new Xml\Tag\Base(['name' => 'vendorCode', 'visible' => true]),
-					new Xml\Tag\Base(['name' => 'typePrefix', 'visible' => true]),
+					new Xml\Tag\Base(['name' => 'typePrefix']),
 				],
 				$this->getOfferDefaultChildren('epilog', [
 					'barcode' => [ 'visible' => true ]
@@ -348,21 +139,25 @@ class VendorModel extends Xml\Format\Reference\Base
 		switch ($place)
 		{
 			case 'prolog':
-				$result = [
-					new Xml\Tag\Url(['required' => true]),
+				$result = array_filter([
+					new Xml\Tag\Url(['preselect' => true]),
 					new Xml\Tag\Price(['required' => true]),
 					new Xml\Tag\OldPrice(),
 					new Xml\Tag\PurchasePrice(),
-					new Xml\Tag\EnableAutoDiscounts(),
+					new Xml\Tag\Base(['name' => 'additional_expenses', 'value_type' => Type\Manager::TYPE_NUMBER, 'value_positive' => true]),
+					new Xml\Tag\PurchasePrice(['name' => 'cofinance_price']),
+					new Xml\Tag\EnableAutoDiscounts(['deprecated' => true]),
 					new Xml\Tag\Vat(),
 					new Xml\Tag\CurrencyId(['required' => true]),
 					new Xml\Tag\CategoryId(['required' => true]),
-					new Xml\Tag\Picture(['multiple' => true, 'visible' => true]),
+					$this->getCollectionId(),
+					new Xml\Tag\Picture(['multiple' => true, 'visible' => true, 'preselect' => true]),
+					new Xml\Tag\Base(['name' => 'video', 'value_type' => 'file']),
 					new Xml\Tag\Base(['name' => 'delivery', 'value_type' => 'boolean']),
 					new Xml\Tag\Base(['name' => 'pickup', 'value_type' => 'boolean']),
-					new Xml\Tag\Base(['name' => 'store', 'value_type' => 'boolean']),
+					new Xml\Tag\Base(['name' => 'store', 'value_type' => 'boolean', 'deprecated' => true]),
 					new Xml\Tag\CargoTypes(),
-				];
+				]);
 
 				if ($this->isSupportDeliveryOptions())
 				{
@@ -389,25 +184,35 @@ class VendorModel extends Xml\Format\Reference\Base
 
 			case 'epilog':
 				$result = [
-					new Xml\Tag\Description(['visible' => true]),
+					new Xml\Tag\Description(['visible' => true, 'preselect' => true]),
+					new Xml\Tag\SetIds(),
 					new Xml\Tag\SalesNotes(),
 					new Xml\Tag\MinQuantity(),
+					new Xml\Tag\StepQuantity(),
 					new Xml\Tag\Base(['name' => 'manufacturer_warranty', 'value_type' => 'boolean']),
 					new Xml\Tag\Base(['name' => 'country_of_origin']),
 					new Xml\Tag\Base(['name' => 'adult', 'value_type' => 'boolean']),
-					new Xml\Tag\Base(['name' => 'barcode', 'multiple' => true, 'value_type' => Type\Manager::TYPE_BARCODE]),
+					new Xml\Tag\Barcode(['multiple' => true, 'preselect' => true]),
 					new Xml\Tag\Cpa(),
 					new Xml\Tag\Param([
 						'multiple' => true,
 						'visible' => true,
+						'preselect' => true,
 						'attributes' => [
-							new Xml\Attribute\Base(['name' => 'name', 'required' => true, 'visible' => true]),
-							new Xml\Attribute\Base(['name' => 'unit']),
+							new Xml\Attribute\ParamName(['required' => true, 'visible' => true, 'preselect' => true]),
+							new Xml\Attribute\ParamUnit(['preselect' => true]),
 						],
 					]),
-					new Xml\Tag\Expiry(),
-					new Xml\Tag\Weight(),
-					new Xml\Tag\Dimensions(),
+					new Xml\Tag\Expiry(['deprecated' => true]),
+					new Xml\Tag\Weight(['preselect' => true]),
+					new Xml\Tag\Expiry(['name' => 'period-of-validity-days', 'value_type' => Type\Manager::TYPE_PERIOD]),
+					new Xml\Tag\Base(['name' => 'comment-validity-days']),
+					new Xml\Tag\Expiry(['name' => 'service-life-days', 'value_type' => Type\Manager::TYPE_PERIOD]),
+					new Xml\Tag\Base(['name' => 'comment-life-days']),
+					new Xml\Tag\Expiry(['name' => 'warranty-days', 'value_type' => Type\Manager::TYPE_PERIOD]),
+					new Xml\Tag\Base(['name' => 'comment-warranty']),
+					new Xml\Tag\Base(['name' => 'certificate']),
+					new Xml\Tag\Dimensions(['preselect' => true]),
 					new Xml\Tag\Base(['name' => 'downloadable', 'value_type' => 'boolean']),
 					new Xml\Tag\Age([
 						'attributes' => [
@@ -415,14 +220,70 @@ class VendorModel extends Xml\Format\Reference\Base
 						],
 					]),
 					new Xml\Tag\Condition([
-						'max_length' => 3000,
-						'value_type' => Type\Manager::TYPE_HTML,
+						'critical' => true,
+						'tree' => true,
 						'attributes' => [
-							new Xml\Attribute\ConditionType(['required' => true, 'value_type' => Type\Manager::TYPE_CONDITION])
+							new Xml\Attribute\ConditionType([ 'required' => true ]),
+						],
+						'children' => [
+							new Xml\Tag\ConditionQuality([ 'required' => true ]),
+							new Xml\Tag\ConditionReason([ 'required' => true ]),
 						],
 					]),
-					new Xml\Tag\CreditTemplate(['multiple' => true]),
+					new Xml\Tag\CreditTemplate(['multiple' => true, 'deprecated' => true]),
+					new Xml\Tag\Base(['name' => 'tn-ved-code', 'wrapper_name' => 'tn-ved-codes', 'multiple' => true, 'value_type' => Type\Manager::TYPE_TN_VED_CODE]),
+					new Xml\Tag\Disabled(),
+					new Xml\Tag\Disabled(['name' => 'archived']),
 					new Xml\Tag\Count(),
+					new Xml\Tag\Base(['name' => 'box-count', 'value_type' => Type\Manager::TYPE_NUMBER]),
+					new Xml\Tag\Base([
+						'name' => 'price-option',
+						'multiple' => true,
+						'max_count' => 5,
+						'tree' => true,
+						'children' => [
+							new Xml\Tag\PriceOption\MinQuantity([
+								'visible' => true,
+								'attributes' => [
+									new Xml\Attribute\PriceOption\MinQuantityUnit(['required' => true]),
+								],
+							]),
+							new Xml\Tag\Base(['name' => 'min-order-sum', 'value_type' => Type\Manager::TYPE_NUMBER]),
+							new Xml\Tag\Base(['name' => 'shipment-days', 'value_type' => Type\Manager::TYPE_NUMBER]),
+							new Xml\Tag\PriceOption\Price([ 'visible' => true ]),
+							new Xml\Tag\PriceOption\OldPrice(),
+							new Xml\Tag\PriceOption\Discount([
+								'attributes' => [
+									new Xml\Attribute\PriceOption\DiscountUnit(['required' => true]),
+								],
+							]),
+						],
+					]),
+					new Xml\Tag\Restrictions([
+						'name' => 'restrictions',
+						'wholesalePrice' => 'price-option',
+						'tree' => true,
+						'children' => [
+							new Xml\Tag\Base([
+								'name' => 'clients',
+								'required' => true,
+								'tree' => true,
+								'children' => [
+									new Xml\Tag\Base(['name' => 'b2c', 'value_type' => Type\Manager::TYPE_BOOLEAN, 'default_value' => true, 'required' => true]),
+									new Xml\Tag\Base(['name' => 'b2b', 'value_type' => Type\Manager::TYPE_BOOLEAN, 'default_value' => false, 'required' => true]),
+								],
+							]),
+							new Xml\Tag\Base([
+								'name' => 'trading',
+								'required' => true,
+								'tree' => true,
+								'children' => [
+									new Xml\Tag\Base(['name' => 'retail', 'value_type' => Type\Manager::TYPE_BOOLEAN, 'default_value' => true, 'required' => true]),
+									new Xml\Tag\Base(['name' => 'wholesale', 'value_type' => Type\Manager::TYPE_BOOLEAN, 'default_value' => false, 'required' => true]),
+								],
+							]),
+						],
+					]),
 				];
 			break;
 		}
@@ -432,79 +293,5 @@ class VendorModel extends Xml\Format\Reference\Base
 		$this->sortTags($result, $sort);
 
 		return $result;
-	}
-
-	protected function overrideTags($tags, $overrides)
-	{
-		if ($overrides !== null)
-		{
-			/** @var \Yandex\Market\Export\Xml\Tag\Base $tag */
-			foreach ($tags as $tag)
-			{
-				$tagName = $tag->getName();
-
-				if (isset($overrides[$tagName]))
-				{
-					$tag->extendParameters($overrides[$tagName]);
-				}
-			}
-		}
-	}
-
-	protected function sortTags(&$tags, $sort)
-	{
-		if ($sort !== null)
-		{
-			$fullSort = [];
-			$nextSortIndex = 10;
-
-			foreach ($tags as $tag)
-			{
-				$tagId = $tag->getId();
-				$fullSort[$tagId] = isset($sort[$tagId]) ? $sort[$tagId] : $nextSortIndex;
-
-				$nextSortIndex += 10;
-			}
-
-			uasort($tags, function($tagA, $tagB) use ($fullSort) {
-				$tagAId = $tagA->getId();
-				$tagBId = $tagB->getId();
-				$tagASort = $fullSort[$tagAId];
-				$tagBSort = $fullSort[$tagBId];
-
-				if ($tagASort === $tagBSort) { return 0; }
-
-				return ($tagASort < $tagBSort ? -1 : 1);
-			});
-		}
-	}
-
-	protected function excludeTags(&$tags, $excludeList)
-	{
-		if ($excludeList !== null)
-		{
-			foreach ($tags as $tagIndex => $tag)
-			{
-				$tagName = $tag->getName();
-
-				if (isset($excludeList[$tagName]))
-				{
-					unset($tags[$tagIndex]);
-				}
-			}
-		}
-	}
-
-	protected function removeChildTags(Xml\Tag\Base $tag, $tagNameList)
-	{
-		foreach ($tagNameList as $tagName)
-		{
-			$childTag = $tag->getChild($tagName);
-
-			if ($childTag)
-			{
-				$tag->removeChild($childTag);
-			}
-		}
 	}
 }

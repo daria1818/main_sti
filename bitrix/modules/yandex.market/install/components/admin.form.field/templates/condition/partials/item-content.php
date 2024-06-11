@@ -44,6 +44,7 @@ $isSelectedCompareMultiple = null;
 				?>>
 					<?
 					$prevSource = null;
+					$isSelectedFieldFound = false;
 
 					foreach ($arParams['FIELD_ENUM'] as $field)
 					{
@@ -70,6 +71,7 @@ $isSelectedCompareMultiple = null;
 							$selectedSourceField = $field['ID'];
 							$selectedSourceFieldType = $field['TYPE'];
 							$isSelectedFieldAutocomplete = !empty($field['AUTOCOMPLETE']);
+							$isSelectedFieldFound = $isSelectedField;
 						}
 
 						?>
@@ -78,6 +80,13 @@ $isSelectedCompareMultiple = null;
 					}
 
 					if ($prevSource !== null) { echo '</optgroup>'; }
+
+					if (!$isSelectedFieldFound && !$isItemPlaceholder && !empty($itemValue['FIELD']))
+					{
+						?>
+						<option value="<?= htmlspecialcharsbx($itemValue['FIELD']) ?>" selected><?= htmlspecialcharsbx($itemValue['FIELD']) ?></option>
+						<?php
+					}
 					?>
 				</select>
 			</div>

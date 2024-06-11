@@ -26,6 +26,13 @@ class Path
 	{
 		$fullScriptName = static::MODULE_PATH_PREFIX . $scriptName;
 
+		if (!isset($query['lang']) && defined('LANGUAGE_ID'))
+		{
+			if ($query === null) { $query = []; }
+
+			$query = ['lang' => LANGUAGE_ID] + $query;
+		}
+
 		return static::getPageUrl($fullScriptName, $query);
 	}
 

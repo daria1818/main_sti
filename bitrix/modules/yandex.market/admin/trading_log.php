@@ -57,6 +57,7 @@ else
 			'URL',
 			'CONTEXT',
 			'TRACE',
+			'DEBUG',
 		],
 		'DEFAULT_LIST_FIELDS' => [
 			'TIMESTAMP_X',
@@ -65,7 +66,7 @@ else
 			'MESSAGE',
 			'ORDER_ID',
 			'SETUP',
-			'TRACE',
+			'DEBUG',
 		],
 		'DEFAULT_SORT' => [ 'ID' => 'DESC' ],
 		'CONTEXT_MENU_EXCEL' => 'Y',

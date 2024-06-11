@@ -25,13 +25,13 @@ use Exception;
 use DateTime;
 use DellinShipping\Kernel;
 use DellinShipping\ExclusionList;
-
+use stdClass;
 
 class NetworkService 
 {
 
     /**
-     * Ключ АПИ
+     * Ключ АП�?
      * @var string
      */
     protected static $api_key;
@@ -78,14 +78,14 @@ class NetworkService
         'produceDateForAddress' => 'https://api.dellin.ru/v2/request/address/dates', 
         'produceDateForTerminal' => 'https://api.dellin.ru/v2/request/terminal/dates',
         'requestTerminal' => 'https://api.dellin.ru/v1/public/request_terminals.json',
-        'terminals' => 'https://api.dellin.ru/v3/public/terminals.json',
+        'terminals' => 'https://api.dellin.ru/v3/public/terminals.json', // сверить с методом requestTerminal
         'requestCounteragents' => 'https://api.dellin.ru/v1/customers/counteragents.json',
-        'streetKladr' => 'https://api.dellin.ru/v1/public/kladr_street.json',
-        'cityInfo' => 'https://api.dellin.ru/v2/public/kladr.json',
+      //  'streetKladr' => 'https://api.dellin.ru/v1/public/kladr_street.json', 
+      //  'cityInfo' => 'https://api.dellin.ru/v2/public/kladr.json',
         'opfList' => 'https://api.dellin.ru/v1/public/opf_list.json',
         'countriesList' => 'https://api.dellin.ru/v1/public/countries.json',
         'terminalsList' => 'https://api.dellin.ru/v3/public/terminals.json',
-        'cities' => 'https://api.dellin.ru/v1/public/cities.json',
+    //    'cities' => 'https://api.dellin.ru/v1/public/cities.json',
         'freightTypeSearch' => 'https://api.dellin.ru/v1/public/freight_types/search.json'
     );
 
@@ -285,7 +285,7 @@ class NetworkService
         //Список для фильтрации сформирован согласно ОКАТО и ОКТМО
         $typesLocation = array(Loc::getMessage("PLACES_VARIANT_14"), Loc::getMessage("PLACES_VARIANT_10"), Loc::getMessage("PLACES_VARIANT_11"),
             Loc::getMessage("PLACES_VARIANT_12"), Loc::getMessage("PLACES_VARIANT_13"),//C ������ ������
-             Loc::getMessage("PLACES_VARIANT_15"),
+            Loc::getMessage("PLACES_VARIANT_15"),
             Loc::getMessage("PLACES_VARIANT_16"), Loc::getMessage("PLACES_VARIANT_17"),
             Loc::getMessage("PLACES_VARIANT_18"), Loc::getMessage("PLACES_VARIANT_19"),
             Loc::getMessage("PLACES_VARIANT_20"), Loc::getMessage("PLACES_VARIANT_21"),
@@ -539,21 +539,25 @@ class NetworkService
      * @param $query строка запроса (часть названия города)
      * @return mixed
      */
-
-    public static function SearchCity($query)
+    public static function SearchCity($query, $appkey)
     {
         // ��������� ������ ������� � ����������.
 
-        $query = str_replace(Loc::getMessage("YO"),Loc::getMessage("YE"),$query);
-        $query = str_replace([Loc::getMessage("CITY_G."),Loc::getMessage("CITY_CITY"),
-            Loc::getMessage("CITY_GOR.")],'',$query);
-        $response = self::sendCurl(self::$apiUrls['citySearch']."?q=".urlencode($query),false,"GET");
-        return json_decode($response);
+      $q = str_replace(Loc::getMessage("YO"),Loc::getMessage("YE"), $query);
+        //По-умолчанию лимит 35 элементов
+        $bodyRequest = [
+            'appkey' => $appkey,
+            'q' => $q
+        ];
+
+        $response = self::sendCurl(self::$apiUrls['locationKLADR'], json_encode($bodyRequest));
+
+        return json_decode($response)->cities;
     }
 
 
     /**
-     * Отправка HTTPS запроса в АПИ с использованием curl
+     * Отправка HTTPS запроса в АП�? с использованием curl
      * @param $url URL адрес запроса
      * @param $postData данные
      * @param string $method метод запроса (post по умолчанию)
@@ -731,13 +735,12 @@ class NetworkService
 
     }
 
-    public function sendQueryForCalculator()
+    public function sendQueryForCalculator()    
     {
 
-
+        
         $requestHandler = new RequestHandler($this->order, $this->config, $this->logger, false, false);
 
-        $sessionID = $this->sessionID;
 
         $fnName = 'calculator';
         $requestHandler->setProduceDate($this->getProduceDate());
@@ -773,7 +776,7 @@ class NetworkService
         } else {
             $this->setErrors($response->errors);
             $this->handlerLogsForMethods($request, $response, $fnName);
-            throw new Exception(Loc::getMessage("NOT_RESPONSE_CALC"));
+            throw new \Exception(Loc::getMessage("NOT_RESPONSE_CALC"));
         }
 
         return $response;
@@ -839,7 +842,7 @@ class NetworkService
 
     public function getArrivalTerminals($response){
         if(!$this->config->isGoodsUnloading()){
-            $_SESSION['terminals'] = $response->data->arrival->terminals;
+            $_SESSION['current_terminals'] = $response->data->arrival->terminals;
         }
     }
 
@@ -907,96 +910,130 @@ class NetworkService
      * @return array
      */
     public static function GetTerminals($apiKey, $cityKladr=false, $terminalId=false){
-        //$result = json_decode(self::sendCurl(self::$apiUrls['terminalsList'],json_encode(array('appkey'=>$apiKey))));
-        $result = self::sendApiRequest('terminalsList',array('appkey'=>$apiKey));
-        $url = $result->url;
-        $hash = $result->hash;
 
-        $obCities = self::getObCities($hash, $url);
+        //FIX PROBLEM WAF BLOCKED
+        $obCities = self::getObCities($apiKey);
 
-            if(!$cityKladr){  //если функция вызвана без параметров - отдаем все терминалы по всем городам
-                $arTerminalsByCities = array();
-                foreach($obCities->city as $city){
-                    $terminalsObs = $city->terminals->terminal;
-                    $arTerminals = array();
-                    foreach($terminalsObs as $key=>$terminalOb){
-                        $arTerminals[$terminalOb->id] = $terminalOb;
-                    }
-                    $cityData = array(
-                        'cityName' => $city->name,
-                        'cityID' => $city->cityID,
-                        'terminals' => $arTerminals
-                    );
-                    $arTerminalsByCities[$city->code] = $cityData;
-                }
-                $arTerminalsList = $arTerminalsByCities;
-            }elseif($cityKladr && !$terminalId){
-                foreach($obCities->city as $city){
-                    if($city->code == $cityKladr){
-                        $cityData = array(
-                            'cityName'  => $city->name,
-                            'cityID'    => $city->cityID,
-                            'cityKladr' => $city->code,
-                            'terminals' => $city->terminals->terminal
-                        );
-                        $arCityTerminals = $cityData;
-                        break 1;
-                    }
-                }
-                $arTerminalsList = $arCityTerminals;
-            }elseif($cityKladr && $terminalId){
-                foreach($obCities->city as $city){
-                    //if($city->code == $cityKladr){
-                    foreach($city->terminals->terminal as $terminal){
-                        if($terminal->id == $terminalId){
+        // END FIX
 
-                            $terminal->cityName = $city->name;
-                            $terminal->cityID = $city->cityID;
-                            break 2;
-                        }
-                    }
-                    //}
-                }
-                $arTerminalsList['terminal'] = $terminal;
+        $arTerminalsList = [];
+
+            if($cityKladr && $terminalId ){ //set terminalId and codeCladr
+                $arTerminalsList['terminal'] = self::getTerminalsOnCityAndTerminal($obCities, $terminalId);
+            } elseif(!$cityKladr && $terminalId ){ // set terminalId
+                $arTerminalsList['terminal'] = self::getTerminalsOnCityAndTerminal($obCities, $terminalId);
+            } elseif( $cityKladr && !$terminalId){ // set kladrcode 
+                $arTerminalsList = self::getTerminalsOnCity($obCities, $cityKladr);
+            } elseif(!$cityKladr){ // empty params send all catalog info
+                $arTerminalsList = self::getTerminalsOnEmptyParams($obCities);
             }
-            $arTerminalsList['hash'] = $hash;
-
-
-
-
+            
         return $arTerminalsList;
     }
 
-    public static function getObCities($hash, $url){
+    public static function getTerminalsOnEmptyParams($obCities)
+    {
+        $arTerminalsByCities = array();
+        foreach($obCities->city as $city){
+            $terminalsObs = $city->terminals->terminal;
+            $arTerminals = array();
+            foreach($terminalsObs as $key=>$terminalOb){
+                $arTerminals[$terminalOb->id] = $terminalOb;
+            }
+            $cityData = array(
+                'cityName' => $city->name,
+                'cityID' => $city->cityID,
+                'terminals' => $arTerminals
+            );
+            $arTerminalsByCities[$city->code] = $cityData;
+        }
+        return  $arTerminalsByCities;
+    }
 
-
-        $cache = new \CPHPCache();
-        $life_time = 86400*10;
-        $cache_path = 'dellin_terminals';
-
-
-        if($cache->initCache($life_time, $hash, $cache_path )){
-
-            $obCities = $cache->getVars()[$hash];
-
-        } else {
-
-            $obCities = self::sendApiRequest(false,array(),'json','GET',$url);
-
-            if(isset($obCities->city) && !empty($obCities->city)) {
-
-                $cache->startDataCache($life_time, $hash, $cache_path);
-                $cache->EndDataCache(
-                    array(
-                        $hash => $obCities
-                    )
+    public static function getTerminalsOnCity($obCities, $cityKladr)
+    {
+        $arCityTerminals = [];
+        foreach($obCities->city as $city){
+            if($city->code == $cityKladr){
+                $cityData = array(
+                    'cityName'  => $city->name,
+                    'cityID'    => $city->cityID,
+                    'cityKladr' => $city->code,
+                    'terminals' => $city->terminals->terminal
                 );
+                $arCityTerminals = $cityData;
+                break 1;
+            }
+        }
+        return $arCityTerminals;
+    }
 
-            }  else {
-                throw new Exception('List with terminals is empty or null.');
+    public static function getTerminalsOnCityAndTerminal($obCities, $terminalId)
+    {
+        $finedTerminal = new stdClass();
+        
+        foreach($obCities->city as $city){
+  
+            foreach($city->terminals->terminal as $terminal){
+
+                if($terminal->id == $terminalId)
+                {
+                    //add cityInfo not good solution
+                    $cityData = new stdClass();
+                    $cityData->name = $city->name;
+                    $cityData->ID = $city->cityID;
+                    $cityData->code = $city->code;
+                    $cityData->latitude = $city->latitude;
+                    $cityData->longitude = $city->longitude;
+
+                    $finedTerminal = $terminal;
+                    $finedTerminal->infoCity = $cityData;
+
+                    break 2;
+                }
+
             }
 
         }
+        return $finedTerminal;
+    }
+
+
+
+    public static function getObCities($apiKey){
+
+       //FIX PROBLEM WAF BLOCKED
+       $cache = new \CPHPCache();
+       $life_time = 43200;//12h
+       $cache_path = 'dellin_terminals';
+
+
+       if($cache->InitCache($life_time, $cache_path, $cache_path )){
+
+           $obCities = $cache->GetVars()[$cache_path];
+
+       } else {
+           $result = self::sendApiRequest('terminalsList', array('appkey'=>$apiKey));
+
+           $url = $result->url;
+           $hash = $result->hash;
+
+           $obCities = self::sendApiRequest(false,array(),'json','GET',$url);
+
+           if(isset($obCities->city) && !empty($obCities->city)) {
+
+               $cache->StartDataCache($life_time, $cache_path, $cache_path);
+               $cache->EndDataCache(
+                   array(
+                       $cache_path => $obCities
+                   )
+               );
+   
+           }  else {
+               throw new \Exception('List with terminals is empty or null.');
+           }
+       }
+        
 
         return $obCities;
 

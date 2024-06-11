@@ -16,6 +16,16 @@ class Assert
 		}
 	}
 
+	public static function notEmpty($value, $argument, $message = null)
+	{
+		if (empty($value))
+		{
+			$message = $message !== null ? $message : sprintf('Argument "%s" is empty', $argument);
+
+			throw new Main\ArgumentException($message, $argument);
+		}
+	}
+
 	public static function typeOf($value, $className, $argument)
 	{
 		if (!($value instanceof $className))
@@ -48,6 +58,18 @@ class Assert
 				'%s must extends %s',
 				$className,
 				$parentName
+			));
+		}
+	}
+
+	public static function methodExists($classOrObject, $method)
+	{
+		if (!method_exists($classOrObject, $method))
+		{
+			throw new Main\InvalidOperationException(sprintf(
+				'Class %s method %s is missing',
+				is_object($classOrObject) ? get_class($classOrObject) : $classOrObject,
+				$method
 			));
 		}
 	}

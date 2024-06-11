@@ -53,7 +53,7 @@ class StringType
 		$values = static::sanitizeMultipleValues($values);
 		$attributes = Fieldset\Helper::makeChildAttributes($userField);
 		$renderer = function($name, $value) use ($userField) {
-			return static::GetEditFormHTML($userField, [
+			return static::GetEditFormHTML(array_diff_key($userField, [ 'VALUE' => true ]), [
 				'NAME' => $name,
 				'VALUE' => $value,
 			]);
@@ -101,10 +101,7 @@ class StringType
 
 	protected static function getEditInput($userField, $htmlControl)
 	{
-		if ($userField['ENTITY_VALUE_ID'] < 1 && (string)$userField['SETTINGS']['DEFAULT_VALUE'] !== '')
-		{
-			$htmlControl['VALUE'] = htmlspecialcharsbx($userField['SETTINGS']['DEFAULT_VALUE']);
-		}
+		$value = Helper\Value::asSingle($userField, $htmlControl);
 
 		if ($userField['SETTINGS']['ROWS'] < 2)
 		{
@@ -123,28 +120,26 @@ class StringType
 			return sprintf(
 				'<input %s value="%s" />',
 				Helper\Attributes::stringify($attributes),
-				$htmlControl['VALUE']
+				htmlspecialcharsbx($value)
 			);
 		}
-		else
-		{
-			$attributes = [
-				'name' => $htmlControl['NAME'],
-			];
-			$attributes += array_filter([
-				'cols' => isset($userField['SETTINGS']['SIZE']) ? (int)$userField['SETTINGS']['SIZE'] : null,
-				'rows' => isset($userField['SETTINGS']['ROWS']) ? (int)$userField['SETTINGS']['ROWS'] : null,
-				'maxlength' => isset($userField['SETTINGS']['MAX_LENGTH']) ? (int)$userField['SETTINGS']['MAX_LENGTH'] : null,
-				'disabled' => $userField['EDIT_IN_LIST'] !== 'Y',
-				'data-multiple' => $userField['MULTIPLE'] !== 'N',
-			]);
 
-			return sprintf(
-				'<textarea %s>%s</textarea>',
-				Helper\Attributes::stringify($attributes),
-				$htmlControl['VALUE']
-			);
-		}
+		$attributes = [
+			'name' => $htmlControl['NAME'],
+		];
+		$attributes += array_filter([
+			'cols' => isset($userField['SETTINGS']['SIZE']) ? (int)$userField['SETTINGS']['SIZE'] : null,
+			'rows' => isset($userField['SETTINGS']['ROWS']) ? (int)$userField['SETTINGS']['ROWS'] : null,
+			'maxlength' => isset($userField['SETTINGS']['MAX_LENGTH']) ? (int)$userField['SETTINGS']['MAX_LENGTH'] : null,
+			'disabled' => $userField['EDIT_IN_LIST'] !== 'Y',
+			'data-multiple' => $userField['MULTIPLE'] !== 'N',
+		]);
+
+		return sprintf(
+			'<textarea %s>%s</textarea>',
+			Helper\Attributes::stringify($attributes),
+			htmlspecialcharsbx($value)
+		);
 	}
 
 	protected static function getCopyButton($userField, $htmlControl)

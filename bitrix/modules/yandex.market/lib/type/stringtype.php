@@ -78,7 +78,9 @@ class StringType extends AbstractType
 
 	protected function sanitizeValue($value)
 	{
-		return trim(strip_tags($value));
+		if (!is_scalar($value)) { return ''; }
+
+		return trim(strip_tags((string)$value));
 	}
 
 	protected function replaceXmlEntity($value)

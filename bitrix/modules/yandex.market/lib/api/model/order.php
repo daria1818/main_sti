@@ -26,6 +26,11 @@ class Order extends Market\Api\Reference\Model
 		return static::getLang('API_MODEL_ORDER_FIELD_' . $fieldName, null, $fieldName);
 	}
 
+	public static function getMeaningfulFieldHelp($fieldName)
+	{
+		return static::getLang('API_MODEL_ORDER_HELP_' . $fieldName, null, '');
+	}
+
 	public function getMeaningfulValues()
 	{
 		return array_filter([
@@ -91,14 +96,16 @@ class Order extends Market\Api\Reference\Model
 		return Market\Data\Number::normalize($this->getField('itemsTotal'));
 	}
 
+	/** @deprecated */
 	public function getSubsidyTotal()
 	{
-		return Market\Data\Number::normalize($this->getField('subsidyTotal'));
+		return $this->getSubsidies()->getSum();
 	}
 
+	/** @deprecated */
 	public function getTotal()
 	{
-		return Market\Data\Number::normalize($this->getField('total'));
+		return $this->getItemsTotal() + $this->getDelivery()->getPrice();
 	}
 
 	public function getNotes()
@@ -127,6 +134,14 @@ class Order extends Market\Api\Reference\Model
 		return $this->getRequiredCollection('items');
 	}
 
+	/**
+	 * @return Order\SubsidyCollection
+	 */
+	public function getSubsidies()
+	{
+		return $this->getChildCollection('subsidies');
+	}
+
 	protected function getChildModelReference()
 	{
 		return [
@@ -137,7 +152,8 @@ class Order extends Market\Api\Reference\Model
 	protected function getChildCollectionReference()
 	{
 		return [
-			'items' => Order\ItemCollection::class
+			'items' => Order\ItemCollection::class,
+			'subsidies' => Order\SubsidyCollection::class,
 		];
 	}
 }

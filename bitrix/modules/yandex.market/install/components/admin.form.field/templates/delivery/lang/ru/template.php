@@ -23,7 +23,10 @@ $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_PERIOD'] = 'Срок';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_PERIOD_NOTE'] = '(в днях)';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_PERIOD_TOOLTIP'] = 'Срок доставки товара в рабочих днях. Если вы готовы доставить товар в день заказа, укажите 0';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_ORDER_BEFORE'] = 'Время заказа';
-$MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_ORDER_BEFORE_TOOLTIP'] = 'Время, до которого нужно сделать заказ, чтобы получить его за срок, указанный в соседнем поле';
+$MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_ORDER_BEFORE_TOOLTIP'] = '
+<p>Время, до которого нужно сделать заказ, чтобы получить его за срок, указанный в соседнем поле.</p>
+<p>Введите целое число от 0 до 23.</p>
+';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_PRICE'] = 'Цена';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_PRICE_NOTE'] = '(в рублях)';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_PRICE_TOOLTIP'] = 'Используйте только целые числа. Если доставка бесплатная, укажите значение 0';
@@ -31,5 +34,5 @@ $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HEADER_DELIVERY_TYPE'] = 'Самов
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_MODAL_TITLE'] = 'Доставка';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HELP'] = 'Укажите стоимость и сроки курьерской доставки по вашему региону.';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_HELP_DETAILS'] = 'Подробнее о настройке читайте:<br /> <a href="https://yandex.ru/support/partnermarket/elements/delivery-options.html" target="_blank">https://yandex.ru/support/partnermarket/elements/delivery-options.html</a>';
-$MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_WARNING'] = 'Для передачи информации о доставке с помощью элемента <nobr>delivery-options</nobr>, убедитесь, что в личном кабинете, на странице Подключение и настройки &rarr; Настройки доставки, отмечена опция Использовать данные из прайс-листа.';
+$MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_WARNING'] = 'Для передачи информации о&nbsp;доставке с&nbsp;помощью элемента <nobr>delivery-options</nobr>, в&nbsp;личном кабинете Маркета на&nbsp;странице Настройки &rarr; Доставка магазина в&nbsp;блоке Ваши курьеры перейдите к&nbsp;настройке. И&nbsp;отредактируйте тариф, выбрав вариант Использовать данные из&nbsp;прайс-листа.';
 $MESS['YANDEX_MARKET_T_ADMIN_FIELD_DELIVERY_ADD_LIMIT_REACHED'] = 'Вы можете указать не более пяти способов доставки.';

@@ -1,42 +1,56 @@
 <?php
-
 namespace Yandex\Market\Components;
 
 use Bitrix\Main;
 use Yandex\Market;
+use Yandex\Market\Trading\Entity as TradingEntity;
 
-if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
+if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) { die(); }
 
+/** @noinspection PhpUnused */
 class TradingOrderView extends \CBitrixComponent
 {
 	protected $setup;
 
-	public function onPrepareComponentParams($params)
+	public function onPrepareComponentParams($arParams)
 	{
-		$params['CHECK_ACCESS'] = isset($params['CHECK_ACCESS']) ? (bool)$params['CHECK_ACCESS'] : true;
-		$params['EXTERNAL_ID'] = trim($params['EXTERNAL_ID']);
-		$params['SETUP_ID'] = !empty($params['SETUP_ID']) ? (int)$params['SETUP_ID'] : null;
-		$params['SERVICE_CODE'] = !empty($params['SERVICE_CODE']) ? trim($params['SERVICE_CODE']) : null;
-		$params['BEHAVIOR_CODE'] = !empty($params['BEHAVIOR_CODE']) ? trim($params['BEHAVIOR_CODE']) : null;
-		$params['SITE_ID'] = !empty($params['SITE_ID']) ? trim($params['SITE_ID']) : null;
+		$arParams['CHECK_ACCESS'] = !isset($arParams['CHECK_ACCESS']) || $arParams['CHECK_ACCESS'];
+		$arParams['EXTERNAL_ID'] = trim($arParams['EXTERNAL_ID']);
+		$arParams['SETUP_ID'] = !empty($arParams['SETUP_ID']) ? (int)$arParams['SETUP_ID'] : null;
+		$arParams['SERVICE_CODE'] = !empty($arParams['SERVICE_CODE']) ? trim($arParams['SERVICE_CODE']) : null;
+		$arParams['BEHAVIOR_CODE'] = !empty($arParams['BEHAVIOR_CODE']) ? trim($arParams['BEHAVIOR_CODE']) : null;
+		$arParams['SITE_ID'] = !empty($arParams['SITE_ID']) ? trim($arParams['SITE_ID']) : null;
 
-		return $params;
+		return $arParams;
+	}
+
+	protected function listKeysSignedParameters()
+	{
+		return [
+			'CHECK_ACCESS',
+			'EXTERNAL_ID',
+			'SETUP_ID',
+			'SERVICE_CODE',
+			'BEHAVIOR_CODE',
+			'SITE_ID',
+		];
 	}
 
 	public function executeComponent()
 	{
-		$templatePage = '';
-
 		try
 		{
 			$this->loadModules();
 
 			$orderExternalId = $this->getOrderExternalId();
 			$orderNum = $this->getOrderNum($orderExternalId);
+			$orderInternalId = $this->getOrderNum($orderExternalId, false);
 			$response = $this->runAction($orderExternalId, $orderNum);
 
 			$this->buildResult($response);
-			$this->extendResult($orderExternalId, $orderNum);
+			$this->extendResult($orderExternalId, $orderNum, $orderInternalId);
+
+			$templatePage = $this->resolveTemplatePage();
 		}
 		catch (Main\SystemException $exception)
 		{
@@ -45,6 +59,24 @@ class TradingOrderView extends \CBitrixComponent
 		}
 
 		$this->includeComponentTemplate($templatePage);
+
+		return isset($this->arResult['RETURN']) ? $this->arResult['RETURN'] : null;
+	}
+
+	protected function resolveTemplatePage()
+	{
+		$mode = isset($this->arParams['MODE']) ? $this->arParams['MODE'] : '';
+
+		if ($mode === 'RELOAD')
+		{
+			$result = 'reload';
+		}
+		else
+		{
+			$result = '';
+		}
+
+		return $result;
 	}
 
 	protected function getSetup()
@@ -157,11 +189,11 @@ class TradingOrderView extends \CBitrixComponent
 		return (int)$this->getParameter('EXTERNAL_ID');
 	}
 
-	protected function getOrderNum($externalId)
+	protected function getOrderNum($externalId, $useAccountNumber = null)
 	{
 		$platform = $this->getSetup()->getPlatform();
 		$registry = $this->getSetup()->getEnvironment()->getOrderRegistry();
-		$result = $registry->search($externalId, $platform);
+		$result = $registry->search($externalId, $platform, $useAccountNumber);
 
 		if ($result === null)
 		{
@@ -200,88 +232,61 @@ class TradingOrderView extends \CBitrixComponent
 		];
 	}
 
-	protected function getBoxDimensions()
-	{
-		return [
-			'WIDTH' => [
-				'NAME' => $this->getLang('DIMENSION_WIDTH'),
-				'UNIT' => Market\Data\Size::UNIT_CENTIMETER,
-			],
-			'HEIGHT' => [
-				'NAME' => $this->getLang('DIMENSION_HEIGHT'),
-				'UNIT' => Market\Data\Size::UNIT_CENTIMETER,
-			],
-			'DEPTH' => [
-				'NAME' => $this->getLang('DIMENSION_DEPTH'),
-				'UNIT' => Market\Data\Size::UNIT_CENTIMETER,
-			],
-			'WEIGHT' => [
-				'NAME' => $this->getLang('DIMENSION_WEIGHT'),
-				'UNIT' => Market\Data\Weight::UNIT_GRAM,
-			],
-		];
-	}
-
 	protected function buildResult(Market\Trading\Service\Reference\Action\Response $response)
 	{
 		$this->arResult = [
+			'ORDER' => $response->getField('order'),
+			'WARNINGS' => $response->getField('warnings'),
 			'PROPERTIES' => $response->getField('properties'),
 			'BASKET' => [
 				'COLUMNS' => $response->getField('basket.columns'),
 				'ITEMS' => $response->getField('basket.items'),
 				'SUMMARY' => $response->getField('basket.summary'),
 			],
+			'DELIVERY' => $response->getField('delivery'),
+			'COURIER' => $response->getField('courier'),
+			'BUYER' => $response->getField('buyer'),
 			'SHIPMENT' => $response->getField('shipments'),
-			'SHIPMENT_EDIT' => (bool)$response->getField('shipmentEdit'),
+			'BOX' => $response->getField('boxes'),
+			'ORDER_ACTIONS' => (array)$response->getField('orderActions'),
 			'PRINT_READY' => (bool)$response->getField('printReady'),
 		];
 	}
 
-	protected function extendResult($orderExternalId, $orderNum)
+	protected function extendResult($orderExternalId, $orderNum, $orderInternalId)
 	{
-		$this->fillCommonData($orderExternalId, $orderNum);
-		$this->fillBoxDimensions();
+		$this->fillCommonData($orderExternalId, $orderNum, $orderInternalId);
 		$this->fillBasketItemsIndex();
-		$this->fillBoxNumber($orderExternalId);
-		$this->convertBoxDimensions();
+		$this->fillBoxNumber();
 		$this->resolveBasketCisColumn();
-		$this->resolveShipmentEdit();
+		$this->resolveBasketDigitalColumn();
+		$this->filterOrderActions();
+		$this->fillItemsChangeReason();
 		$this->fillPrintDocuments();
-		$this->fillBoxPacks();
-		$this->resolveBoxSelectedPack();
+		$this->extendActivities();
 	}
 
-	protected function fillCommonData($orderExternalId, $orderNum)
+	protected function fillCommonData($orderExternalId, $orderNum, $orderInternalId)
 	{
 		$this->arResult['SETUP_ID'] = $this->getSetup()->getId();
 		$this->arResult['SERVICE_NAME'] = $this->getSetup()->getService()->getInfo()->getTitle('SHORT');
+		$this->arResult['ORDER_INTERNAL_ID'] = $orderInternalId;
 		$this->arResult['ORDER_EXTERNAL_ID'] = $orderExternalId;
 		$this->arResult['ORDER_ACCOUNT_NUMBER'] = $orderNum;
 	}
 
-	protected function fillBoxDimensions()
+	protected function fillBoxNumber()
 	{
-		$this->arResult['BOX_DIMENSIONS'] = $this->getBoxDimensions();
-	}
-
-	protected function fillBoxNumber($orderId)
-	{
-		if (empty($this->arResult['SHIPMENT'])) { return; }
+		if (empty($this->arResult['BOX'])) { return; }
 
 		$boxNumber = 1;
 
-		foreach ($this->arResult['SHIPMENT'] as &$shipment)
+		foreach ($this->arResult['BOX'] as &$box)
 		{
-			foreach ($shipment['BOX'] as &$box)
-			{
-				$box['NUMBER'] = $boxNumber;
-				$box['FULFILMENT_ID'] = $orderId . '-' . $boxNumber;
-
-				++$boxNumber;
-			}
-			unset($box);
+			$box['NUMBER'] = $boxNumber;
+			++$boxNumber;
 		}
-		unset($shipment);
+		unset($box);
 	}
 
 	protected function fillBasketItemsIndex()
@@ -305,56 +310,6 @@ class TradingOrderView extends \CBitrixComponent
 		unset($basketItem);
 	}
 
-	protected function convertBoxDimensions()
-	{
-		if (empty($this->arResult['SHIPMENT']) || empty($this->arResult['BOX_DIMENSIONS'])) { return; }
-
-		foreach ($this->arResult['SHIPMENT'] as &$shipment)
-		{
-			foreach ($shipment['BOX'] as &$box)
-			{
-				foreach ($this->arResult['BOX_DIMENSIONS'] as $dimensionName => $dimensionDescription)
-				{
-					if (!isset($box['DIMENSIONS'][$dimensionName])) { continue; }
-
-					$boxDimension = &$box['DIMENSIONS'][$dimensionName];
-
-					if (
-						(string)$boxDimension['VALUE'] !== ''
-						&& $boxDimension['UNIT'] !== $dimensionDescription['UNIT']
-					)
-					{
-						$boxDimension['VALUE'] = $this->convertDimension(
-							$dimensionName,
-							$boxDimension['VALUE'],
-							$boxDimension['UNIT'],
-							$dimensionDescription['UNIT']
-						);
-						$boxDimension['UNIT'] = $dimensionDescription['UNIT'];
-					}
-
-					unset($boxDimension);
-				}
-			}
-			unset($box);
-		}
-		unset($shipment);
-	}
-
-	protected function convertDimension($dimension, $value, $fromUnit, $toUnit)
-	{
-		if ($dimension === 'WEIGHT')
-		{
-			$result = Market\Data\Weight::convertUnit($value, $fromUnit, $toUnit);
-		}
-		else
-		{
-			$result = Market\Data\Size::convertUnit($value, $fromUnit, $toUnit);
-		}
-
-		return $result;
-	}
-
 	protected function resolveBasketCisColumn()
 	{
 		if (!isset($this->arResult['BASKET']['COLUMNS']['CIS'])) { return; }
@@ -363,7 +318,7 @@ class TradingOrderView extends \CBitrixComponent
 
 		foreach ($this->arResult['BASKET']['ITEMS'] as $item)
 		{
-			if (!empty($item['MARKING_GROUP']))
+			if (!empty($item['INSTANCE_TYPES']) || !empty($item['MARKING_GROUP']))
 			{
 				$isMarkingGroupUsed = true;
 				break;
@@ -376,24 +331,70 @@ class TradingOrderView extends \CBitrixComponent
 		}
 	}
 
-	protected function resolveShipmentEdit()
+	protected function resolveBasketDigitalColumn()
 	{
-		if (empty($this->arResult['SHIPMENT']) && !isset($this->arResult['BASKET']['COLUMNS']['CIS']))
+		if (
+			isset($this->arResult['BASKET']['COLUMNS']['DIGITAL'])
+			&& empty($this->arResult['ORDER_ACTIONS'][TradingEntity\Operation\Order::DIGITAL])
+		)
 		{
-			$this->arResult['SHIPMENT_EDIT'] = false;
+			unset($this->arResult['BASKET']['COLUMNS']['DIGITAL']);
 		}
+	}
+
+	protected function filterOrderActions()
+	{
+		if (empty($this->arResult['ORDER_ACTIONS'])) { return; }
+
+		$this->arResult['ORDER_ACTIONS'] = array_intersect_key(
+			$this->arResult['ORDER_ACTIONS'],
+			$this->getReadyActions()
+		);
+	}
+
+	protected function getReadyActions()
+	{
+		return array_filter([
+			TradingEntity\Operation\Order::ITEM => !empty($this->arResult['BASKET']['ITEMS']),
+			TradingEntity\Operation\Order::BOX => !empty($this->arResult['BOX']),
+			TradingEntity\Operation\Order::CIS => isset($this->arResult['BASKET']['COLUMNS']['CIS']),
+			TradingEntity\Operation\Order::DIGITAL => isset($this->arResult['BASKET']['COLUMNS']['DIGITAL']),
+		]);
+	}
+
+	protected function fillItemsChangeReason()
+	{
+		if (!isset($this->arResult['ORDER_ACTIONS'][TradingEntity\Operation\Order::ITEM])) { return; }
+
+		$service = $this->getSetup()->getService();
+
+		if (!($service instanceof Market\Trading\Service\Reference\HasItemsChangeReason)) { return; }
+
+		$reasonService = $service->getItemsChangeReason();
+		$enum = [];
+
+		foreach ($reasonService->getVariants() as $variant)
+		{
+			$enum[] = [
+				'ID' => $variant,
+				'VALUE' => $reasonService->getTitle($variant),
+			];
+		}
+
+		$this->arResult['ITEMS_CHANGE_REASON'] = $enum;
 	}
 
 	protected function fillPrintDocuments()
 	{
-		if (!$this->arResult['SHIPMENT_EDIT'] && !$this->arResult['PRINT_READY']) { return; }
-
 		$printer = $this->getSetup()->getService()->getPrinter();
 		$documents = [];
 
 		foreach ($printer->getTypes() as $type)
 		{
 			$document = $printer->getDocument($type);
+
+			if ($document->getSourceType() !== Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER) { continue; }
+			if (!$this->matchActivityFilter($document->getFilter())) { continue; }
 
 			$documents[] = [
 				'TYPE' => $type,
@@ -404,50 +405,107 @@ class TradingOrderView extends \CBitrixComponent
 		$this->arResult['PRINT_DOCUMENTS'] = $documents;
 	}
 
-	protected function fillBoxPacks()
+	protected function extendActivities()
 	{
-		$query = Market\Ui\Trading\Internals\PackTable::getList();
+		$resultKeys = [
+			'PROPERTIES',
+			'DELIVERY',
+			'BUYER',
+		];
 
-		$this->arResult['BOX_PACKS'] = $query->fetchAll();
+		foreach ($resultKeys as $resultKey)
+		{
+			if (!isset($this->arResult[$resultKey])) { continue; }
+
+			foreach ($this->arResult[$resultKey] as $propertyKey => &$property)
+			{
+				if (!isset($property['ACTIVITY'])) { continue; }
+
+				$activity = $this->getActivity($property['ACTIVITY']);
+				$activityAction = $this->makeActivityAction($property['ACTIVITY'], $activity);
+
+				if ($this->matchActivityFilter($activityAction['FILTER']))
+				{
+					$property['ACTIVITY_ACTION'] = $activityAction;
+				}
+				else if (Market\Utils\Value::isEmpty($property['VALUE']))
+				{
+					unset($this->arResult[$resultKey][$propertyKey]);
+				}
+			}
+			unset($property);
+
+			if (empty($this->arResult[$resultKey]))
+			{
+				unset($this->arResult[$resultKey]);
+			}
+		}
 	}
 
-	protected function resolveBoxSelectedPack()
+	protected function makeActivityAction($path, Market\Trading\Service\Reference\Action\AbstractActivity $activity, $chain = '')
 	{
-		if (empty($this->arResult['SHIPMENT']) || empty($this->arResult['BOX_DIMENSIONS'])) { return; }
+		$type = $path . ($chain !== '' ? '|' . $chain : '');
+		$result = [
+			'TYPE' => $path,
+			'TEXT' => $activity->getTitle(),
+			'FILTER' => $activity->getFilter(),
+		];
 
-		foreach ($this->arResult['SHIPMENT'] as &$shipment)
+		if ($activity instanceof Market\Trading\Service\Reference\Action\ComplexActivity)
 		{
-			foreach ($shipment['BOX'] as &$box)
+			$result['MENU'] = [];
+
+			foreach ($activity->getActivities() as $key => $child)
 			{
-				$selectedPack = null;
+				$childChain = ($chain !== '' ? $chain . '.' . $key : $key);
 
-				foreach ($this->arResult['BOX_PACKS'] as $pack)
-				{
-					$isMatchedPack = true;
-
-					foreach ($this->arResult['BOX_DIMENSIONS'] as $dimensionName => $dimensionDescription)
-					{
-						if ($dimensionName === 'WEIGHT') { continue; }
-						if (!isset($pack[$dimensionName], $box['DIMENSIONS'][$dimensionName])) { continue; }
-
-						if ((int)$pack[$dimensionName] !== (int)$box['DIMENSIONS'][$dimensionName]['VALUE'])
-						{
-							$isMatchedPack = false;
-							break;
-						}
-					}
-
-					if ($isMatchedPack)
-					{
-						$selectedPack = $pack['ID'];
-						break;
-					}
-				}
-
-				$box['PACK'] = $selectedPack;
+				$result['MENU'][] = $this->makeActivityAction($path, $child, $childChain);
 			}
-			unset($box);
 		}
-		unset($shipment);
+		else if ($activity instanceof Market\Trading\Service\Reference\Action\CommandActivity)
+		{
+			$result['METHOD'] = sprintf(
+				'BX.YandexMarket.OrderView.activity.executeCommand("%s")',
+				$type
+			);
+
+			$result += $activity->getParameters(); // confirm and etc
+		}
+		else if ($activity instanceof Market\Trading\Service\Reference\Action\FormActivity)
+		{
+			$result['METHOD'] = sprintf(
+				'BX.YandexMarket.OrderView.activity.openForm("%s", %s)',
+				$type,
+				Main\Web\Json::encode([
+					'TITLE' => $result['TEXT'],
+				])
+			);
+		}
+		else if ($activity instanceof Market\Trading\Service\Reference\Action\ViewActivity)
+		{
+			$result['METHOD'] = sprintf(
+				'BX.YandexMarket.OrderView.activity.openView("%s", %s)',
+				$type,
+				Main\Web\Json::encode([
+					'TITLE' => $result['TEXT'],
+				])
+			);
+		}
+
+		return $result;
+	}
+
+	protected function getActivity($path)
+	{
+		/** @var Market\Trading\Service\Reference\Action\HasActivity $action */
+		$setup = $this->getSetup();
+		$router = $setup->wakeupService()->getRouter();
+
+		return $router->getActivity($path, $setup->getEnvironment());
+	}
+
+	protected function matchActivityFilter($filter)
+	{
+		return Market\Utils\ActionFilter::isMatch($filter, $this->arResult['ORDER']);
 	}
 }

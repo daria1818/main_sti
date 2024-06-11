@@ -20,12 +20,21 @@ class Router extends Market\Trading\Service\Marketplace\Router
 			'order/cancellation/notify' => Action\OrderCancellationNotify\Action::class,
 			'send/cancellation/accept' => Action\SendCancellationAccept\Action::class,
 			'send/delivery/date' => Action\SendDeliveryDate\Action::class,
+			'send/delivery/storageLimit' => Action\SendDeliveryStorageLimit\Action::class,
 			'send/track' => Action\SendTrack\Action::class,
+			'send/items' => Action\SendItems\Action::class,
+			'generate/digital' => Action\GenerateDigital\Action::class,
+			'send/digital' => Action\SendDigital\Action::class,
+			'fill/phone' => Action\FillPhone\Action::class,
+			'fill/outlet' => Action\FillOutlet\Action::class,
+			'system/cashbox/reset' => Action\SystemCashboxReset\Action::class,
+			'settings' => Action\Settings\Action::class,
 		];
 		$result += array_diff_key(
 			parent::getSystemMap(),
 			[
-				'send/boxes' => true,
+				'admin/shipments' => true,
+				'send/shipment/confirm' => true,
 			]
 		);
 

@@ -60,6 +60,20 @@ abstract class Node
 
 	abstract public function getLangKey();
 
+	public function tune(array $context)
+	{
+		// nothing by default
+	}
+
+	public function preselect(array $context)
+	{
+		$recommendation = $this->getSourceRecommendation($context);
+
+		if (empty($recommendation)) { return null; }
+
+		return reset($recommendation);
+	}
+
 	/**
 	 * @return string
 	 */

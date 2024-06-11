@@ -1,5 +1,4 @@
 <?php
-
 namespace Yandex\Market\Ui\UserField;
 
 use Bitrix\Main;
@@ -22,24 +21,7 @@ class ReferenceType extends EnumerationType
 		}
 		else
 		{
-			$values = [];
-
-			/** @var Main\Entity\DataManager $dataClass*/
-			$query = $dataClass::getList([
-				'select' => [
-					'ID',
-					'NAME'
-				]
-			]);
-
-			while ($row = $query->fetch())
-			{
-				$values[] = [
-					'ID' => $row['ID'],
-					'VALUE' => '[' . $row['ID'] . '] ' . $row['NAME']
-				];
-			}
-
+			$values = static::fetchList($dataClass);
 			$cache[$dataClass] = $values;
 		}
 
@@ -56,6 +38,32 @@ class ReferenceType extends EnumerationType
 		$result->InitFromArray($values);
 
 		return $result;
+	}
+
+	protected static function fetchList($dataClass)
+	{
+		$values = [];
+
+		/** @var Main\Entity\DataManager $dataClass */
+		$query = $dataClass::getList([
+			'filter' => static::fetchFilter(),
+			'select' => [ 'ID', 'NAME' ],
+		]);
+
+		while ($row = $query->fetch())
+		{
+			$values[] = [
+				'ID' => $row['ID'],
+				'VALUE' => sprintf('[%s] %s', $row['ID'], $row['NAME']),
+			];
+		}
+
+		return $values;
+	}
+
+	protected static function fetchFilter()
+	{
+		return [];
 	}
 
 	protected static function getDataClass($userField)

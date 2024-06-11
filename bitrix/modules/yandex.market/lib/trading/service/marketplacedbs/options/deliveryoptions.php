@@ -12,6 +12,23 @@ class DeliveryOptions extends TradingService\Reference\Options\FieldsetCollectio
 		return DeliveryOption::class;
 	}
 
+	public function hasType($type)
+	{
+		$result = false;
+
+		/** @var DeliveryOption $option */
+		foreach ($this->collection as $option)
+		{
+			if ($option->getType() === $type)
+			{
+				$result = true;
+				break;
+			}
+		}
+
+		return $result;
+	}
+
 	public function getServiceIds()
 	{
 		$result = [];

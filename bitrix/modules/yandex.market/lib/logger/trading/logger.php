@@ -22,6 +22,11 @@ class Logger extends Market\Logger\Reference\Logger
 		$this->entityParent = $parentId;
 	}
 
+	public function getEntityParent()
+	{
+		return $this->entityParent;
+	}
+
 	protected function createRow($level, $message, array $context = [])
 	{
 		$result = parent::createRow($level, $message, $context);

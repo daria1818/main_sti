@@ -1,9 +1,9 @@
 <?php
 IncludeModuleLangFile(__FILE__);
 
-define ('ASD_UT_CHECKBOX_NUM', 'SASDCheckboxNum');
-define ('ASD_UT_CHECKBOX_VAL_NUM_FALSE', 0);
-define ('ASD_UT_CHECKBOX_VAL_NUM_TRUE', 1);
+const ASD_UT_CHECKBOX_NUM = 'SASDCheckboxNum';
+const ASD_UT_CHECKBOX_VAL_NUM_FALSE = 0;
+const ASD_UT_CHECKBOX_VAL_NUM_TRUE = 1;
 
 class CASDiblockPropCheckboxNum {
 	public static function GetUserTypeDescription() {
@@ -82,18 +82,9 @@ class CASDiblockPropCheckboxNum {
 		if ($arValue['VALUE'] != ASD_UT_CHECKBOX_VAL_NUM_TRUE) {
 			$arValue['VALUE'] = ASD_UT_CHECKBOX_VAL_NUM_FALSE;
 		}
-
-		if (
-			isset($strHTMLControlName['MODE'])
-			&& $strHTMLControlName['MODE'] == 'iblock_element_admin'
-			&& CASDiblockVersion::isIblockNewGridv18()
-		) {
-			$strResult = '<input type="checkbox" name="'.htmlspecialcharsbx($strHTMLControlName['VALUE']).'" id="'.$strHTMLControlName['VALUE'].'_Y" value="'.ASD_UT_CHECKBOX_VAL_NUM_TRUE.'" '.($arValue['VALUE'] == ASD_UT_CHECKBOX_VAL_NUM_TRUE ? 'checked="checked"' : '').'/>';
-		} else {
-			$strResult = '<input type="hidden" name="'.htmlspecialcharsbx($strHTMLControlName['VALUE']).'" id="'.$strHTMLControlName['VALUE'].'_N" value="'.ASD_UT_CHECKBOX_VAL_NUM_FALSE.'" />'.
+		
+		return '<input type="hidden" name="'.htmlspecialcharsbx($strHTMLControlName['VALUE']).'" id="'.$strHTMLControlName['VALUE'].'_N" value="'.ASD_UT_CHECKBOX_VAL_NUM_FALSE.'" />'.
 				'<input type="checkbox" name="'.htmlspecialcharsbx($strHTMLControlName['VALUE']).'" id="'.$strHTMLControlName['VALUE'].'_Y" value="'.ASD_UT_CHECKBOX_VAL_NUM_TRUE.'" '.($arValue['VALUE'] == ASD_UT_CHECKBOX_VAL_NUM_TRUE ? 'checked="checked"' : '').'/>';
-		}
-		return $strResult;
 	}
 
 	public static function GetAdminListViewHTML($arProperty, $arValue, $strHTMLControlName) {

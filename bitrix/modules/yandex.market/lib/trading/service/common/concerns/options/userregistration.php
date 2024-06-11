@@ -16,6 +16,7 @@ class UserRegistration
 		Main\Localization\Loc::loadMessages(__FILE__);
 	}
 
+	/** @deprecated */
 	public static function getDefault()
 	{
 		return UserRegistrationInterface::USER_RULE_MATCH_ANY;
@@ -31,7 +32,6 @@ class UserRegistration
 				'HIDDEN' => Market\Config::isExpertMode() ? 'N' : 'Y',
 				'SORT' => 3400,
 				'SETTINGS' => [
-					'DEFAULT_VALUE' => UserRegistrationInterface::USER_RULE_MATCH_ANY,
 					'ALLOW_NO_VALUE' => 'N',
 					'STYLE' => 'max-width: 450px;'
 				],
@@ -45,6 +45,8 @@ class UserRegistration
 			UserRegistrationInterface::USER_RULE_MATCH_ANY,
 			UserRegistrationInterface::USER_RULE_MATCH_PHONE,
 			UserRegistrationInterface::USER_RULE_MATCH_EMAIL,
+			UserRegistrationInterface::USER_RULE_MATCH_NAME,
+			UserRegistrationInterface::USER_RULE_MATCH_ID,
 			UserRegistrationInterface::USER_RULE_ANONYMOUS,
 		];
 		$result = [];

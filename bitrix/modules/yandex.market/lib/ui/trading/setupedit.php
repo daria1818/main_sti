@@ -9,6 +9,8 @@ Main\Localization\Loc::loadMessages(__FILE__);
 
 class SetupEdit extends Market\Ui\Reference\Form
 {
+	use Market\Reference\Concerns\HasMessage;
+
 	const STATE_NOT_INSTALLED = 'notInstalled';
 	const STATE_DEPRECATED = 'deprecated';
 	const STATE_MIGRATE = 'migrate';
@@ -18,6 +20,8 @@ class SetupEdit extends Market\Ui\Reference\Form
 	const ACTION_DEACTIVATE = 'deactivate';
 	const ACTION_DEPRECATE = 'deprecate';
 	const ACTION_MIGRATE = 'migrate';
+	const ACTION_PUSH_STOCKS = 'pushStocks';
+	const ACTION_PUSH_PRICES = 'pushPrices';
 
 	protected $setup;
 
@@ -35,6 +39,8 @@ class SetupEdit extends Market\Ui\Reference\Form
 				static::ACTION_ACTIVATE => true,
 				static::ACTION_DEACTIVATE => true,
 				static::ACTION_DEPRECATE => true,
+				static::ACTION_PUSH_STOCKS => true,
+				static::ACTION_PUSH_PRICES => true,
 			];
 
 			$result = !isset($selfHandled[$action]);
@@ -95,6 +101,14 @@ class SetupEdit extends Market\Ui\Reference\Form
 				$this->processRequestDeactivate();
 			break;
 
+			case static::ACTION_PUSH_STOCKS:
+				$this->processRequestPush('push/stocks');
+			break;
+
+			case static::ACTION_PUSH_PRICES:
+				$this->processRequestPush('push/prices');
+			break;
+
 			default:
 				throw new Main\SystemException('requested action not implemented');
 			break;
@@ -152,6 +166,7 @@ class SetupEdit extends Market\Ui\Reference\Form
 
 		$setup->install();
 		$setup->activate();
+		$setup->tweak();
 	}
 
 	protected function processRequestDeactivate()
@@ -160,6 +175,22 @@ class SetupEdit extends Market\Ui\Reference\Form
 
 		$setup->deactivate();
 		$setup->uninstall();
+	}
+
+	protected function processRequestPush($path)
+	{
+		$type = mb_strtoupper($path);
+		$type = str_replace('/', '_', $type);
+
+		Market\Trading\State\PushAgent::refresh((string)$this->getSetup()->getId(), $path, true);
+
+		\CAdminMessage::ShowMessage([
+			'TYPE' => 'OK',
+			'MESSAGE' => self::getMessage('ACTION_PUSH_SUCCESS', [
+				'#TYPE#' => self::getMessage('ACTION_' . $type),
+			]),
+			'DETAILS' => self::getMessage('ACTION_PUSH_SUCCESS_DETAILS'),
+		]);
 	}
 
 	public function resolveState()
@@ -247,7 +278,6 @@ class SetupEdit extends Market\Ui\Reference\Form
 				);
 
 				LocalRedirect($url);
-				die();
 			}
 		}
 	}
@@ -405,7 +435,6 @@ class SetupEdit extends Market\Ui\Reference\Form
 		]);
 
 		LocalRedirect($url);
-		die();
 	}
 
 	protected function showEditForm()
@@ -415,7 +444,7 @@ class SetupEdit extends Market\Ui\Reference\Form
 		$setup = $this->getSetup();
 		$tabs = $this->getEditFormTabs();
 		$fields = $this->getEditFormFields();
-		$contextMenu = $this->getEditFormContextMenu();
+		$contextMenu = $this->getEditFormContextMenu($setup);
 		$writeRights = $this->getWriteRights();
 		$resetConfirmMessage = Market\Config::getLang('ADMIN_TRADING_RESET_BUTTON_CONFIRM');
 
@@ -446,10 +475,12 @@ class SetupEdit extends Market\Ui\Reference\Form
 		]);
 	}
 
-	protected function getEditFormContextMenu()
+	protected function getEditFormContextMenu(Market\Trading\Setup\Model $setup)
 	{
 		return array_filter([
 			$this->getEditFormContextListItem(),
+			$this->getEditFormContextSyncItem($setup),
+			$this->getEditFormContextImportItem($setup),
 			$this->getEditFormContextActivateItem(),
 			$this->getEditFormContextDeactivateItem(),
 		]);
@@ -464,6 +495,56 @@ class SetupEdit extends Market\Ui\Reference\Form
 				'lang' => LANGUAGE_ID,
 			]),
 			'TEXT' => Market\Config::getLang('ADMIN_TRADING_MENU_LIST')
+		];
+	}
+
+	protected function getEditFormContextSyncItem(Market\Trading\Setup\Model $setup)
+	{
+		global $APPLICATION;
+
+		$options = $setup->wakeupService()->getOptions();
+
+		if (!($options instanceof Market\Trading\Service\Marketplace\Options)) { return null; }
+
+		$result = [
+			'TEXT' => self::getMessage('MENU_SYNC'),
+			'MENU' => [],
+		];
+
+		if ($options->usePushStocks())
+		{
+			$result['MENU'][] = [
+				'LINK' => $APPLICATION->GetCurPageParam(
+					http_build_query(['sessid' => bitrix_sessid(), 'action' => static::ACTION_PUSH_STOCKS]),
+					[ 'sessid', 'action' ]
+				),
+				'TEXT' => self::getMessage('MENU_PUSH_STOCKS'),
+			];
+		}
+
+		if ($options->usePushPrices())
+		{
+			$result['MENU'][] = [
+				'LINK' => $APPLICATION->GetCurPageParam(
+					http_build_query(['sessid' => bitrix_sessid(), 'action' => static::ACTION_PUSH_PRICES]),
+					[ 'sessid', 'action' ]
+				),
+				'TEXT' => self::getMessage('MENU_PUSH_PRICES'),
+			];
+		}
+
+		return !empty($result['MENU']) ? $result : null;
+	}
+
+	protected function getEditFormContextImportItem(Market\Trading\Setup\Model $setup)
+	{
+		return [
+			'LINK' => Market\Ui\Admin\Path::getModuleUrl('trading_import', [
+				'service' => $this->getServiceCode(),
+				'lang' => LANGUAGE_ID,
+				'id' => $setup->getId(),
+			]),
+			'TEXT' => Market\Config::getLang('ADMIN_TRADING_MENU_IMPORT')
 		];
 	}
 

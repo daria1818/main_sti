@@ -42,7 +42,7 @@ class Table extends Market\Reference\Storage\Table
 			]),
 			new Main\Entity\BooleanField('ENABLE_CPA', [
 				'values' => ['0', '1'],
-				'default_value' => '1'
+				'default_value' => '0',
 			]),
 			new Main\Entity\BooleanField('AUTOUPDATE', [
 				'values' => ['0', '1'],
@@ -62,19 +62,19 @@ class Table extends Market\Reference\Storage\Table
 			]),
 			new Main\Entity\StringField('FILE_NAME', [
 				'required' => true,
-				'format' => '/^[0-9A-Za-z-_.]+$/',
+				'format' => '/^[0-9A-Za-z-_.\\/]+$/',
 				'size' => 20
 			]),
 			new Main\Entity\StringField('SALES_NOTES', [
 				'size' => 50
 			]),
-			new Main\Entity\ReferenceField('IBLOCK_LINK', Market\Export\IblockLink\Table::getClassName(), [
+			new Main\Entity\ReferenceField('IBLOCK_LINK', Market\Export\IblockLink\Table::class, [
 				'=this.ID' => 'ref.SETUP_ID'
 			]),
 			new Main\Entity\ReferenceField('IBLOCK', 'Bitrix\Iblock\Iblock', [
 				'=this.IBLOCK_LINK.IBLOCK_ID' => 'ref.ID',
 			]),
-			new Main\Entity\ReferenceField('DELIVERY', Market\Export\Delivery\Table::getClassName(), [
+			new Main\Entity\ReferenceField('DELIVERY', Market\Export\Delivery\Table::class, [
 				'=this.ID' => 'ref.ENTITY_ID',
 				'=ref.ENTITY_TYPE' => ['?', Market\Export\Delivery\Table::ENTITY_TYPE_SETUP],
 			]),
@@ -82,7 +82,10 @@ class Table extends Market\Reference\Storage\Table
 				'SHOP_DATA',
 				Market\Reference\Storage\Field\Serializer::getParameters()
 			),
-            new Main\Entity\ReferenceField('PROMO_LINK', Market\Export\Promo\Internals\SetupLinkTable::getClassName(), [
+            new Main\Entity\ReferenceField('PROMO_LINK', Market\Export\Promo\Internals\SetupLinkTable::class, [
+                '=this.ID' => 'ref.SETUP_ID'
+            ]),
+            new Main\Entity\ReferenceField('COLLECTION_LINK', Market\Export\Collection\Internals\SetupLinkTable::class, [
                 '=this.ID' => 'ref.SETUP_ID'
             ]),
 			new Main\Entity\ReferenceField('GROUP_LINK', Internals\GroupLinkTable::class, [
@@ -204,8 +207,8 @@ class Table extends Market\Reference\Storage\Table
 		if (isset($result['REFRESH_PERIOD']))
 		{
 			$result['REFRESH_PERIOD']['EDIT_IN_LIST'] = (Market\Utils::isAgentUseCron() ? 'Y' : 'N');
-			$result['REFRESH_PERIOD']['USER_TYPE'] = $USER_FIELD_MANAGER->GetUserType('enumeration');
-			$result['REFRESH_PERIOD']['USER_TYPE']['CLASS_NAME'] = 'Yandex\Market\Ui\UserField\EnumerationType';
+			$result['REFRESH_PERIOD']['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType('enumeration');
+			$result['REFRESH_PERIOD']['SETTINGS']['DEFAULT_VALUE'] = (Market\Utils::isAgentUseCron() ? 21600 : null);
 			$result['REFRESH_PERIOD']['VALUES'] = [];
 			$refreshPeriodVariants = array_reverse([
 				604800, // week
@@ -284,6 +287,16 @@ class Table extends Market\Reference\Storage\Table
 			}
 		}
 
+		if (isset($result['ENABLE_CPA']))
+		{
+			$result['ENABLE_CPA']['DEPRECATED'] = 'Y';
+		}
+
+		if (isset($result['ENABLE_AUTO_DISCOUNTS']))
+		{
+			$result['ENABLE_AUTO_DISCOUNTS']['DEPRECATED'] = 'Y';
+		}
+
 		return $result;
 	}
 
@@ -319,14 +332,14 @@ class Table extends Market\Reference\Storage\Table
 	{
 		return [
 			'IBLOCK_LINK' => [
-				'TABLE' => Market\Export\IblockLink\Table::getClassName(),
+				'TABLE' => Market\Export\IblockLink\Table::class,
 				'LINK_FIELD' => 'SETUP_ID',
 				'LINK' => [
 					'SETUP_ID' => $primary,
 				],
 			],
 			'DELIVERY' => [
-				'TABLE' => Market\Export\Delivery\Table::getClassName(),
+				'TABLE' => Market\Export\Delivery\Table::class,
 				'LINK_FIELD' => 'ENTITY_ID',
 				'LINK' => [
 					'ENTITY_TYPE' => Market\Export\Delivery\Table::ENTITY_TYPE_SETUP,
@@ -482,54 +495,62 @@ class Table extends Market\Reference\Storage\Table
 	public static function deleteReference($primary)
 	{
 		parent::deleteReference($primary);
-		static::deleteReferenceRunResults($primary);
+		static::deleteReferenceTables($primary);
+		static::deleteReferenceWriterIndex($primary);
 		static::deleteReferenceChanges($primary);
-		static::deleteReferenceLog($primary);
-		static::deleteReferenceGroupLink($primary);
 	}
 
-	protected static function deleteReferenceRunResults($primary)
+	protected static function deleteReferenceTables($primary)
 	{
+		/** @var \Yandex\Market\Reference\Storage\Table[] $runDataClassList */
 		$runDataClassList = [
-			Market\Export\Run\Storage\CategoryTable::getClassName(),
-			Market\Export\Run\Storage\CurrencyTable::getClassName(),
-			Market\Export\Run\Storage\OfferTable::getClassName(),
-			Market\Export\Run\Storage\PromoProductTable::getClassName(),
-			Market\Export\Run\Storage\PromoGiftTable::getClassName(),
-			Market\Export\Run\Storage\GiftTable::getClassName(),
-			Market\Export\Run\Storage\PromoTable::getClassName(),
+			Market\Export\Run\Storage\CategoryTable::class,
+			Market\Export\Run\Storage\CurrencyTable::class,
+			Market\Export\Run\Storage\OfferTable::class,
+			Market\Export\Run\Storage\CollectionOfferTable::class,
+			Market\Export\Run\Storage\CollectionTable::class,
+			Market\Export\Run\Storage\PromoProductTable::class,
+			Market\Export\Run\Storage\PromoGiftTable::class,
+			Market\Export\Run\Storage\GiftTable::class,
+			Market\Export\Run\Storage\PromoTable::class,
+			Market\Logger\Table::class => 'ENTITY_PARENT',
+			Internals\GroupLinkTable::class,
+			Market\Export\Promo\Internals\SetupLinkTable::class,
+			Market\Export\Collection\Internals\SetupLinkTable::class,
 		];
 
-		foreach ($runDataClassList as $runDataClass)
+		foreach ($runDataClassList as $key => $runDataClass)
 		{
+			if (!is_numeric($key))
+			{
+				$field = $runDataClass;
+				$runDataClass = $key;
+			}
+			else
+			{
+				$field = 'SETUP_ID';
+			}
+
 			$runDataClass::deleteBatch([
 				'filter' => [
-					'=SETUP_ID' => $primary
+					'=' . $field => $primary
 				]
 			]);
 		}
 	}
 
+    protected static function deleteReferenceWriterIndex($primary)
+    {
+        Market\Export\Run\Writer\IndexFacade::remove($primary);
+    }
+
 	protected static function deleteReferenceChanges($primary)
 	{
-		Market\Export\Run\Storage\ChangesTable::deleteBatch([
+		Market\Watcher\Track\StampTable::deleteBatch([
 			'filter' => [
-				'=SETUP_ID' => $primary
+				'=SERVICE' => Market\Glossary::SERVICE_EXPORT,
+				'=SETUP_ID' => $primary,
 			]
-		]);
-	}
-
-	protected static function deleteReferenceLog($primary)
-	{
-		Market\Logger\Table::deleteBatch([
-			'filter' => [ '=ENTITY_PARENT' => $primary ],
-		]);
-	}
-
-	protected static function deleteReferenceGroupLink($primary)
-	{
-		Internals\GroupLinkTable::deleteBatch([
-			'filter' => [ '=SETUP_ID' => $primary ],
 		]);
 	}
 

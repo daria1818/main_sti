@@ -15,6 +15,44 @@ class Address extends Market\Api\Reference\Model
 		Main\Localization\Loc::loadMessages(__FILE__);
 	}
 
+	public static function fromOutlet(Market\Api\Model\Outlet $outlet)
+	{
+		$fields = [];
+		$address = $outlet->getAddress();
+		$coords = $outlet->getCoords();
+		$phones = $outlet->getPhones();
+
+		if ($address !== null)
+		{
+			$fields += [
+				'city' => $address->getCity(),
+				'street' => $address->getStreet(),
+				'house' => implode('/', array_filter([
+					$address->getNumber(),
+					$address->getBuilding(),
+				])),
+				'block' => $address->getBlock(),
+				'apartment' => $address->getEstate(),
+				'recipient' => $address->getAdditional(),
+			];
+		}
+
+		if ($coords !== null)
+		{
+			$fields += [
+				'lat' => $coords->getLat(),
+				'lon' => $coords->getLon(),
+			];
+		}
+
+		if (!empty($phones))
+		{
+			$fields['phone'] = reset($phones);
+		}
+
+		return new static($fields);
+	}
+
 	public static function getZipFields()
 	{
 		return [
@@ -33,6 +71,7 @@ class Address extends Market\Api\Reference\Model
 	public static function getAddressFields()
 	{
 		return [
+			'DISTRICT',
 			'SUBWAY',
 			'STREET',
 			'HOUSE',
@@ -77,6 +116,7 @@ class Address extends Market\Api\Reference\Model
 	public function getAddressValues()
 	{
 		return [
+			'DISTRICT' => $this->getField('district'),
 			'SUBWAY' => $this->getField('subway'),
 			'STREET' => $this->getField('street'),
 			'HOUSE' => $this->getField('house'),
@@ -131,6 +171,7 @@ class Address extends Market\Api\Reference\Model
 	protected function combineAddress($values, array $skipAdditionalTypes = [])
 	{
 		$commonFields = [
+			'DISTRICT' => true,
 			'SUBWAY' => true,
 			'STREET' => true,
 			'HOUSE' => true,

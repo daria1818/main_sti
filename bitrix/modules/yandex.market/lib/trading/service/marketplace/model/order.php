@@ -17,7 +17,9 @@ class Order extends Market\Api\Model\Order
 	public static function getMeaningfulFields()
 	{
 		$result = parent::getMeaningfulFields();
+		$result[] = 'DATE_EXPIRY';
 		$result[] = 'DATE_SHIPMENT';
+		$result[] = 'EAC_CODE';
 
 		return $result;
 	}
@@ -34,6 +36,30 @@ class Order extends Market\Api\Model\Order
 		return $result;
 	}
 
+	public static function getMeaningfulFieldHelp($fieldName)
+	{
+		$result = static::getLang('TRADING_ACTION_MODEL_ORDER_HELP_' . $fieldName, null, '');
+
+		if ($result === '')
+		{
+			$result = parent::getMeaningfulFieldHelp($fieldName);
+		}
+
+		return $result;
+	}
+
+	/** @return Order\Buyer|null */
+	public function getBuyer()
+	{
+		return $this->getChildModel('buyer');
+	}
+
+	/** @return Order\Delivery */
+	public function getDelivery()
+	{
+		return $this->getRequiredModel('delivery');
+	}
+
 	/**
 	 * @return Order\ItemCollection
 	 * @throws Main\ObjectPropertyException
@@ -43,18 +69,28 @@ class Order extends Market\Api\Model\Order
 		return $this->getRequiredCollection('items');
 	}
 
+	protected function getChildModelReference()
+	{
+		return array_merge(parent::getChildModelReference(), [
+			'buyer' => Order\Buyer::class,
+			'delivery' => Order\Delivery::class
+		]);
+	}
+
 	protected function getChildCollectionReference()
 	{
-		return [
+		return array_merge(parent::getChildCollectionReference(), [
 			'items' => Order\ItemCollection::class,
-		];
+		]);
 	}
 
 	public function getMeaningfulValues()
 	{
 		$result = parent::getMeaningfulValues();
 		$result += array_filter([
+			'DATE_EXPIRY' => $this->getExpiryDate(),
 			'DATE_SHIPMENT' => $this->getMeaningfulShipmentDates(),
+			'EAC_CODE' => $this->getDelivery()->getEacCode(),
 		]);
 
 		return $result;
@@ -82,5 +118,12 @@ class Order extends Market\Api\Model\Order
 		}
 
 		return $result;
+	}
+
+	public function getExpiryDate()
+	{
+		$value = $this->getField('expiryDate');
+
+		return $value !== null ? Market\Data\DateTime::convertFromService($value) : null;
 	}
 }

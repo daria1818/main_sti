@@ -11,10 +11,22 @@ class CalculationFacade
 {
 	public static function mergeCalculationResult(TradingEntity\Reference\Delivery\CalculationResult $result, Sale\Delivery\CalculationResult $saleResult)
 	{
+		$saleData = $saleResult->getData();
+
 		$result->setDateFrom(static::getDateFrom($saleResult));
 		$result->setDateTo(static::getDateTo($saleResult));
 		$result->setDateIntervals(static::getDateIntervals($saleResult));
-		$result->setData($saleResult->getData());
+		$result->setData($saleData);
+
+		if (isset($saleData['MARKET_STORES']) && is_array($saleData['MARKET_STORES']))
+		{
+			$result->setStores($saleData['MARKET_STORES']);
+		}
+
+		if (isset($saleData['MARKET_OUTLETS']) && is_array($saleData['MARKET_OUTLETS']))
+		{
+			$result->setOutlets($saleData['MARKET_OUTLETS']);
+		}
 
 		$errors = static::convertErrors($saleResult);
 
@@ -36,10 +48,20 @@ class CalculationFacade
 
 	public static function mergeDeliveryService(TradingEntity\Reference\Delivery\CalculationResult $result, Sale\Delivery\Services\Base $service)
 	{
-		$stores = Sale\Delivery\ExtraServices\Manager::getStoresList($service->getId());
+		if ($result->getServiceName() === null)
+		{
+			$result->setServiceName($service->getNameWithParent());
+		}
 
-		$result->setServiceName($service->getNameWithParent());
-		$result->setStores($stores);
+		if ($result->getStores() === null && $result->getOutlets() === null)
+		{
+			$stores = Sale\Delivery\ExtraServices\Manager::getStoresList($service->getId());
+
+			if (!empty($stores))
+			{
+				$result->setStores($stores);
+			}
+		}
 	}
 
 	protected static function getDateFrom(Sale\Delivery\CalculationResult $saleResult)

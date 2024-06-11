@@ -11,7 +11,7 @@ use Yandex\Market\Trading\Service as TradingService;
  * trait HasOrderMarker
  * @method string getAudit()
  * @method TradingEntity\Reference\Order getOrder()
- * @method void updateOrder(TradingEntity\Reference\Order $order)
+ * @method void updateOrder(TradingEntity\Reference\Order $order = null)
  * @property TradingService\Common\Provider $provider
  * @property TradingEntity\Reference\Environment $environment
  * @property TradingService\Common\Action\SendRequest $request

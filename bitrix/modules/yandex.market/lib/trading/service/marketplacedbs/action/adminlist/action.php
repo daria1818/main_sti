@@ -25,6 +25,13 @@ class Action extends TradingService\Marketplace\Action\AdminList\Action
 		$storedCancellationAccept = Market\Trading\State\OrderData::getValue($serviceUniqueKey, $order->getId(), 'CANCELLATION_ACCEPT');
 
 		$result = parent::getOrderRow($order, $bitrixOrder);
+		$result['DISPATCH_TYPE'] = $this->getDispatchType($order);
+		$result['OUTLET_STORAGE_LIMIT_DATE'] = $this->getOutletStorageLimitDate($order);
+
+		if ($result['TOTAL'] !== null)
+		{
+			$result['TOTAL'] += $order->getDelivery()->getPrice();
+		}
 
 		if ($storedCancellationAccept !== null)
 		{
@@ -48,9 +55,29 @@ class Action extends TradingService\Marketplace\Action\AdminList\Action
 		return $result;
 	}
 
+	protected function getDispatchType(Market\Api\Model\Order $order)
+	{
+		if (!$order->hasDelivery()) { return null; }
+
+		$delivery = $order->getDelivery();
+
+		if (!($delivery instanceof TradingService\MarketplaceDbs\Model\Order\Delivery)) { return null; }
+
+		return $delivery->getDispatchType();
+	}
+
+	protected function getOutletStorageLimitDate(Market\Api\Model\Order $order)
+	{
+		$delivery = $order->hasDelivery() ? $order->getDelivery() : null;
+
+		if (!($delivery instanceof TradingService\MarketplaceDbs\Model\Order\Delivery)) { return null; }
+
+		return $delivery->getOutletStorageLimitDate();
+	}
+
 	protected function isStatusReady(Market\Api\Model\Order $order)
 	{
-		return true;
+		return $order->getStatus() !== TradingService\MarketplaceDbs\Status::STATUS_UNPAID;
 	}
 
 	protected function makeAllowedStatuses(Market\Api\Model\Order $order)
@@ -98,6 +125,9 @@ class Action extends TradingService\Marketplace\Action\AdminList\Action
 	protected function isCancelAllowed(Market\Api\Model\Order $order)
 	{
 		$status = $order->getStatus();
+
+		if ($status === TradingService\MarketplaceDbs\Status::STATUS_UNPAID) { return false; }
+
 		$statusOrder = $this->provider->getStatus()->getProcessOrder();
 		$currentOrder = isset($statusOrder[$status]) ? $statusOrder[$status] : null;
 		$cancelOrder = $statusOrder[TradingService\MarketplaceDbs\Status::STATUS_CANCELLED];

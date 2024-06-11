@@ -99,7 +99,7 @@ class EditForm extends Market\Component\Model\EditForm
 				$origin = $this->loadOrigin();
 				$model = $this->installModel($fields);
 
-				$this->copySettings($origin, $model);
+				Market\Trading\Facade\Routine::copySettings($origin, $model);
 			}
 			else
 			{
@@ -153,117 +153,6 @@ class EditForm extends Market\Component\Model\EditForm
 		$model->activate();
 
 		return $model;
-	}
-
-	protected function copySettings(TradingSetup\Model $from, TradingSetup\Model $to)
-	{
-		$reservedKeys = $from->getReservedSettingsKeys();
-		$settings = $from->getSettings()->getValues();
-		$settings = array_diff_key($settings, array_flip($reservedKeys));
-		$dataClass = $this->getDataClass();
-
-		if ($from->getServiceCode() !== $to->getServiceCode() || $from->getBehaviorCode() !== $to->getBehaviorCode())
-		{
-			$options = $to->wakeupService()->getOptions();
-			$fields = $options->getFields($to->getEnvironment(), $to->getSiteId());
-
-			$settings = array_intersect_key($settings, $fields);
-			$settings = $this->fillSettingsDefaults($fields, $settings);
-			$settings = $this->sanitizeSettingsEnum($fields, $settings);
-		}
-
-		$dataClass::update($to->getId(), [
-			'SETTINGS' => $this->convertSettingsToRows($settings),
-		]);
-	}
-
-	protected function fillSettingsDefaults($fields, $values)
-	{
-		$result = $values;
-
-		foreach ($fields as $fieldName => $field)
-		{
-			if (!isset($field['SETTINGS']['DEFAULT_VALUE'])) { continue; }
-			if (!empty($field['SETTINGS']['READONLY'])) { continue; }
-
-			$isHidden = (!empty($field['HIDDEN']) && $field['HIDDEN'] === 'Y');
-			$defaultValue = $field['SETTINGS']['DEFAULT_VALUE'];
-			$value = Market\Utils\Field::getChainValue($result, $fieldName, Market\Utils\Field::GLUE_BRACKET);
-
-			if ($value === null || $isHidden || $fieldName === 'PERSON_TYPE')
-			{
-				Market\Utils\Field::setChainValue($result, $fieldName, $defaultValue, Market\Utils\Field::GLUE_BRACKET);
-			}
-		}
-
-		return $result;
-	}
-
-	protected function sanitizeSettingsEnum($fields, $values)
-	{
-		$result = $values;
-
-		foreach ($fields as $fieldName => $field)
-		{
-			$value = Market\Utils\Field::getChainValue($result, $fieldName, Market\Utils\Field::GLUE_BRACKET);
-			$userField = Market\Ui\UserField\Helper\Field::extend($field);
-			$userField = Market\Ui\UserField\Helper\Field::extendValue($userField, $value, $values);
-			$isMultiple = ($userField['MULTIPLE'] !== 'N');
-
-			if (empty($userField['USER_TYPE']['CLASS_NAME'])) { continue; }
-			if (!is_callable([$userField['USER_TYPE']['CLASS_NAME'], 'GetList'])) { continue; }
-
-			$query = call_user_func([$userField['USER_TYPE']['CLASS_NAME'], 'GetList'], $userField);
-			$enum = Market\Ui\UserField\Helper\Enum::toArray($query);
-			$enumIds = array_column($enum, 'ID');
-			$valueIds = $isMultiple && is_array($value) ? $value : [ $value ];
-			$existIds = array_intersect($valueIds, $enumIds);
-
-			if (!empty($existIds)) { continue; }
-
-			if (!empty($userField['SETTINGS']['DEFAULT_VALUE']))
-			{
-				$defaultValue = $userField['SETTINGS']['DEFAULT_VALUE'];
-				$enumDefaultIds = $isMultiple && is_array($defaultValue) ? $defaultValue : [ $defaultValue ];
-			}
-			else
-			{
-				$enumDefaults = array_filter($enum, static function($option) {
-					return isset($option['DEF']) && $option['DEF'] === 'Y';
-				});
-				$enumDefaultIds = array_column($enumDefaults, 'ID');
-			}
-
-			if (empty($enumDefaultIds))
-			{
-				Market\Utils\Field::unsetChainValue($result, $fieldName, Market\Utils\Field::GLUE_BRACKET);
-			}
-			else if ($isMultiple)
-			{
-				Market\Utils\Field::setChainValue($result, $fieldName, $enumDefaultIds, Market\Utils\Field::GLUE_BRACKET);
-			}
-			else
-			{
-				Market\Utils\Field::setChainValue($result, $fieldName, reset($enumDefaultIds), Market\Utils\Field::GLUE_BRACKET);
-			}
-		}
-
-		return $result;
-	}
-
-	protected function convertSettingsToRows(array $settings)
-	{
-		$result = [];
-
-		foreach ($settings as $key => $value)
-		{
-			$result[] = [
-				'NAME' => $key,
-				'VALUE' => $value,
-			];
-		}
-
-		return $result;
 	}
 
 	protected function getRepository()

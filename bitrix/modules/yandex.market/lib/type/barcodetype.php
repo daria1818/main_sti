@@ -5,19 +5,21 @@ namespace Yandex\Market\Type;
 use Yandex\Market;
 use Bitrix\Main;
 
-Main\Localization\Loc::loadMessages(__FILE__);
-
 class BarcodeType extends StringType
 {
+	use Market\Reference\Concerns\HasMessage;
+	
     protected static $availableLengthMap = [
         8 => true,
         12 => true,
-        13 => true
+        13 => true,
+	    14 => true,
     ];
 
     public function validate($value, array $context = [], Market\Export\Xml\Reference\Node $node = null, Market\Result\XmlNode $nodeResult = null)
     {
         $valueDigits = $this->sanitizeValue($value);
+	    $result = true;
 
         if ($valueDigits === '')
         {
@@ -25,29 +27,20 @@ class BarcodeType extends StringType
 
             if ($nodeResult)
             {
-                $nodeResult->registerError(Market\Config::getLang('TYPE_BARCODE_ERROR_NOT_NUMERIC'));
+                $nodeResult->registerError(self::getMessage('ERROR_NOT_NUMERIC'));
             }
         }
         else
         {
             $length = $this->getStringLength($valueDigits);
 
-            if (isset(static::$availableLengthMap[$length]))
-            {
-                $result = $this->validateCheckSum($valueDigits, $length);
-
-                if (!$result && $nodeResult)
-                {
-                    $nodeResult->registerError(Market\Config::getLang('TYPE_BARCODE_ERROR_CHECKSUM_FAIL'));
-                }
-            }
-            else
+            if (!isset(static::$availableLengthMap[$length]))
             {
                 $result = false;
 
                 if ($nodeResult)
                 {
-                    $nodeResult->registerError(Market\Config::getLang('TYPE_BARCODE_ERROR_NOT_FOUND_LENGTH_FORMAT'));
+                    $nodeResult->registerError(self::getMessage('ERROR_NOT_FOUND_LENGTH_FORMAT'));
                 }
             }
         }
@@ -55,6 +48,7 @@ class BarcodeType extends StringType
         return $result;
     }
 
+	/** @deprecated */
     protected function validateCheckSum($valueDigits, $length)
     {
         $evenSum = 0;

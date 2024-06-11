@@ -19,69 +19,24 @@ class GridList extends Market\Component\Base\GridList
 
 	public function processAjaxAction($action, $data)
 	{
-		if (Market\Data\TextString::getPosition($action, 'status:') === 0)
-		{
-			$status = Market\Data\TextString::getSubstring(
-				$action,
-				Market\Data\TextString::getLength('status:')
-			);
-
-			$this->processOrderAction($data, 'sendStatus', [
-				'externalStatus' => $status,
-			]);
-		}
-		else if ($action === 'status')
-		{
-			$status = $this->getAjaxActionStatus();
-
-			$this->processOrderAction($data, 'sendStatus', [
-				'externalStatus' => $status,
-			]);
-		}
-		else if (Market\Data\TextString::getPosition($action, 'cancel:') === 0)
-		{
-			$reason = Market\Data\TextString::getSubstring(
-				$action,
-				Market\Data\TextString::getLength('cancel:')
-			);
-
-			$this->processOrderAction($data, 'sendStatus', [
-				'externalStatus' => $this->getCancelStatus(),
-				'cancelReason' => $reason,
-			]);
-		}
-		else if ($action === 'boxes')
+		if ($action === 'boxes')
 		{
 			$count = $this->getAjaxActionBoxesCount();
 
 			$this->processOrderAction($data, 'sendBoxes', $count);
 		}
+		else if ($action === 'accept')
+        {
+            $this->processOrderAction($data, 'emulateAccept', null);
+        }
+		else if ($action === 'status')
+        {
+            $this->processOrderAction($data, 'emulateStatus', null);
+        }
 		else
 		{
 			parent::processAjaxAction($action, $data);
 		}
-	}
-
-	protected function getAjaxActionStatus()
-	{
-		if (!isset($_REQUEST['status']))
-		{
-			throw new Main\ArgumentException('status is missing');
-		}
-
-		return (string)$_REQUEST['status'];
-	}
-
-	protected function getCancelStatus()
-	{
-		$value = (string)$this->getComponentParam('CANCEL_STATUS');
-
-		if ($value === '')
-		{
-			throw new Main\ArgumentException('cancel status is undefined');
-		}
-
-		return $value;
 	}
 
 	protected function getAjaxActionBoxesCount()
@@ -134,42 +89,7 @@ class GridList extends Market\Component\Base\GridList
 		return (array)$data['ID'];
 	}
 
-	protected function sendStatus($externalId, array $data)
-	{
-		$result = new Main\Result();
-
-		try
-		{
-			$setup = $this->getSetup();
-			$orderId = $this->getOrderNumber($externalId, false);
-			$orderAccountNumber = $this->getOrderNumber($externalId);
-
-			$procedure = new Market\Trading\Procedure\Runner(
-				Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER,
-				$orderAccountNumber
-			);
-
-			$procedure->run($setup, 'send/status', $data + [
-				'internalId' => $orderId,
-				'orderId' => $externalId,
-				'orderNum' => $orderAccountNumber,
-				'immediate' => true,
-			]);
-		}
-		catch (Main\SystemException $exception)
-		{
-			$exceptionMessage = $exception->getMessage();
-			$message = static::getLang('COMPONENT_TRADING_ORDER_LIST_ORDER_ACTION_FAILED', [
-				'#ORDER_ID#' => $externalId,
-				'#MESSAGE#' => $exceptionMessage,
-			], $exceptionMessage);
-
-			$result->addError(new Main\Error($message));
-		}
-
-		return $result;
-	}
-
+	/** @noinspection PhpUnused */
 	protected function sendBoxes($externalId, $count)
 	{
 		$result = new Main\Result();
@@ -178,7 +98,7 @@ class GridList extends Market\Component\Base\GridList
 		{
 			$setup = $this->getSetup();
 			$accountNumber = $this->getOrderNumber($externalId);
-			$shipmentId = $this->getOrderShipmentId($externalId, $accountNumber);
+			$shipmentId = $this->getOrderShipmentId($externalId);
 
 			$procedure = new Market\Trading\Procedure\Runner(
 				Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER,
@@ -206,6 +126,82 @@ class GridList extends Market\Component\Base\GridList
 		return $result;
 	}
 
+	/** @noinspection PhpUnused */
+	protected function emulateAccept($externalId)
+    {
+        $result = new Main\Result();
+
+        try
+        {
+            $setup = $this->getSetup();
+            $service = $setup->wakeupService();
+            $options = $service->getOptions();
+
+            $orderFacade = $service->getModelFactory()->getOrderFacadeClassName();
+            $order = $orderFacade::load($options, $externalId);
+
+            static::emulateAction($setup, 'order/accept', $order);
+            static::emulateAction($setup, 'order/status', $order);
+        }
+        catch (Main\SystemException $exception)
+        {
+            $result->addError(new Main\Error($exception->getMessage()));
+        }
+
+        return $result;
+    }
+
+	/** @noinspection PhpUnused */
+	protected function emulateStatus($externalId)
+    {
+        $result = new Main\Result();
+
+        try
+        {
+            $setup = $this->getSetup();
+            $service = $setup->wakeupService();
+            $options = $service->getOptions();
+
+            $orderFacade = $service->getModelFactory()->getOrderFacadeClassName();
+            $order = $orderFacade::load($options, $externalId);
+
+            static::emulateAction($setup, 'order/status', $order);
+        }
+        catch (Main\SystemException $exception)
+        {
+            $result->addError(new Main\Error($exception->getMessage()));
+        }
+
+        return $result;
+    }
+
+	protected static function emulateAction(Market\Trading\Setup\Model $setup, $path, Market\Api\Model\Order $order)
+	{
+		$environment = $setup->getEnvironment();
+		$service = $setup->wakeupService();
+		/** @noinspection NullPointerExceptionInspection */
+		$server = Main\Context::getCurrent()->getServer();
+		$request = static::makeRequestFromOrder($server, $order);
+
+		$action = $service->getRouter()->getHttpAction($path, $environment, $request, $server);
+		$action->process();
+	}
+
+	protected static function makeRequestFromOrder(Main\Server $server, Market\Api\Model\Order $order)
+	{
+		return new Main\HttpRequest(
+			$server,
+			[], // query string
+			[
+				'order' => $order->getFields(),
+				'emulated' => true,
+				'download' => true,
+			], // post
+			[], // files
+			[] // cookies
+		);
+	}
+
 	protected function getOrderNumber($externalId, $useAccountNumber = null)
 	{
 		$setup = $this->getSetup();
@@ -215,37 +211,11 @@ class GridList extends Market\Component\Base\GridList
 		return $orderRegistry->search($externalId, $platform, $useAccountNumber);
 	}
 
-	protected function getOrderShipmentId($externalId, $accountNumber)
-	{
-		return
-			$this->getOrderShipmentIdFromData($externalId)
-			?: $this->getOrderShipmentIdFromAction($externalId, $accountNumber);
-	}
-
-	protected function getOrderShipmentIdFromData($externalId)
+	protected function getOrderShipmentId($externalId)
 	{
 		$uniqueKey = $this->getSetup()->getService()->getUniqueKey();
 
 		return Market\Trading\State\OrderData::getValue($uniqueKey, $externalId, 'SHIPMENT_ID');
-	}
-
-	protected function getOrderShipmentIdFromAction($externalId, $accountNumber)
-	{
-		$setup = $this->getSetup();
-		$procedure = new Market\Trading\Procedure\Runner(
-			Market\Trading\Entity\Registry::ENTITY_TYPE_ORDER,
-			$accountNumber
-		);
-
-		$response = $procedure->run($setup, 'admin/view', [
-			'id' => $externalId,
-			'useCache' => true,
-		]);
-
-		$shipments = $response->getField('shipments');
-		$shipment = is_array($shipments) ? reset($shipments) : false;
-
-		return isset($shipment['ID']) ? $shipment['ID'] : null;
 	}
 
 	protected function makeBoxes($externalId, $count)
@@ -292,13 +262,23 @@ class GridList extends Market\Component\Base\GridList
 	{
 		return $this->makeFields([
 			'ID' => [
-				'TYPE' => 'primary',
+				'TYPE' => 'compound',
 				'NAME' => static::getLang('COMPONENT_TRADING_ORDER_LIST_FIELD_ID', [
 					'#SERVICE_NAME#' => $this->getSetup()->getService()->getInfo()->getTitle('DATIVE'),
 				]),
 				'SORTABLE' => false,
-				'SETTINGS' => [
-					'URL_FIELD' => 'SERVICE_URL',
+				'FIELDS' => [
+					'ID' => [
+						'TYPE' => 'primary',
+						'SETTINGS' => [
+							'URL_FIELD' => 'SERVICE_URL',
+						],
+					],
+					'BUYER_TYPE' => [
+						'SKIP' => [
+							Market\Trading\Service\Marketplace\Model\Order\Buyer::TYPE_PERSON,
+						],
+					],
 				],
 			],
 			'ORDER_ID' => [
@@ -319,14 +299,44 @@ class GridList extends Market\Component\Base\GridList
 				'TYPE' => 'datetime',
 				'SORTABLE' => false,
 			],
+			'UPDATED_AT' => [
+				'TYPE' => 'datetime',
+				'SORTABLE' => false,
+				'SELECTABLE' => false,
+			],
 			'DATE_SHIPMENT' => [
-				'TYPE' => 'date',
+				'TYPE' => 'datetime',
 				'MULTIPLE' => 'Y',
 				'SORTABLE' => false,
 			],
 			'DATE_DELIVERY' => [
 				'TYPE' => 'dateTimePeriod',
 				'SORTABLE' => false,
+			],
+			'OUTLET_STORAGE_LIMIT_DATE' => [
+				'TYPE' => 'date',
+				'FILTERABLE' => false,
+				'SORTABLE' => false,
+				'SUPPORTS' => [
+					Market\Trading\Service\Manager::SERVICE_MARKETPLACE . ':' . Market\Trading\Service\Manager::BEHAVIOR_DBS,
+				],
+			],
+			'EXPIRY_DATE' => [
+				'TYPE' => 'date',
+				'FILTERABLE' => false,
+				'SORTABLE' => false,
+				'SUPPORTS' => [
+					Market\Trading\Service\Manager::SERVICE_MARKETPLACE . ':' . Market\Trading\Service\Manager::BEHAVIOR_DEFAULT,
+				],
+			],
+			'BUYER_TYPE' => [
+				'TYPE' => 'enumeration',
+				'FILTERABLE' => false,
+				'SORTABLE' => false,
+				'VALUES' => $this->getBuyerTypeEnum(),
+				'SUPPORTS' => [
+					Market\Trading\Service\Manager::SERVICE_MARKETPLACE . ':' . Market\Trading\Service\Manager::BEHAVIOR_DEFAULT,
+				],
 			],
 			'BASKET' => [
 				'TYPE' => 'tradingOrderItem',
@@ -340,9 +350,6 @@ class GridList extends Market\Component\Base\GridList
 				'SORTABLE' => false,
 				'SETTINGS' => [
 					'UNIT' => static::getLang('COMPONENT_TRADING_ORDER_LIST_FIELD_BOX_COUNT_UNIT'),
-				],
-				'SUPPORTS' => [
-					Market\Trading\Service\Manager::SERVICE_MARKETPLACE . ':' . Market\Trading\Service\Manager::BEHAVIOR_DEFAULT,
 				],
 			],
 			'TOTAL' => [
@@ -362,13 +369,59 @@ class GridList extends Market\Component\Base\GridList
 				'VALUES' => $this->getStatusEnum(),
 			],
 			'STATUS_LANG' => [
-				'TYPE' => 'string',
+				'TYPE' => 'compound',
 				'FILTERABLE' => false,
 				'SORTABLE' => false,
+				'FIELDS' => [
+					'STATUS_LANG' => [
+						'TYPE' => 'string',
+					],
+					'EXPIRY_DATE',
+					'OUTLET_STORAGE_LIMIT_DATE',
+					'DATE_SHIPMENT',
+					'DATE_DELIVERY',
+					'EAC_CODE' => [
+						'TYPE' => 'string',
+						'NAME' => static::getLang('COMPONENT_TRADING_ORDER_LIST_FIELD_EAC_CODE'),
+					],
+				],
+				'FILTER' => [
+					'EXPIRY_DATE' => [
+						'STATUS' => [
+							Market\Trading\Service\Marketplace\Status::STATUS_UNPAID,
+							Market\Trading\Service\Marketplace\Status::STATUS_PENDING,
+						],
+					],
+					'DATE_SHIPMENT' => [
+						'STATUS' => Market\Trading\Service\Marketplace\Status::STATUS_PROCESSING,
+					],
+					'OUTLET_STORAGE_LIMIT_DATE' => [
+						'STATUS' => Market\Trading\Service\Marketplace\Status::STATUS_PICKUP,
+					],
+					'DATE_DELIVERY' => false,
+				],
 			],
 			'FAKE' => [
 				'TYPE' => 'boolean',
 				'SORTABLE' => false,
+				'SELECTABLE' => false,
+			],
+			'HAS_CIS' => [
+				'TYPE' => 'boolean',
+				'SELECTABLE' => false,
+				'SORTABLE' => false,
+				'SUPPORTS' => [
+					Market\Trading\Service\Manager::SERVICE_MARKETPLACE . ':' . Market\Trading\Service\Manager::BEHAVIOR_DEFAULT,
+				],
+			],
+			'DISPATCH_TYPE' => [
+				'TYPE' => 'enumeration',
+				'SORTABLE' => false,
+				'SELECTABLE' => false,
+				'VALUES' => $this->getDispatchTypeEnum(),
+				'SUPPORTS' => [
+					Market\Trading\Service\Manager::SERVICE_MARKETPLACE . ':' . Market\Trading\Service\Manager::BEHAVIOR_DBS,
+				],
 			],
 			'WAIT_CANCELLATION_APPROVE' => [
 				'TYPE' => 'boolean',
@@ -398,10 +451,40 @@ class GridList extends Market\Component\Base\GridList
 			if (empty($intersect))
 			{
 				unset($fields[$key]);
+				continue;
+			}
+
+			if (isset($field['FIELDS']))
+			{
+				$field['FIELDS'] = $this->filterSupportsFields($field['FIELDS']);
+
+				if (empty($field['FIELDS']))
+				{
+					unset($fields[$key]);
+				}
 			}
 		}
 
 		return $fields;
+	}
+
+	protected function getBuyerTypeEnum()
+	{
+		$types = [
+			Market\Trading\Service\Marketplace\Model\Order\Buyer::TYPE_PERSON,
+			Market\Trading\Service\Marketplace\Model\Order\Buyer::TYPE_BUSINESS,
+		];
+		$result = [];
+
+		foreach ($types as $type)
+		{
+			$result[] = [
+				'ID' => $type,
+				'VALUE' => Market\Trading\Service\Marketplace\Model\Order\Buyer::getTypeTitle($type),
+			];
+		}
+
+		return $result;
 	}
 
 	protected function getStatusEnum()
@@ -420,34 +503,94 @@ class GridList extends Market\Component\Base\GridList
 		return $result;
 	}
 
+	protected function getDispatchTypeEnum()
+	{
+		$service = $this->getSetup()->getService();
+
+		if (!method_exists($service, 'getDelivery')) { return []; }
+
+		$serviceDelivery = $service->getDelivery();
+
+		if (!($serviceDelivery instanceof Market\Trading\Service\MarketplaceDbs\Delivery)) { return []; }
+
+		$result = [];
+
+		foreach ($serviceDelivery->getDispatchTypes() as $type)
+		{
+			$result[] = [
+				'ID' => $type,
+				'VALUE' => $serviceDelivery->getDispatchTypeTitle($type),
+			];
+		}
+
+		return $result;
+	}
+
 	protected function makeFields($fields)
 	{
 		$result = [];
 
 		foreach ($fields as $name => $field)
 		{
-			$userField = $field;
-			$fieldTitle = isset($field['NAME'])
-				? $field['NAME']
-				: static::getLang('COMPONENT_TRADING_ORDER_LIST_FIELD_' . $name);
-
-			if (!isset($field['USER_TYPE']) && isset($field['TYPE']))
-			{
-				$userField['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType($field['TYPE']);
-			}
-
-			$userField += [
-				'MULTIPLE' => 'N',
-				'EDIT_IN_LIST' => 'Y',
-				'EDIT_FORM_LABEL' => $fieldTitle,
-				'FIELD_NAME' => $name,
-				'SETTINGS' => [],
-			];
-
-			$result[$name] = $userField;
+			$result[$name] = $this->extendField($name, $field);
 		}
 
-		return $result;
+		return $this->compileCompoundFields($result);
+	}
+
+	protected function compileCompoundFields(array $fields)
+	{
+		foreach ($fields as &$field)
+		{
+			if (!isset($field['TYPE']) || $field['TYPE'] !== 'compound') { continue; }
+
+			$children = [];
+
+			foreach ($field['FIELDS'] as $childName => $child)
+			{
+				if (is_numeric($childName))
+				{
+					$childName = $child;
+					$child = $fields[$child];
+				}
+				else if (isset($fields[$childName]))
+				{
+					$child += array_diff_key($fields[$childName], [
+						'USER_TYPE' => true,
+					]);
+				}
+
+				$children[$childName] = $this->extendField($childName, $child);
+			}
+
+			$field['FIELDS'] = $children;
+		}
+		unset($field);
+
+		return $fields;
+	}
+
+	protected function extendField($name, array $field)
+	{
+		$userField = $field;
+		$fieldTitle = isset($field['NAME'])
+			? $field['NAME']
+			: static::getLang('COMPONENT_TRADING_ORDER_LIST_FIELD_' . $name);
+
+		if (!isset($field['USER_TYPE']) && isset($field['TYPE']))
+		{
+			$userField['USER_TYPE'] = Market\Ui\UserField\Manager::getUserType($field['TYPE']);
+		}
+
+		$userField += [
+			'MULTIPLE' => 'N',
+			'EDIT_IN_LIST' => 'Y',
+			'EDIT_FORM_LABEL' => $fieldTitle,
+			'FIELD_NAME' => $name,
+			'SETTINGS' => [],
+		];
+
+		return $userField;
 	}
 
 	public function load(array $queryParameters = [])
@@ -487,7 +630,12 @@ class GridList extends Market\Component\Base\GridList
 	{
 		foreach ($items as &$item)
 		{
-			if (empty($item['ORDER_ID']))
+			$allowStatus = $item['STATUS_READY'] && !empty($item['STATUS_ALLOW']);
+			$allowCancel = $item['CANCEL_ALLOW'];
+			$allowPrint = $item['PRINT_READY'];
+			$isProcessing = $item['PROCESSING'];
+
+			if (!$allowStatus && !$allowCancel && !$allowPrint && !$isProcessing)
 			{
 				$item['DISABLED'] = true;
 			}
@@ -517,24 +665,40 @@ class GridList extends Market\Component\Base\GridList
 						$result['status'] = $value;
 					break;
 
+					case 'DISPATCH_TYPE':
+						$result['dispatchType'] = $value;
+					break;
+
 					case '>=DATE_CREATE':
 						$result['fromDate'] = new Main\Type\DateTime($value);
 					break;
 
 					case '<=DATE_CREATE':
-						$result['toDate'] = new Main\Type\DateTime($value);
+						$result['toDate'] = $this->roundFilterUntilDate(new Main\Type\DateTime($value));
+					break;
+
+					case '>=UPDATED_AT':
+						$result['updatedAtFrom'] = new Main\Type\DateTime($value);
+					break;
+
+					case '<=UPDATED_AT':
+						$result['updatedAtTo'] = $this->roundFilterUntilDate(new Main\Type\DateTime($value));
 					break;
 
 					case '>=DATE_SHIPMENT':
-						$result['fromShipmentDate'] = new Main\Type\Date($value);
+						$result['fromShipmentDate'] = new Main\Type\DateTime($value);
 					break;
 
 					case '<=DATE_SHIPMENT':
-						$result['toShipmentDate'] = new Main\Type\Date($value);
+						$result['toShipmentDate'] = $this->roundFilterUntilDate(new Main\Type\DateTime($value));
 					break;
 
 					case 'FAKE':
 						$result['fake'] = ((string)$value === '1');
+					break;
+
+					case 'HAS_CIS':
+						$result['hasCis'] = ((string)$value === '1');
 					break;
 
 					case 'ID':
@@ -564,7 +728,48 @@ class GridList extends Market\Component\Base\GridList
 			}
 		}
 
+		$result = $this->limitFilterDatesGap($result, 'fromDate', 'toDate', 30);
+		$result = $this->limitFilterDatesGap($result, 'fromShipmentDate', 'toShipmentDate', 30);
+		$result = $this->limitFilterDatesGap($result, 'updatedAtFrom', 'updatedAtTo', 30);
+
 		return $result;
+	}
+
+	protected function roundFilterUntilDate(Main\Type\DateTime $date)
+	{
+		$date = new Main\Type\DateTime($date);
+		$time = $date->format('H:i');
+
+		if ($time === '23:59')
+		{
+			$date->add('PT1S');
+		}
+		else if ($time === '00:00')
+		{
+			$date->add('P1D');
+		}
+
+		return $date;
+	}
+
+	protected function limitFilterDatesGap($filter, $fromName, $toName, $limit)
+	{
+		if (!isset($filter[$fromName], $filter[$toName])) { return $filter; }
+
+		$from = $filter[$fromName];
+		$to = $filter[$toName];
+
+		if (!($from instanceof Main\Type\Date) || !($to instanceof Main\Type\Date)) { return $filter; }
+
+		$fromLimit = clone $to;
+		$fromLimit->add(sprintf('-P%sD', $limit));
+
+		if (Market\Data\Date::compare($fromLimit, $from) === 1)
+		{
+			$filter[$fromName] = $fromLimit;
+		}
+
+		return $filter;
 	}
 
 	protected function searchExternalIds($value, $field)
@@ -594,7 +799,7 @@ class GridList extends Market\Component\Base\GridList
 
 		return [
 			'userId' => $USER->GetID(),
-			'checkAccess' => isset($accessParameter) ? (bool)$accessParameter : true,
+			'checkAccess' => !isset($accessParameter) || $accessParameter,
 		];
 	}
 
@@ -612,7 +817,15 @@ class GridList extends Market\Component\Base\GridList
 	{
 		foreach ($actions as $actionIndex => &$action)
 		{
-			if (empty($item['ORDER_ID']))
+			if ($action['TYPE'] === 'ACCEPT')
+			{
+				$isValid = empty($item['ORDER_ID']);
+			}
+			else if ($action['TYPE'] === 'STATUS')
+			{
+				$isValid = !empty($item['ORDER_ID']);
+			}
+			else if (empty($item['ORDER_ID']))
 			{
 				$isValid = false;
 			}
@@ -624,51 +837,15 @@ class GridList extends Market\Component\Base\GridList
 			{
 				$isValid = !empty($item['PRINT_READY']);
 			}
-			else if ($action['TYPE'] === 'CANCEL')
-			{
-				$isValid = !empty($item['CANCEL_ALLOW']);
-			}
-			else if ($action['TYPE'] === 'STATUS')
-			{
-				if (empty($item['STATUS_READY']) || empty($item['STATUS_ALLOW']))
-				{
-					$isValid = false;
-				}
-				else
-				{
-					$allowMap = array_flip($item['STATUS_ALLOW']);
-
-					foreach ($action['MENU'] as $statusIndex => $statusAction)
-					{
-						$status = Market\Data\TextString::getSubstring(
-							$statusAction['TYPE'],
-							Market\Data\TextString::getLength('STATUS_')
-						);
-
-						if (!isset($allowMap[$status]))
-						{
-							unset($action['MENU'][$statusIndex]);
-						}
-					}
-
-					if (!empty($action['MENU']))
-					{
-						$isValid = true;
-						$action['MENU'] = array_values($action['MENU']);
-					}
-					else
-					{
-						$isValid = false;
-					}
-				}
-			}
-			else if (isset($action['FILTER']) && is_array($action['FILTER']))
-			{
-				$isValid = (count(array_diff_assoc($action['FILTER'], $item)) === 0);
-			}
 			else
 			{
-				$isValid = true;
+				$isValid = $this->matchActionFilter($action, $item);
+			}
+
+			if ($isValid && isset($action['MENU']))
+			{
+				$action['MENU'] = $this->filterActionMenu($action['MENU'], $item);
+				$isValid = !empty($action['MENU']);
 			}
 
 			if (!$isValid)
@@ -679,6 +856,26 @@ class GridList extends Market\Component\Base\GridList
 		unset($action);
 
 		return $actions;
+	}
+
+	protected function filterActionMenu($menu, $item)
+	{
+		foreach ($menu as $menuKey => $menuAction)
+		{
+			if (!$this->matchActionFilter($menuAction, $item))
+			{
+				unset($menu[$menuKey]);
+			}
+		}
+
+		return array_values($menu);
+	}
+
+	protected function matchActionFilter($action, $item)
+	{
+		if (!isset($action['FILTER'])) { return true; }
+
+		return Market\Utils\ActionFilter::isMatch($action['FILTER'], $item);
 	}
 
 	public function getSetup()

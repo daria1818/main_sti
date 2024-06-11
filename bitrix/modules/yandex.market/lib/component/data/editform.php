@@ -83,8 +83,10 @@ class EditForm extends Market\Component\Base\EditForm
 	public function getFields(array $select = [], $item = null)
 	{
 		$dataClass = $this->getDataClass();
+		$result = $this->loadTableFields($dataClass, $select, $item);
+		$result = $this->applyFieldsDeprecated($result, $item);
 
-		return $this->loadTableFields($dataClass, $select, $item);
+		return $result;
 	}
 
 	protected function loadTableFields($dataClass, $select, $row)
@@ -183,6 +185,26 @@ class EditForm extends Market\Component\Base\EditForm
 		}
 
 		return $result;
+	}
+
+	protected function applyFieldsDeprecated(array $fields, $item = null)
+	{
+		foreach ($fields as &$field)
+		{
+			if (!isset($field['DEPRECATED']) || $field['DEPRECATED'] !== 'Y') { continue; }
+
+			$value = $item !== null
+				? Market\Utils\Field::getChainValue($item, $field['FIELD_NAME'], Market\Utils\Field::GLUE_BRACKET)
+				: null;
+
+			if (empty($value))
+			{
+				$field['HIDDEN'] = 'Y';
+			}
+		}
+		unset($field);
+
+		return $fields;
 	}
 
 	public function load($primary, array $select = [], $isCopy = false)

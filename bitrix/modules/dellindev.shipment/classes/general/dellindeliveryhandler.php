@@ -266,13 +266,16 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
 
             foreach( $mapProps as $varName => $propName){
                 $obj = $props->getItemByOrderPropertyCode($propName);
-                if(method_exists($obj, 'getValue')){
+                // Fixed to php8.1
+                if(is_null($obj)){
+                   ${$varName} = '';
+                } elseif (method_exists($obj, 'getValue')){
                    ${$varName} = $obj->getValue();
                 } else {
-                    ${$varName} = '';
+                   ${$varName} = '';
                 }
-
             }
+            
             $personType = $order->getPersonTypeId();
             $country = $locationData['COUNTRY_NAME_ORIG'];
             $regionName = $locationData['REGION_NAME_ORIG'];
@@ -282,11 +285,8 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
 
             $shipmentCost = $order->getDeliveryPrice();
             $shipmentName = $shipment->getDeliveryName();
-			if($personName = $props->getPayerName()){
             $personName = $props->getPayerName()->getValue();
-			}?>
-
-<?//            $personPhone = $props->getItemByOrderPropertyCode('PHONE')->getValue();
+//            $personPhone = $props->getItemByOrderPropertyCode('PHONE')->getValue();
 //            $zip = $props->getItemByOrderPropertyCode('ZIP')->getValue();
 //            $personAddress = $props->getItemByOrderPropertyCode('ADDRESS')->getValue();
 //            $email = $props->getItemByOrderPropertyCode('EMAIL')->getValue();
@@ -383,8 +383,8 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
     protected function calculateConcrete(\Bitrix\Sale\Shipment $shipment = null)
     {
         
-
-        if(CModule::IncludeModule("dellindev.shipment")) {
+        
+        if(CModule::IncludeModule("dellindev.shipment")) { 
 
             try {
 
@@ -428,7 +428,6 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
 
 
 
-
                 $result = new \Bitrix\Sale\Delivery\CalculationResult();
 
                 if($data['status'] == 'error'){
@@ -437,6 +436,7 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
 
                 }
 
+                $result->setAsNextStep();
 
                 $result->setDeliveryPrice(
                     roundEx(
@@ -444,6 +444,8 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
                         SALE_VALUE_PRECISION
                     )
                 );
+                
+                
 
                 $result->setPeriodDescription($data['days'].' '. self::plural( (int)$data['days'],
                                                                                 Loc::getMessage("DELLINDEV_1_DAY"),
@@ -455,7 +457,8 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
                 return $result;
 
             } catch ( Exception $exception){
-
+                
+                $this->clearTerminals($shipment);
                 $result = new \Bitrix\Sale\Delivery\CalculationResult();
                 $error = new Error($exception->getMessage(), false, '0001');
                 $result->addError($error);
@@ -468,6 +471,25 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
             throw new Exception(Loc::getMessage("DELLINDEV_EXCEPTION_MODULE_NOT_INSTALL"));
         }
 
+    }
+
+    private function clearTerminals($shipment)
+    {
+
+
+        if(CModule::IncludeModule('dellindev.shipment')){
+            $config = $this->builderConfigForLib($shipment);
+            
+            if(is_null($config)){
+                return false;
+            }
+
+            if($config->isGoodsUnloading())
+            {
+                unset($_SESSION['current_terminals']);
+            }
+
+        }
     }
 
     public function calculate(\Bitrix\Sale\Shipment $shipment = null, $extraServices = array())
@@ -521,6 +543,18 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
 
         ob_end_clean();
 
+        ob_start();
+        $APPLICATION->IncludeComponent(
+            "dellindev:dellindev.shipment.widgetsettings",
+            "",
+            [],
+            false
+        );
+
+        $tabwidgetsettings = ob_get_contents();
+
+        ob_end_clean();
+
 
         return array(
             array(
@@ -537,6 +571,11 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
                 'TAB' => Loc::getMessage("DELLINDEV_CARGO_INFO"),
                 'TITLE' => '',
                 'CONTENT'=> $tabcargo
+            ),
+            array(
+                'TAB' => GetMessage("DELLINDEV_SHIPMENT_WIDGET_SETTINGS"),
+                'TITLE' => '',
+                'CONTENT'=> $tabwidgetsettings
             )
         );
     }
@@ -672,7 +711,7 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
                     ".default",
                     Array(
                         "USER_RESULT" => $arUserResult,
-                        "TERMINAL_LIST" => self::getTerminalList($_SESSION['terminals'])
+                        "TERMINAL_LIST" => self::getTerminalList($_SESSION['current_terminals'])
                     ));
 
             }

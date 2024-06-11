@@ -2,6 +2,7 @@
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) { die(); }
 
 use Yandex\Market;
+use Yandex\Market\Ui\UserField\Helper\Attributes;
 use Bitrix\Main\Localization\Loc;
 
 if (!empty($arResult['ERRORS']))
@@ -52,10 +53,17 @@ $langStatic = [
 
 $fieldId = 'param-' . $this->randString(5);
 $addTagList = [];
-$hasActiveAddTag = false;
 
 ?>
-<div class="b-param-table js-plugin js-param-manager" id="<?= $fieldId; ?>" data-plugin="Field.Param.TagCollection" data-base-name="<?= $arParams['INPUT_NAME']; ?>">
+<div class="b-param-table js-plugin js-param-manager" <?= Attributes::stringify([
+	'id' => $fieldId,
+	'data-plugin' => 'Field.Param.TagCollection',
+	'data-base-name' => $arParams['INPUT_NAME'],
+	'data-item-element' => '.js-param-tag-collection__item.level--0',
+	'data-item-add-holder-element' => '.js-param-tag-collection__item-add-holder.level--0',
+	'data-item-add-element' => '.js-param-tag-collection__item-add.level--0',
+	'data-item-delete-element' => '.js-param-tag-collection__item-delete.level--0',
+]) ?>>
 	<table class="b-param-table__row">
 		<tr>
 			<td class="b-param-table__cell width--param-label">&nbsp;</td>
@@ -76,17 +84,19 @@ $hasActiveAddTag = false;
 			<th>&nbsp;</th>
 		</tr>
 	</table>
-	<?
+	<?php
 	$tagIndex = 0;
 
 	/** @var \Yandex\Market\Export\Xml\Tag\Base $tag */
-	foreach ($arResult['TAGS'] as $tag)
+	foreach ($arResult['TAGS'] as $tagId => $tag)
 	{
+		if (Market\Data\TextString::getPosition($tagId, '.') !== false) { continue; } // children
+
+		$tagLevel = 0;
 		$tagValues = [];
-		$tagId = $tag->getId();
-		$tagName = $tag->getName();
-		$hasTagValues = false;
-		$attributes = $tag->getAttributes();
+		$parentBaseId = '';
+		$parentInputName = $arParams['INPUT_NAME'];
+		$isParentPlaceholder = $arParams['PLACEHOLDER'];
 
 		foreach ($arParams['VALUE'] as $rowValue)
 		{
@@ -96,257 +106,47 @@ $hasActiveAddTag = false;
 			}
 		}
 
-		if (empty($tagValues))
-		{
-			$tagValues[] = $tag->isRequired() || $tag->isVisible() ? [] : [ 'PLACEHOLDER' => true ];
-		}
+		if (empty($tagValues) && $tag->isDeprecated()) { continue; }
 
-		foreach ($tagValues as $tagValue)
+		if (!$tag->isDeprecated())
 		{
-			$tagInputName = $arParams['INPUT_NAME'] . '[' . $tagIndex . ']';
-			$isTagPlaceholder = $arParams['PLACEHOLDER'] || !empty($tagValue['PLACEHOLDER']);
-			$isTagRowShown = false;
-			$attributeIndex = 0;
-			$addAttributeList = [];
-			$hasActiveAddAttribute = false;
-
-			if (!$isTagPlaceholder)
+			if ($tag->isMultiple() || $tag->isUnion())
 			{
-				$hasTagValues = true;
+				$addTagList[$tagId] = true;
 			}
-
-			?>
-			<div class="<?= $isTagPlaceholder ? 'is--hidden' : ''; ?> js-param-tag-collection__item" data-plugin="Field.Param.Tag" data-type="<?= $tagId; ?>" <?= $tag->isMultiple() ? 'data-multiple="true"' : ''; ?> <?= $tag->isRequired() ? 'data-required="true"' : ''; ?>>
-				<input class="js-param-tag__input" type="hidden" data-name="ID" <?
-
-					if (!$isTagPlaceholder)
-					{
-						echo 'name="' . $tagInputName . '[ID]' . '"';
-						echo 'value="' . $tagValue['ID'] . '"';
-					}
-
-				?> />
-				<input class="js-param-tag__input is--persistent" type="hidden" value="<?= $tagId; ?>" data-name="XML_TAG" <?
-
-					if (!$isTagPlaceholder)
-					{
-						echo 'name="' . $tagInputName . '[XML_TAG]' . '"';
-					}
-
-				?> />
-
-				<table class="b-param-table__row js-param-tag__child" data-plugin="Field.Param.NodeCollection" data-name="PARAM_VALUE">
-					<?
-					if (!$tag->hasChildren() && !$tag->hasEmptyValue())
-					{
-						$isTagRowShown = true;
-						$attributeInputName = $tagInputName . '[PARAM_VALUE][' . $attributeIndex . ']';
-						$attributeValue = [];
-						$attributeType = Market\Export\ParamValue\Table::XML_TYPE_VALUE;
-						$attributeValueType = $tag->getValueType();
-						$attributeId = null;
-						$attributeName = null;
-						$isAttribute = false;
-						$isRequired = $tag->isRequired();
-						$isDefined = $tag->isDefined();
-						$isAttributePlaceholder = false;
-
-						if (!empty($tagValue['PARAM_VALUE']))
-						{
-							foreach ($tagValue['PARAM_VALUE'] as $paramValue)
-							{
-								if ($paramValue['XML_TYPE'] === $attributeType)
-								{
-									$attributeValue = $paramValue;
-									break;
-								}
-							}
-						}
-
-						include __DIR__ . '/partials/value.php';
-
-						$attributeIndex++;
-					}
-					else if ($tagIndex === 0)
-					{
-						$isTagRowShown = true;
-					}
-					else if ($tag->hasChildren() || count($attributes) > 1)
-					{
-						$isTagRowShown = true;
-						$isAttribute = false;
-
-						?>
-						<tr>
-							<td class="b-param-table__cell for--label">
-								<?
-								include __DIR__ . '/partials/name.php';
-								?>
-							</td>
-							<td colspan="2">&nbsp;</td>
-							<td>
-								<?
-								if ($tag->isMultiple() || (!$tag->isRequired() && !$tag->isVisible()))
-								{
-									?>
-									<button class="adm-btn js-param-tag-collection__item-delete <?= $tag->isRequired() && count($tagValues) <= 1 ? 'is--hidden' : ''; ?> spacing--1x3" type="button">-</button>
-									<?
-								}
-								?>
-							</td>
-						</tr>
-						<?
-					}
-
-					if (!empty($attributes))
-					{
-						foreach ($attributes as $attribute)
-						{
-							$isDefined = $attribute->isDefined();
-
-							if ($isDefined && !$attribute->isVisible()) { continue; } /* предопределенный аттрибут */
-
-							$attributeInputName = $tagInputName . '[PARAM_VALUE][' . $attributeIndex . ']';
-							$attributeValue = null;
-							$attributeId = $attribute->getId();
-							$attributeName = $attribute->getName();
-							$attributeType = Market\Export\ParamValue\Table::XML_TYPE_ATTRIBUTE;
-							$attributeValueType = $attribute->getValueType();
-							$isAttribute = true;
-							$isRequired = $attribute->isRequired();
-							$isAttributePlaceholder = false;
-
-							if (!$isTagPlaceholder && !empty($tagValue['PARAM_VALUE']))
-							{
-								foreach ($tagValue['PARAM_VALUE'] as $paramValue)
-								{
-									if (
-										$paramValue['XML_TYPE'] === $attributeType
-										&& $paramValue['XML_ATTRIBUTE_NAME'] === $attributeId
-									)
-									{
-										$attributeValue = $paramValue;
-										break;
-									}
-								}
-							}
-
-							if ($attributeValue === null)
-							{
-								$attributeValue = [];
-								$isAttributePlaceholder = (!$attribute->isRequired() && !$attribute->isVisible());
-							}
-
-							if ($isDefined)
-							{
-								$definedSource = $attribute->getDefinedSource();
-
-								$attributeValue['SOURCE_TYPE'] = $definedSource['TYPE'];
-								$attributeValue['SOURCE_FIELD'] = (
-									(!empty($arResult['SOURCE_TYPE_ENUM'][$definedSource['TYPE']]['VARIABLE']))
-										? $definedSource['VALUE']
-										: $definedSource['FIELD']
-								);
-							}
-
-							include __DIR__ . '/partials/value.php';
-
-							if (!$attribute->isRequired())
-							{
-								$addAttributeList[$attributeId] = $isAttributePlaceholder;
-
-								if ($isAttributePlaceholder)
-								{
-									$hasActiveAddAttribute = true;
-								}
-							}
-
-							if (!$isAttributePlaceholder)
-							{
-								$attributeIndex++;
-							}
-						}
-
-						if (!empty($addAttributeList))
-						{
-							?>
-							<tr class="<?= $hasActiveAddAttribute ? '' : 'is--hidden'; ?> js-param-node-collection__item-add-holder">
-								<td class="b-param-table__cell width--param-label">&nbsp;</td>
-								<td class="b-param-table__cell" colspan="3">
-									<span class="js-params--show-hidden-tags">
-										<span class="b-link" tabindex="0"><?= Loc::getMessage('YANDEX_MARKET_T_ADMIN_FIELD_PARAM_ADD_ATTRIBUTE', [
-											'#TAG_NAME#' => $tagName
-										]); ?></span>
-										<span class="js-params--hidden-tags">
-											<?
-											foreach ($addAttributeList as $attributeId => $isActive)
-											{
-												?>
-												<span class="<?= $isActive ? '' : 'is--hidden'; ?> js-param-node-collection__item-add" tabindex="0" data-type="<?= $tagId . '.' . $attributeId; ?>"><?= $attributeId; ?></span>
-												<?
-											}
-											?>
-										</span>
-									</span>
-								</td>
-							</tr>
-							<?
-						}
-					}
-
-					include __DIR__ . '/partials/warning.php';
-					include __DIR__ . '/partials/settings.php';
-					?>
-				</table>
-			</div>
-			<?
-
-			if (!$isTagPlaceholder)
+			else if (!$tag->isRequired() && !$tag->isVisible())
 			{
-				$tagIndex++;
+				$addTagList[$tagId] = empty($tagValues);
 			}
 		}
 
-		if ($tag->isMultiple())
-		{
-			$addTagList[$tagId] = true;
-			$hasActiveAddTag = true;
-		}
-		else if (!$tag->isRequired())
-		{
-			$addTagList[$tagId] = !$hasTagValues;
-
-			if (!$hasTagValues)
-			{
-				$hasActiveAddTag = true;
-			}
-		}
+		include __DIR__ . '/partials/tag.php';
 	}
 	?>
-	<div class="b-param-table__footer <?= $hasActiveAddTag ? '' : 'is--hidden'; ?> js-param-tag-collection__item-add-holder">
+	<div class="b-param-table__footer">
 		<table class="b-param-table__row">
 			<tr>
 				<td class="b-param-table__cell width--param-label">&nbsp;</td>
 				<td class="b-param-table__cell">
-					<span class="js-params--show-hidden-tags">
+					<span class="js-params--show-hidden-tags js-param-tag-collection__item-add-holder level--0 <?= count(array_filter($addTagList)) > 0 ? '' : 'is--hidden'; ?>">
 						<span class="adm-btn" tabindex="0"><?= $langStatic['ADD_TAG']; ?></span>
 						<span class="js-params--hidden-tags">
-							<?
+							<?php
 							foreach ($addTagList as $tagId => $isActive)
 							{
 								?>
-								<span class="<?= $isActive ? '' : 'is--hidden'; ?> js-param-tag-collection__item-add" tabindex="0" data-type="<?= $tagId; ?>"><?= htmlspecialcharsbx('<' . $tagId . '>'); ?></span>
-								<?
+								<span class="<?= $isActive ? '' : 'is--hidden'; ?> js-param-tag-collection__item-add level--0" tabindex="0" data-type="<?= $tagId; ?>"><?= htmlspecialcharsbx('<' . $tagId . '>'); ?></span>
+								<?php
 							}
 							?>
 						</span>
 					</span>
-					<?
+					<?php
 					if (!empty($arResult['DOCUMENTATION_LINK']))
 					{
 						?>
 						<div class="b-admin-message-list spacing--1x2">
-							<?
+							<?php
 							\CAdminMessage::ShowMessage([
 								'TYPE' => 'OK',
 								'MESSAGE' => Loc::getMessage('YANDEX_MARKET_T_ADMIN_FIELD_PARAM_DOCUMENTATION_TITLE'),
@@ -357,14 +157,14 @@ $hasActiveAddTag = false;
 							]);
 							?>
 						</div>
-						<?
+						<?php
 					}
 
 					if (!empty($arResult['DOCUMENTATION_BETA']))
 					{
 						?>
 						<div class="b-admin-message-list">
-							<?
+							<?php
 							\CAdminMessage::ShowMessage([
 								'TYPE' => 'ERROR',
 								'MESSAGE' => Loc::getMessage('YANDEX_MARKET_T_ADMIN_FIELD_PARAM_DOCUMENTATION_BETA', [
@@ -374,7 +174,7 @@ $hasActiveAddTag = false;
 							]);
 							?>
 						</div>
-						<?
+						<?php
 					}
 					?>
 				</td>
@@ -382,7 +182,7 @@ $hasActiveAddTag = false;
 		</table>
 	</div>
 </div>
-<?
+<?php
 $managerData = [
 	'types' => array_values($arResult['SOURCE_TYPE_ENUM']),
 	'fields' => array_values($arResult['SOURCE_FIELD_ENUM']),

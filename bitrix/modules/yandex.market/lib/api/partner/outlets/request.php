@@ -9,6 +9,7 @@ class Request extends Market\Api\Partner\Reference\Request
 {
 	protected $page;
 	protected $pageSize;
+	protected $shopOutletCode;
 
 	public function getPath()
 	{
@@ -22,21 +23,13 @@ class Request extends Market\Api\Partner\Reference\Request
 
 	public function getQuery()
 	{
-		$result = [];
-		$page = $this->getPage();
-		$pageSize = $this->getPageSize();
+		$result = [
+			'page' => $this->getPage(),
+			'pageSize' => $this->getPageSize(),
+			'shop_outlet_code' => $this->getShopOutletCode(),
+		];
 
-		if ($page !== null)
-		{
-			$result['page'] = $page;
-		}
-
-		if ($pageSize !== null)
-		{
-			$result['pageSize'] = $pageSize;
-		}
-
-		return $result;
+		return array_filter($result, static function($value) { return $value !== null; });
 	}
 
 	public function processParameters(array $parameters)
@@ -51,6 +44,10 @@ class Request extends Market\Api\Partner\Reference\Request
 
 				case 'pageSize':
 					$this->setPageSize($value);
+				break;
+
+				case 'shop_outlet_code':
+					$this->setShopOutletCode($value);
 				break;
 
 				default:
@@ -78,5 +75,15 @@ class Request extends Market\Api\Partner\Reference\Request
 	public function getPageSize()
 	{
 		return $this->pageSize;
+	}
+
+	public function getShopOutletCode()
+	{
+		return $this->shopOutletCode;
+	}
+
+	public function setShopOutletCode($shopOutletCode)
+	{
+		$this->shopOutletCode = $shopOutletCode;
 	}
 }

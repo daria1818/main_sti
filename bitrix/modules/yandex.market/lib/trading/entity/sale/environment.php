@@ -6,6 +6,9 @@ use Yandex\Market;
 use Bitrix\Main;
 use Bitrix\Sale;
 
+/**
+ * @method Delivery getDelivery()
+ */
 class Environment extends Market\Trading\Entity\Common\Environment
 {
 	protected $marker;
@@ -69,7 +72,17 @@ class Environment extends Market\Trading\Entity\Common\Environment
     	return new Delivery($this);
     }
 
-    protected function createPaySystem()
+	protected function createOutletRegistry()
+	{
+		return new OutletRegistry($this);
+	}
+
+	protected function createCourierRegistry()
+	{
+		return new CourierRegistry($this);
+	}
+
+	protected function createPaySystem()
     {
     	return new PaySystem($this);
     }
@@ -94,7 +107,14 @@ class Environment extends Market\Trading\Entity\Common\Environment
     	return new Location($this);
     }
 
-    public function getMarker()
+	protected function createReserve()
+	{
+		return class_exists(Sale\ReserveQuantityCollection::class)
+			? new Reserve\Basket($this)
+			: new Reserve\Shipment($this);
+	}
+
+	public function getMarker()
     {
     	if ($this->marker === null)
 	    {

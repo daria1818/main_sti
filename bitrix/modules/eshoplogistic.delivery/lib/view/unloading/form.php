@@ -12,9 +12,9 @@ use Eshoplogistic\Delivery\Api\Site;
 use Eshoplogistic\Delivery\Helpers\ExportFileds;
 use Eshoplogistic\Delivery\Api\Additional;
 
-require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_before.php");
-require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/subscribe/include.php");
-require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/subscribe/prolog.php");
+require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_before.php"); // первый общий пролог
+require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/subscribe/include.php"); // инициализация модуля
+require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/subscribe/prolog.php"); // пролог модуля
 
 Loader::includeModule("sale");
 Loader::includeModule("eshoplogistic.delivery");
@@ -373,8 +373,11 @@ if (isset($resultSave['errors'])) {
     <?php if (isset($additionalFields['data']) && $additionalFields['data']): ?>
         <tr class="esl-box_add">
             <?php foreach ($additionalFields['data'] as $key => $value): ?>
-                <p><?php echo ($additionalFieldsRu[$key]) ?? $key ?></p>
-                <?php foreach ($value as $k => $v): ?>
+                <p class="titleBox"><?php echo ($additionalFieldsRu[$key]) ?? $key ?></p>
+                <?php foreach ($value as $k => $v):
+                    if(!isset($v['name']))
+                        continue;
+                    ?>
                     <div class="form-field_add">
                         <label class="label" for="<?php echo $k ?>"><?php echo $v['name'] ?></label>
                         <?php if ($v['type'] === 'integer'): ?>
@@ -398,7 +401,7 @@ if (isset($resultSave['errors'])) {
     $tabControl->Buttons(
         array(
             "disabled" => ($POST_RIGHT < "W"),
-            "back_url" => "rubric_admin.php?lang=" . LANG,
+            "back_url" => "/bitrix/admin/sale_order_view.php?ID=".$orderData['ID']."&lang=" . LANG,
 
         )
     );

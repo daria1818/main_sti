@@ -20,6 +20,8 @@ class IblockBuilder extends VersionBuilder
     {
         $this->setTitle(Locale::getMessage('BUILDER_IblockExport1'));
         $this->setDescription(Locale::getMessage('BUILDER_IblockExport2'));
+        $this->setGroup('Iblock');
+
         $this->addVersionFields();
     }
 
@@ -104,23 +106,26 @@ class IblockBuilder extends VersionBuilder
         }
 
         if (in_array('iblockProperties', $what)) {
-            $exportProps = $this->addFieldAndReturn(
-                'export_props', [
-                    'title'    => Locale::getMessage('BUILDER_IblockExport_Properties'),
-                    'width'    => 250,
-                    'multiple' => 1,
-                    'value'    => [],
-                    'select'   => $this->getHelperManager()->IblockExchange()->getIblockPropertiesStructure($iblockId),
-                ]
-            );
+            $struct = $this->getHelperManager()->IblockExchange()->getIblockPropertiesStructure($iblockId);
+            if (!empty($struct)) {
+                $exportProps = $this->addFieldAndReturn(
+                    'export_props', [
+                        'title'    => Locale::getMessage('BUILDER_IblockExport_Properties'),
+                        'width'    => 250,
+                        'multiple' => 1,
+                        'value'    => [],
+                        'select'   => $struct,
+                    ]
+                );
 
-            $iblockProperties = $helper->Iblock()->exportProperties($iblockId);
-            $iblockProperties = array_filter(
-                $iblockProperties,
-                function ($item) use ($exportProps) {
-                    return in_array($item['CODE'], $exportProps);
-                }
-            );
+                $iblockProperties = $helper->Iblock()->exportProperties($iblockId);
+                $iblockProperties = array_filter(
+                    $iblockProperties,
+                    function ($item) use ($exportProps) {
+                        return in_array($item['CODE'], $exportProps);
+                    }
+                );
+            }
         }
 
         if (in_array('iblockFields', $what)) {

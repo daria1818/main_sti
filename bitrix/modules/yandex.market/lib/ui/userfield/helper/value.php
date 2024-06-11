@@ -2,9 +2,6 @@
 
 namespace Yandex\Market\Ui\UserField\Helper;
 
-use Bitrix\Main;
-use Yandex\Market;
-
 class Value
 {
 	public static function asSingle($userField, $htmlControl)
@@ -51,17 +48,17 @@ class Value
 
 	protected static function extractFromField($userField, $htmlControl)
 	{
-		if ($userField['ENTITY_VALUE_ID'] < 1 && !empty($userField['SETTINGS']['DEFAULT_VALUE']))
-		{
-			$result = $userField['SETTINGS']['DEFAULT_VALUE'];
-		}
-		else if (isset($userField['VALUE']))
+		if (isset($userField['VALUE']))
 		{
 			$result = $userField['VALUE'];
 		}
-		else if (isset($htmlControl['VALUE']))
+		else if (isset($htmlControl['VALUE']) && ($htmlControl['VALUE'] !== '' || !array_key_exists('VALUE', $userField)))
 		{
 			$result = $htmlControl['VALUE'];
+		}
+		else if ($userField['ENTITY_VALUE_ID'] < 1 && !empty($userField['SETTINGS']['DEFAULT_VALUE']))
+		{
+			$result = $userField['SETTINGS']['DEFAULT_VALUE'];
 		}
 		else
 		{

@@ -30,4 +30,9 @@ class PurchasePrice extends Price
 
 		return $result;
 	}
+
+	public function getSettingsDescription(array $context = [])
+	{
+		return [];
+	}
 }

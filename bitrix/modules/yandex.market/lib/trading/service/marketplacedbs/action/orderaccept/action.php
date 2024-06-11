@@ -9,6 +9,7 @@ use Yandex\Market\Trading\Service as TradingService;
 
 class Action extends TradingService\Marketplace\Action\OrderAccept\Action
 {
+	use Market\Reference\Concerns\HasOnce;
 	use TradingService\MarketplaceDbs\Concerns\Action\HasRegionHandler;
 	use TradingService\MarketplaceDbs\Concerns\Action\HasDeliveryDates;
 	use TradingService\MarketplaceDbs\Concerns\Action\HasAddress;
@@ -96,70 +97,424 @@ class Action extends TradingService\Marketplace\Action\OrderAccept\Action
 
 	protected function resolveDelivery()
 	{
-		$deliveryRequest = $this->request->getOrder()->getDelivery();
-		$partnerType = $deliveryRequest->getPartnerType();
-		$price = null;
+		return $this->once('resolveDelivery', null, function() {
+			$deliveryRequest = $this->request->getOrder()->getDelivery();
+			$partnerType = $deliveryRequest->getPartnerType();
+			$price = null;
+			$data = [];
 
-		if ($this->provider->getDelivery()->isShopDelivery($partnerType))
+			if ($this->provider->getDelivery()->isShopDelivery($partnerType))
+			{
+				$options = $this->provider->getOptions();
+				list($deliveryId, $data) = $this->resolveShopDelivery($deliveryRequest);
+				$price = $deliveryRequest->getPrice();
+
+				if ($options->includeBasketSubsidy())
+				{
+					$price += $deliveryRequest->getSubsidy();
+				}
+
+				if ($options->includeLiftPrice())
+				{
+					$price += $deliveryRequest->getLiftPrice();
+				}
+			}
+			else
+			{
+				$deliveryId = $this->environment->getDelivery()->getEmptyDeliveryId();
+			}
+
+			return [$deliveryId, $price, $data];
+		});
+	}
+
+	/** @deprecated */
+	protected function resolveShopDeliveryId(TradingService\MarketplaceDbs\Model\Order\Delivery $delivery)
+	{
+		list($deliveryId) = $this->resolveShopDelivery($delivery);
+
+		return $deliveryId;
+	}
+
+	protected function resolveShopDelivery(TradingService\MarketplaceDbs\Model\Order\Delivery $delivery)
+	{
+		$deliveryId = null;
+		$deliveryData = [];
+
+		if ($this->provider->getDelivery()->isDispatchToMarketOutlet($delivery->getDispatchType()))
 		{
-			$deliveryId = $deliveryRequest->getShopDeliveryId();
-			$price = $deliveryRequest->getPrice();
+			$deliveryId = $delivery->hasShopDeliveryId() ? $delivery->getShopDeliveryId() : $this->searchShopCourierDeliveryId();
 		}
-		else
+		else if ((int)$delivery->getServiceId() === TradingService\MarketplaceDbs\Delivery::SHOP_SERVICE_ID)
 		{
-			$deliveryId = $this->environment->getDelivery()->getEmptyDeliveryId();
+			if ($delivery->hasShopDeliveryId())
+			{
+				$deliveryId = $delivery->getShopDeliveryId();
+			}
+			else if ($delivery->getType() === TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP)
+			{
+				$deliveryId = $this->searchShopPickupDeliveryId($delivery);
+			}
+			else
+			{
+				$deliveryId = $this->searchShopTypeDeliveryId($delivery->getType());
+			}
+		}
+		else if (
+			$delivery->getType() === TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP
+			|| (
+				$delivery->getType() === TradingService\MarketplaceDbs\Delivery::TYPE_DELIVERY
+				&& $delivery->getDispatchType() === TradingService\MarketplaceDbs\Delivery::DISPATCH_TYPE_SHOP_OUTLET
+			)
+		)
+		{
+			$command = new TradingService\MarketplaceDbs\Command\DeliveryPickupFinder(
+				$this->provider,
+				$this->environment,
+				$this->order,
+				$delivery
+			);
+
+			$foundPickup = $command->execute();
+
+			if ($foundPickup !== null)
+			{
+				list($deliveryId, $environmentOutlet, $outlet) = $foundPickup;
+
+				$deliveryData = [
+					'OUTLET_ADAPTER' => $environmentOutlet,
+					'OUTLET' => $outlet,
+				];
+			}
+		}
+		else if ($delivery->getType() === TradingService\MarketplaceDbs\Delivery::TYPE_DELIVERY)
+		{
+			$command = new TradingService\MarketplaceDbs\Command\DeliveryCourierFinder(
+				$this->provider,
+				$this->environment,
+				$this->order,
+				$delivery
+			);
+
+			$deliveryId = $command->execute();
 		}
 
-		return [$deliveryId, $price];
+		if ($deliveryId === null)
+		{
+			$deliveryId = $delivery->hasShopDeliveryId() ? $delivery->getShopDeliveryId() : $this->environment->getDelivery()->getEmptyDeliveryId();
+		}
+
+		return [ $deliveryId, $deliveryData ];
+	}
+
+	protected function searchShopCourierDeliveryId()
+	{
+		return $this->searchShopTypeDeliveryId(TradingService\MarketplaceDbs\Delivery::TYPE_DELIVERY);
+	}
+
+	protected function searchShopPickupDeliveryId(TradingService\MarketplaceDbs\Model\Order\Delivery $delivery)
+	{
+		$outlet = $delivery->getOutlet();
+
+		if ($outlet === null || !$outlet->hasField('code')) { return null; }
+
+		$outletCode = $outlet->getCode();
+		$environmentDelivery = $this->environment->getDelivery();
+		$options = $this->provider->getOptions();
+		$restricted = $environmentDelivery->getRestricted($this->order);
+		$storeField = (string)$this->provider->getOptions()->getOutletStoreField();
+
+		// search configured
+
+		/** @var TradingService\MarketplaceDbs\Options\DeliveryOption $deliveryOption */
+		foreach ($options->getDeliveryOptions() as $deliveryOption)
+		{
+			if ($deliveryOption->getType() !== TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP) { continue; }
+			if ($deliveryOption->getOutletType() !== TradingService\MarketplaceDbs\Options\DeliveryOption::OUTLET_TYPE_MANUAL) { continue; }
+
+			$serviceId = $deliveryOption->getServiceId();
+			$optionOutlets = $deliveryOption->getOutlets();
+
+			if (!in_array($serviceId, $restricted, true)) { continue; }
+
+			if (empty($optionOutlets) && $storeField !== '')
+			{
+				$storeId = $this->environment->getStore()->findStore($storeField, $outletCode);
+				$matched = ($storeId !== null);
+			}
+			else
+			{
+				$matched = (is_array($optionOutlets) && in_array((string)$outletCode, $optionOutlets, true));
+			}
+
+			if ($matched && $environmentDelivery->isCompatible($serviceId, $this->order))
+			{
+				return $serviceId;
+			}
+		}
+
+		// search restricted
+
+		if ($storeField !== '' && !$options->isDeliveryStrict())
+		{
+			foreach (array_diff($restricted, $options->getDeliveryOptions()->getServiceIds()) as $serviceId)
+			{
+				$deliveryStores = $environmentDelivery->getStores($serviceId);
+
+				if (empty($deliveryStores) || !is_array($deliveryStores)) { continue; }
+
+				$storesMap = $this->environment->getStore()->mapStores($storeField, $deliveryStores);
+
+				/** @noinspection TypeUnsafeArraySearchInspection */
+				if (!in_array($outletCode, $storesMap)) { continue; }
+
+				if ($environmentDelivery->isCompatible($serviceId, $this->order))
+				{
+					return $serviceId;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	protected function searchShopTypeDeliveryId($type)
+	{
+		$serviceDelivery = $this->provider->getDelivery();
+		$environmentDelivery = $this->environment->getDelivery();
+		$options = $this->provider->getOptions();
+		$deliveryOptions = $options->getDeliveryOptions();
+		$restricted = $environmentDelivery->getRestricted($this->order);
+		$configuredAll = $deliveryOptions->getServiceIds();
+		$configured = $deliveryOptions->filter([ 'TYPE' => $type ])->getServiceIds();
+
+		// search matched all conditions
+
+		foreach (array_intersect($restricted, $configured) as $serviceId)
+		{
+			if ($environmentDelivery->isCompatible($serviceId, $this->order))
+			{
+				return $serviceId;
+			}
+		}
+
+		// search restricted
+
+		if (!$options->isDeliveryStrict())
+		{
+			foreach (array_diff($restricted, $configuredAll) as $serviceId)
+			{
+				$serviceType = $environmentDelivery->suggestDeliveryType($serviceId, $serviceDelivery->getTypes());
+
+				if ($serviceType === $type && $environmentDelivery->isCompatible($serviceId, $this->order))
+				{
+					return $serviceId;
+				}
+			}
+		}
+
+		if (!empty($configured))
+		{
+			return reset($configured);
+		}
+
+		return null;
 	}
 
 	protected function fillOutlet()
 	{
-		$deliveryRequest = $this->request->getOrder()->getDelivery();
-		$outletRequest = $deliveryRequest->getOutlet();
-		$storeField = (string)$this->provider->getOptions()->getOutletStoreField();
+		list($shopDeliveryId, , $shopDeliveryData) = $this->resolveDelivery();
 
-		if ($outletRequest !== null && $storeField !== '')
+		if (isset($shopDeliveryData['OUTLET_ADAPTER'], $shopDeliveryData['OUTLET']))
 		{
-			$deliveryId = $deliveryRequest->getShopDeliveryId();
-			$storeId = $this->environment->getStore()->findStore($storeField, $outletRequest->getCode());
+			$this->applyOutletEnvironment($shopDeliveryId, $shopDeliveryData['OUTLET_ADAPTER'], $shopDeliveryData['OUTLET']);
+			return;
+		}
 
-			$this->order->setShipmentStore($deliveryId, $storeId);
+		$delivery = $this->request->getOrder()->getDelivery();
+		$outlet = $delivery->getOutlet();
+
+		if ($outlet === null || !$outlet->hasField('code')) { return; } // ignore self-test missing outlet code
+		if ((int)$delivery->getServiceId() !== TradingService\MarketplaceDbs\Delivery::SHOP_SERVICE_ID) { return; } // external service delivery
+
+		$filled = $this->fillOutletEnvironment($delivery, $outlet, $shopDeliveryId);
+
+		if (!$filled)
+		{
+			$filled = $this->fillOutletStore($delivery, $outlet, $shopDeliveryId);
+		}
+
+		if (!$filled)
+		{
+			$this->fillOutletRegistry($outlet);
+		}
+	}
+
+	protected function applyOutletEnvironment(
+		$deliveryId,
+		TradingEntity\Reference\Outlet $environmentOutlet,
+		Market\Api\Model\Outlet $outletDetails
+	)
+	{
+		if ($environmentOutlet instanceof TradingEntity\Reference\OutletSelectable)
+		{
+			$environmentOutlet->selectOutlet($this->order, $deliveryId, $outletDetails->getShopOutletCode());
+		}
+		else
+		{
+			$address = TradingService\MarketplaceDbs\Model\Order\Delivery\Address::fromOutlet($outletDetails);
+			$propertyValues = $this->getAddressProperties($address);
+
+			$this->setMeaningfulPropertyValues($propertyValues);
+		}
+	}
+
+	protected function fillOutletEnvironment(
+		TradingService\MarketplaceDbs\Model\Order\Delivery $delivery,
+		TradingService\MarketplaceDbs\Model\Order\Delivery\Outlet $outlet,
+		$shopDeliveryId = null
+	)
+	{
+		try
+		{
+			/** @noinspection DuplicatedCode */
+			$deliveryId = $delivery->hasShopDeliveryId() ? $delivery->getShopDeliveryId() : $shopDeliveryId;
+
+			if ($deliveryId === null) { return false; }
+
+			$deliveryOption = $this->provider->getOptions()->getDeliveryOptions()->getItemByServiceId($deliveryId);
+
+			if ($deliveryOption !== null)
+			{
+				if ($deliveryOption->getType() !== TradingService\MarketplaceDbs\Delivery::TYPE_PICKUP) { return null; }
+
+				$outletType = $deliveryOption->getOutletType();
+
+				if ($outletType === $deliveryOption::OUTLET_TYPE_MANUAL) { return false; }
+
+				$environmentOutlet = $this->environment->getOutletRegistry()->getOutlet($outletType);
+			}
+			else
+			{
+				$environmentOutlet = $this->environment->getOutletRegistry()->resolveOutlet($deliveryId);
+			}
+
+			if ($environmentOutlet === null) { return false; }
+
+			if ($environmentOutlet instanceof TradingEntity\Reference\OutletSelectable)
+			{
+				$environmentOutlet->selectOutlet($this->order, $deliveryId, $outlet->getCode());
+			}
+			else
+			{
+				$outletDetails = $environmentOutlet->outletDetails($deliveryId, $outlet->getCode());
+
+				if ($outletDetails === null) { return false; }
+
+				$address = TradingService\MarketplaceDbs\Model\Order\Delivery\Address::fromOutlet($outletDetails);
+				$propertyValues = $this->getAddressProperties($address);
+
+				$this->setMeaningfulPropertyValues($propertyValues);
+			}
+
+			$result = true;
+		}
+		catch (Main\SystemException $exception)
+		{
+			$this->provider->getLogger()->debug($exception);
+
+			$result = false;
+		}
+		/** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
+		catch (\Throwable $exception)
+		{
+			$this->provider->getLogger()->warning($exception);
+
+			$result = false;
+		}
+
+		return $result;
+	}
+
+	protected function fillOutletStore(
+		TradingService\MarketplaceDbs\Model\Order\Delivery $delivery,
+		TradingService\MarketplaceDbs\Model\Order\Delivery\Outlet $outlet,
+		$shopDeliveryId = null
+	)
+	{
+		$storeField = (string)$this->provider->getOptions()->getOutletStoreField();
+		$deliveryId = $delivery->hasShopDeliveryId() ? $delivery->getShopDeliveryId() : $shopDeliveryId;
+
+		if ($storeField === '' || $deliveryId === null) { return false; }
+
+		$storeId = $this->environment->getStore()->findStore($storeField, $outlet->getCode());
+
+		$setResult = $this->order->setShipmentStore($deliveryId, $storeId);
+
+		return ($storeId !== null && $setResult->isSuccess());
+	}
+
+	protected function fillOutletRegistry(TradingService\MarketplaceDbs\Model\Order\Delivery\Outlet $deliveryOutlet)
+	{
+		$setupId = $this->provider->getOptions()->getSetupId();
+		$outletType = TradingEntity\Registry::ENTITY_TYPE_OUTLET;
+		$outletCode = $deliveryOutlet->getCode();
+		$stored = Market\Trading\State\EntityRegistry::get($setupId, $outletType, $outletCode);
+
+		if ($stored !== null)
+		{
+			$outlet = new Market\Api\Model\Outlet($stored);
+			$address = TradingService\MarketplaceDbs\Model\Order\Delivery\Address::fromOutlet($outlet);
+			$propertyValues = $this->getAddressProperties($address);
+
+			$this->setMeaningfulPropertyValues($propertyValues);
+			Market\Trading\State\EntityRegistry::touch($setupId, $outletType, $outletCode);
+		}
+		else
+		{
+			$this->addTask('fill/outlet', [
+				'outletCode' => $outletCode,
+			]);
 		}
 	}
 
 	protected function resolvePaySystem()
 	{
+		$type = $this->request->getOrder()->getPaymentType();
 		$method = $this->request->getOrder()->getPaymentMethod();
 		$compatibleIds = $this->getCompatiblePaySystems();
-		$configuredIds = $this->getConfiguredPaySystemsForMethod($method);
-		$matchedIds = array_intersect($compatibleIds, $configuredIds);
-		$result = null;
+		$configuredByType = $this->getConfiguredPaySystemsForType($type);
+		$configuredByMethod = $this->getConfiguredPaySystemsForMethod($method);
+		$matchedByType = array_intersect($compatibleIds, $configuredByType);
+		$matchedByMethod = array_intersect($compatibleIds, $configuredByMethod);
 
-		if (!empty($matchedIds))
+		if (!empty($matchedByMethod))
 		{
-			$result = reset($matchedIds);
+			$result = reset($matchedByMethod);
 		}
-		else if (!$this->provider->getOptions()->isPaySystemStrict())
+		else if (!empty($matchedByType))
 		{
-			$environmentPaySystem = $this->environment->getPaySystem();
-			$servicePaySystem = $this->provider->getPaySystem();
-			$meaningfulMap = $servicePaySystem->getMethodMeaningfulMap();
-
-			if (!isset($meaningfulMap[$method])) { return null; }
-
-			$meaningfulMethod = $meaningfulMap[$method];
-
-			foreach ($compatibleIds as $compatibleId)
-			{
-				$suggestMethods = $environmentPaySystem->suggestPaymentMethod($compatibleId, $meaningfulMap);
-
-				if (!empty($suggestMethods) && in_array($meaningfulMethod, $suggestMethods, true))
-				{
-					$result = $compatibleId;
-					break;
-				}
-			}
+			$result = reset($matchedByType);
+		}
+		else if ($this->provider->getOptions()->isPaySystemStrict())
+		{
+			$result =
+				reset($configuredByMethod)
+				?: reset($configuredByType)
+				?: $this->suggestPaySystemByMethod($method, $compatibleIds)
+				?: $this->suggestPaySystemByType($type, $compatibleIds)
+				?: reset($compatibleIds)
+				?: null;
+		}
+		else
+		{
+			$result =
+				$this->suggestPaySystemByMethod($method, $compatibleIds)
+				?: $this->suggestPaySystemByType($type, $compatibleIds)
+				?: reset($configuredByMethod)
+				?: reset($configuredByType)
+				?: reset($compatibleIds)
+				?: null;
 		}
 
 		return (string)$result;
@@ -172,6 +527,24 @@ class Action extends TradingService\Marketplace\Action\OrderAccept\Action
 		return $paySystem->getCompatible($this->order);
 	}
 
+	protected function getConfiguredPaySystemsForType($type)
+	{
+		$result = [];
+
+		/** @var TradingService\MarketplaceDbs\Options\PaySystemOption $paySystemOption */
+		foreach ($this->provider->getOptions()->getPaySystemOptions() as $paySystemOption)
+		{
+			if ($paySystemOption->useMethod()) { continue; }
+
+			if ($paySystemOption->getType() === $type)
+			{
+				$result[] = $paySystemOption->getPaySystemId();
+			}
+		}
+
+		return $result;
+	}
+
 	protected function getConfiguredPaySystemsForMethod($method)
 	{
 		$result = [];
@@ -179,10 +552,75 @@ class Action extends TradingService\Marketplace\Action\OrderAccept\Action
 		/** @var TradingService\MarketplaceDbs\Options\PaySystemOption $paySystemOption */
 		foreach ($this->provider->getOptions()->getPaySystemOptions() as $paySystemOption)
 		{
+			if (!$paySystemOption->useMethod()) { continue; }
+
 			if ($paySystemOption->getMethod() === $method)
 			{
 				$result[] = $paySystemOption->getPaySystemId();
 			}
+		}
+
+		return $result;
+	}
+
+	protected function suggestPaySystemByMethod($method, $compatibleIds)
+	{
+		$environmentPaySystem = $this->environment->getPaySystem();
+		$servicePaySystem = $this->provider->getPaySystem();
+		$meaningfulMap = $servicePaySystem->getMethodMeaningfulMap();
+
+		if (!isset($meaningfulMap[$method])) { return null; }
+
+		$meaningfulMethod = $meaningfulMap[$method];
+		$result = null;
+
+		foreach ($compatibleIds as $compatibleId)
+		{
+			$suggestMethods = $environmentPaySystem->suggestPaymentMethod($compatibleId, $meaningfulMap);
+
+			if (!empty($suggestMethods) && in_array($meaningfulMethod, $suggestMethods, true))
+			{
+				$result = $compatibleId;
+				break;
+			}
+		}
+
+		return $result;
+	}
+
+	protected function suggestPaySystemByType($type, $compatibleIds)
+	{
+		$environmentPaySystem = $this->environment->getPaySystem();
+		$meaningfulMap = $this->provider->getPaySystem()->getTypeMeaningfulMap();
+		$result = null;
+
+		if (!isset($meaningfulMap[$type])) { return null; }
+
+		$meaningfulType = $meaningfulMap[$type];
+
+		foreach ($compatibleIds as $compatibleId)
+		{
+			if ($environmentPaySystem->suggestPaymentType($compatibleId) === $meaningfulType)
+			{
+				$result = $compatibleId;
+				break;
+			}
+		}
+
+		return $result;
+	}
+
+	protected function calculateSubsidySum()
+	{
+		$order = $this->request->getOrder();
+		$result = $order->getItems()->getSubsidySum();
+
+		if (
+			$order->hasDelivery()
+			&& $this->provider->getDelivery()->isShopDelivery($order->getDelivery()->getPartnerType())
+		)
+		{
+			$result += $order->getDelivery()->getSubsidy();
 		}
 
 		return $result;
@@ -264,5 +702,19 @@ class Action extends TradingService\Marketplace\Action\OrderAccept\Action
 		}
 
 		return $result;
+	}
+
+	protected function makeData()
+	{
+		return
+			parent::makeData()
+			+ $this->makePaymentData();
+	}
+
+	protected function makePaymentData()
+	{
+		return [
+			'PAYMENT_TYPE' => $this->request->getOrder()->getPaymentType(),
+		];
 	}
 }
