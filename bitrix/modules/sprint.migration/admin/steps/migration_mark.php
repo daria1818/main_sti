@@ -24,8 +24,8 @@ if ($existsEvents && check_bitrix_sessid('send_sessid')) {
 
     ?>
     <script>
-        migrationListRefresh(function () {
-            migrationListScroll();
+        migrationMigrationRefresh(function () {
+            migrationScrollList();
             migrationEnableButtons(1);
         });
     </script><?php

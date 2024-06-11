@@ -17,7 +17,7 @@ class EventManager
 	protected static $siteId = 'pn';
 	protected static $user1C = 1;
 
-	function OnAfterCrmContactAddHandler($arFields)
+	public static function OnAfterCrmContactAddHandler($arFields)
 	{
 		if(Premission::get() === '')
 			return;
@@ -25,7 +25,7 @@ class EventManager
 		RtopMain::addBonus(__FUNCTION__, $arFields["CREATED_BY_ID"], $client);
 	}
 
-	function OnAfterCrmCompanyAddHandler($arFields)
+	public static function OnAfterCrmCompanyAddHandler($arFields)
 	{
 		if(Premission::get() === '')
 			return;
@@ -33,7 +33,7 @@ class EventManager
 		RtopMain::addBonus(__FUNCTION__, $arFields["CREATED_BY_ID"], $client);
 	}
 
-	function OnBeforeCrmContactUpdateHandler($arFields)
+	public static function OnBeforeCrmContactUpdateHandler($arFields)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -83,7 +83,7 @@ class EventManager
 		}
 	}
 
-	function OnBeforeCrmCompanyUpdateHandler($arFields)
+	public static function OnBeforeCrmCompanyUpdateHandler($arFields)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -140,7 +140,7 @@ class EventManager
 		}
 	}
 
-	function OnSaleOrderSavedHandler(BitrixEvent $event)
+	public static function OnSaleOrderSavedHandler(BitrixEvent $event)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -165,7 +165,7 @@ class EventManager
 		}
 	}
 
-	function OnSaleOrderBeforeSavedHandler(BitrixEvent $event)
+	public static function OnSaleOrderBeforeSavedHandler(BitrixEvent $event)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -187,7 +187,7 @@ class EventManager
 		RtopMain::addBonus(__FUNCTION__, $userId, self::getBuyerForBonus($order));
 	}
 
-	function OnSaleStatusOrderChangeHandler(BitrixEvent $event)
+	public static function OnSaleStatusOrderChangeHandler(BitrixEvent $event)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -215,7 +215,7 @@ class EventManager
 		// Log::writeLog1("3 - ЗАНЕС".$res);	
 	}
 
-	function OnSaleStatusOrderChangeDealSuccess(BitrixEvent $event)
+	public static function OnSaleStatusOrderChangeDealSuccess(BitrixEvent $event)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -242,11 +242,11 @@ class EventManager
 
 		RtopMain::addBonus(__FUNCTION__, $BMUID, self::getBuyerForBonus($order));
 	}
-	function setBonusCreateOrderOfDeal(BitrixEvent $event)
+	public static function setBonusCreateOrderOfDeal(BitrixEvent $event)
 	{
 		
 	}
-	function OnSaleOrderCanceledHandler(BitrixEvent $event)
+	public static function OnSaleOrderCanceledHandler(BitrixEvent $event)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -262,7 +262,7 @@ class EventManager
 		RtopMain::addBonus(__FUNCTION__, $userId, self::getBuyerForBonus($order));
 	}
 
-	function OnBeforeCrmContactUpdateStaging($arFields)
+	public static function OnBeforeCrmContactUpdateStaging($arFields)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -279,7 +279,7 @@ class EventManager
 		}
 	}
 
-	function OnBeforeCrmCompanyUpdateStaging($arFields)
+	public static function OnBeforeCrmCompanyUpdateStaging($arFields)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -295,7 +295,7 @@ class EventManager
 		}
 	}
 
-	function OnBeforeCrmContactUpdateWithdrawal($arFields)
+	public static function OnBeforeCrmContactUpdateWithdrawal($arFields)
 	{
 		if(Premission::get() === '' || $arFields['ASSIGNED_BY_ID'] != '1')
 			return;
@@ -304,7 +304,7 @@ class EventManager
 		RtopMain::addBonus(__FUNCTION__, $arFields["MODIFY_BY_ID"], $client);
 	}
 
-	function OnBeforeCrmCompanyUpdateWithdrawal($arFields)
+	public static function OnBeforeCrmCompanyUpdateWithdrawal($arFields)
 	{
 		if(Premission::get() === '' || $arFields['ASSIGNED_BY_ID'] != '1')
 			return;
@@ -313,41 +313,41 @@ class EventManager
 		RtopMain::addBonus(__FUNCTION__, $arFields["MODIFY_BY_ID"], $client);
 	}
 
-	public function setBonusVolumeOrders5000($userList, $params)
+	public static function setBonusVolumeOrders5000($userList, $params)
 	{
 		//self::checkTheAmout(0, 5000, $userList, $params);
 		self::checkTheAmout(0, 7000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrders15000($userList, $params)
+	public static function setBonusVolumeOrders15000($userList, $params)
 	{
 		//self::checkTheAmout(5000, 15000, $userList, $params);
 		self::checkTheAmout(7000, 20000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrders21000($userList, $params)
+	public static function setBonusVolumeOrders21000($userList, $params)
 	{
 		//self::checkTheAmout(15000, 21000, $userList, $params);
 		self::checkTheAmout(20000, 35000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrders28000($userList, $params)
+	public static function setBonusVolumeOrders28000($userList, $params)
 	{
 		//self::checkTheAmout(21000, 28000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrders35000($userList, $params)
+	public static function setBonusVolumeOrders35000($userList, $params)
 	{
 		//self::checkTheAmout(28000, 35000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrders75000($userList, $params)
+	public static function setBonusVolumeOrders75000($userList, $params)
 	{
 		//self::checkTheAmout(35000, 75000, $userList, $params);
 		self::checkTheAmout(35000, 100000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrders75001($userList, $params)
+	public static function setBonusVolumeOrders75001($userList, $params)
 	{
 		//self::checkTheAmout(75000, 100000000, $userList, $params);
 		self::checkTheAmout(100000, 100000000, $userList, $params);
@@ -356,27 +356,27 @@ class EventManager
 
 
 	//upd начисления за заказы для менеджеров
-	public function setBonusVolumeOrdersManagers5000($userList, $params)
+	public static function setBonusVolumeOrdersManagers5000($userList, $params)
 	{
 		self::checkTheAmoutManagers(0, 7000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrdersManagers15000($userList, $params)
+	public static function setBonusVolumeOrdersManagers15000($userList, $params)
 	{
 		self::checkTheAmoutManagers(7000, 20000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrdersManagers21000($userList, $params)
+	public static function setBonusVolumeOrdersManagers21000($userList, $params)
 	{
 		self::checkTheAmoutManagers(20000, 35000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrdersManagers75000($userList, $params)
+	public static function setBonusVolumeOrdersManagers75000($userList, $params)
 	{
 		self::checkTheAmoutManagers(35000, 100000, $userList, $params);
 	}
 
-	public function setBonusVolumeOrdersManagers75001($userList, $params)
+	public static function setBonusVolumeOrdersManagers75001($userList, $params)
 	{
 		self::checkTheAmoutManagers(100000, 100000000, $userList, $params);
 	}
@@ -384,7 +384,7 @@ class EventManager
 
 
 
-	public function setBonusVolumeOrdersMonth($userList, $params)
+	public static function setBonusVolumeOrdersMonth($userList, $params)
 	{
 		foreach($userList as $userid => $user)
 		{
@@ -395,22 +395,22 @@ class EventManager
 		}
 	}
 
-	public function setBonusVolumeOrdersQuarter($userList, $params)
+	public static function setBonusVolumeOrdersQuarter($userList, $params)
 	{
 		//???
 	}
 
-	public function absenceOrders3months($users, $params)
+	public static function absenceOrders3months($users, $params)
 	{
 
 	}
 
-	public function absenceOrders6months($userList, $params)
+	public static function absenceOrders6months($userList, $params)
 	{
 
 	}
 
-	public function setBonusSpecialProduct($userList, $params)
+	public static function setBonusSpecialProduct($userList, $params)
 	{
 		$typeCompany = \CCrmOwnerType::Company;
 
@@ -511,7 +511,7 @@ class EventManager
 		return $client;
 	}
 
-	function OnSaleStatusOrderChangeOffers(BitrixEvent $event)
+	public static function OnSaleStatusOrderChangeOffers(BitrixEvent $event)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -621,17 +621,17 @@ class EventManager
 		Log::writeLog('all true');
 	}
 
-	function onCrmDealUpdateProductKO($arFields)
+	public static function onCrmDealUpdateProductKO($arFields)
 	{
 		
 	}
 
-	function onCrmDealUpdateProductIM($arFields)
+	public static function onCrmDealUpdateProductIM($arFields)
 	{
 		
 	}
 
-	function onCrmDealUpdateProductAll($arFields, $deal)
+	public static function onCrmDealUpdateProductAll($arFields, $deal)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());
@@ -696,7 +696,7 @@ class EventManager
 		}
 	}
 
-	function onCrmDealUpdateKO($arFields)
+	public static function onCrmDealUpdateKO($arFields)
 	{
 		global $USER;
 		$userId = intval($USER->GetId());

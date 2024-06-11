@@ -8,7 +8,7 @@ if (php_sapi_name() != 'cli') {
 
 set_time_limit(0);
 error_reporting(E_ERROR);
-ini_set('zend.exception_ignore_args', 0);
+
 
 defined('NO_AGENT_CHECK') || define('NO_AGENT_CHECK', true);
 defined('NO_KEEP_STATISTIC') || define('NO_KEEP_STATISTIC', "Y");
@@ -43,14 +43,24 @@ try {
 
     require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php");
 
-} catch (Throwable $exception) {
+} catch (Exception $e) {
     fwrite(STDOUT, sprintf(
-        "[%s] %s (%s) in %s:%d \n",
-        get_class($exception),
-        $exception->getMessage(),
-        $exception->getCode(),
-        $exception->getFile(),
-        $exception->getLine()
+        "[%s] %s (%s)\n%s\n",
+        get_class($e),
+        $e->getMessage(),
+        $e->getCode(),
+        $e->getTraceAsString()
+    ));
+
+    die(1);
+
+} catch (Throwable $e) {
+    fwrite(STDOUT, sprintf(
+        "[%s] %s (%s)\n%s\n",
+        get_class($e),
+        $e->getMessage(),
+        $e->getCode(),
+        $e->getTraceAsString()
     ));
 
     die(1);

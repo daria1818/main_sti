@@ -2,8 +2,6 @@
 
 namespace Sprint\Migration\Builders;
 
-use Sprint\Migration\Exceptions\HelperException;
-use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RebuildException;
 use Sprint\Migration\Locale;
 use Sprint\Migration\Module;
@@ -19,15 +17,12 @@ class UserOptionsBuilder extends VersionBuilder
     protected function initialize()
     {
         $this->setTitle(Locale::getMessage('BUILDER_UserOptionsExport_Title'));
-        $this->setGroup('Main');
-
+        $this->setDescription(Locale::getMessage('BUILDER_UserOptionsExport_Desc'));
         $this->addVersionFields();
     }
 
     /**
      * @throws RebuildException
-     * @throws HelperException
-     * @throws MigrationException
      */
     protected function execute()
     {

@@ -389,10 +389,7 @@ class IblockSchema extends AbstractSchema
 
     protected function getUniqIblock($iblock)
     {
-        return $this
-            ->getHelperManager()
-            ->Iblock()
-            ->getIblockUid($iblock);
+        return $this->getHelperManager()->Iblock()->getIblockUid($iblock);
     }
 
     protected function getIblockId($iblockUid)
@@ -403,9 +400,8 @@ class IblockSchema extends AbstractSchema
             return $this->iblockIds[$iblockUid];
         }
 
-        $this->iblockIds[$iblockUid] = $helper
-            ->Iblock()
-            ->getIblockIdByUid($iblockUid);
+        $this->iblockIds[$iblockUid] = $helper->Iblock()
+                                              ->getIblockIdByUid($iblockUid);
 
         return $this->iblockIds[$iblockUid];
     }

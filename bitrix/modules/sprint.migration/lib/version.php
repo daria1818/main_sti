@@ -2,46 +2,72 @@
 
 namespace Sprint\Migration;
 
-use Sprint\Migration\Exceptions\MigrationException;
-use Sprint\Migration\Traits\ExitMessageTrait;
+use Sprint\Migration\Exceptions\HelperException;
+use Sprint\Migration\Exceptions\RestartException;
 use Sprint\Migration\Traits\HelperManagerTrait;
 
 /**
  * Class Version
- *
  * @package Sprint\Migration
  */
 class Version extends ExchangeEntity
 {
     use HelperManagerTrait;
-    use ExitMessageTrait;
-    use OutTrait;
 
-    protected $author        = "";
-    protected $description   = "";
+    /**
+     * @var string
+     */
+    protected $description = "";
+    /**
+     * @var string
+     */
     protected $moduleVersion = "";
     /**
-     * Миграции, которые должны быть установлены перед установкой текущей
-     * $this->requiredVersions = ['Version1','Version1']
-     * или
-     * $this->requiredVersions = [Version1::class,Version2::class]
+     * @var array
      */
-    protected $requiredVersions = [];
+    protected $versionFilter = [];
+    /**
+     * @var string
+     */
+    protected $storageName = 'default';
 
     /**
-     * @throws MigrationException
+     * your code for up
+     * @throws RestartException
+     * @throws HelperException
+     * @return bool
      */
     public function up()
     {
-        throw new MigrationException(Locale::getMessage('WRITE_UP_CODE'));
+        return true;
     }
 
     /**
-     * @throws MigrationException
+     * your code for down
+     * @throws RestartException
+     * @throws HelperException
+     * @return bool
      */
     public function down()
     {
-        throw new MigrationException(Locale::getMessage('WRITE_DOWN_CODE'));
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isVersionEnabled()
+    {
+        return true;
+    }
+
+    /**
+     * @throws Exceptions\ExchangeException
+     * @return string
+     */
+    public function getVersionName()
+    {
+        return $this->getClassName();
     }
 
     /**
@@ -50,11 +76,6 @@ class Version extends ExchangeEntity
     public function getDescription()
     {
         return $this->description;
-    }
-
-    public function getAuthor(): string
-    {
-        return $this->author;
     }
 
     /**
@@ -68,30 +89,47 @@ class Version extends ExchangeEntity
     /**
      * @return array
      */
-    public function getRequiredVersions()
+    public function getVersionFilter()
     {
-        return $this->requiredVersions;
+        return $this->versionFilter;
     }
 
     /**
-     * @throws MigrationException
+     * @param $name
+     * @param $data
+     * @throws Exceptions\ExchangeException
      */
-    public function checkRequiredVersions($versionNames)
+    public function saveData($name, $data)
     {
-        (new VersionManager($this->getVersionConfig()))->checkRequiredVersions($versionNames);
+        $this->getStorageManager()->saveData($this->getVersionName(), $name, $data);
     }
 
     /**
-     * @throws MigrationException
+     * @param $name
+     * @throws Exceptions\ExchangeException
+     * @return mixed|string
+     *
+     */
+    public function getSavedData($name)
+    {
+        return $this->getStorageManager()->getSavedData($this->getVersionName(), $name);
+    }
+
+    /**
+     * @param bool $name
+     * @throws Exceptions\ExchangeException
+     */
+    public function deleteSavedData($name = false)
+    {
+        $this->getStorageManager()->deleteSavedData($this->getVersionName(), $name);
+    }
+
+    /**
      * @return StorageManager
      */
-    protected function getStorageManager($versionName = '')
+    protected function getStorageManager()
     {
-        if (empty($versionName)) {
-            $versionName = $this->getClassName();
-        }
-
-        return new StorageManager('default', $versionName);
+        return new StorageManager($this->storageName);
     }
 
     /**
@@ -101,6 +139,7 @@ class Version extends ExchangeEntity
     {
         return new ExchangeManager($this);
     }
+
 }
 
 

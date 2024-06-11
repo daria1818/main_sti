@@ -25,7 +25,8 @@ trait IblockTrait
         if ($item && isset($item['ID'])) {
             return $item;
         }
-        throw new HelperException(
+        $this->throwException(
+            __METHOD__,
             Locale::getMessage(
                 'ERR_IB_NOT_FOUND',
                 ['#IBLOCK#' => is_array($code) ? var_export($code, true) : $code]
@@ -48,19 +49,11 @@ trait IblockTrait
         if ($item && isset($item['ID'])) {
             return $item['ID'];
         }
-
-        if (is_array($code)) {
-            $iblockUid = var_export($code, true);
-        } elseif ($typeId) {
-            $iblockUid = $typeId . ':' . $code;
-        } else {
-            $iblockUid = $code;
-        }
-
-        throw new HelperException(
+        $this->throwException(
+            __METHOD__,
             Locale::getMessage(
                 'ERR_IB_NOT_FOUND',
-                ['#IBLOCK#' => $iblockUid]
+                ['#IBLOCK#' => is_array($code) ? var_export($code, true) : $code]
             )
         );
     }
@@ -149,7 +142,7 @@ trait IblockTrait
      */
     public function addIblockIfNotExists($fields = [])
     {
-        $this->checkRequiredKeys($fields, ['CODE', 'IBLOCK_TYPE_ID', 'LID']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE', 'IBLOCK_TYPE_ID', 'LID']);
 
         $typeId = false;
         if (!empty($fields['IBLOCK_TYPE_ID'])) {
@@ -174,7 +167,7 @@ trait IblockTrait
      */
     public function addIblock($fields)
     {
-        $this->checkRequiredKeys($fields, ['CODE', 'IBLOCK_TYPE_ID', 'LID']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE', 'IBLOCK_TYPE_ID', 'LID']);
 
         $default = [
             'ACTIVE'           => 'Y',
@@ -202,7 +195,7 @@ trait IblockTrait
         if ($iblockId) {
             return $iblockId;
         }
-        throw new HelperException($ib->LAST_ERROR);
+        $this->throwException(__METHOD__, $ib->LAST_ERROR);
     }
 
     /**
@@ -221,7 +214,7 @@ trait IblockTrait
             return $iblockId;
         }
 
-        throw new HelperException($ib->LAST_ERROR);
+        $this->throwException(__METHOD__, $ib->LAST_ERROR);
     }
 
     /**
@@ -274,7 +267,8 @@ trait IblockTrait
             return true;
         }
 
-        throw new HelperException(
+        $this->throwException(
+            __METHOD__,
             Locale::getMessage(
                 'ERR_CANT_DELETE_IBLOCK', [
                     '#NAME#' => $iblockId,
@@ -294,7 +288,7 @@ trait IblockTrait
      */
     public function saveIblock($fields = [])
     {
-        $this->checkRequiredKeys($fields, ['CODE', 'IBLOCK_TYPE_ID', 'LID']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE', 'IBLOCK_TYPE_ID', 'LID']);
 
         $item = $this->getIblock($fields['CODE'], $fields['IBLOCK_TYPE_ID']);
         $exists = $this->prepareExportIblock($item);
@@ -329,7 +323,20 @@ trait IblockTrait
             return $ok;
         }
 
-        return $this->getMode('test') ? true : $item['ID'];
+        $ok = $this->getMode('test') ? true : $item['ID'];
+
+        if ($this->getMode('out_equal')) {
+            $this->outIf(
+                $ok,
+                Locale::getMessage(
+                    'IB_EQUAL',
+                    [
+                        '#NAME#' => $fields['CODE'],
+                    ]
+                )
+            );
+        }
+        return $ok;
     }
 
     /**
@@ -351,7 +358,8 @@ trait IblockTrait
             return $export;
         }
 
-        throw new HelperException(
+        $this->throwException(
+            __METHOD__,
             Locale::getMessage(
                 'ERR_IB_CODE_NOT_FOUND',
                 ['#IBLOCK_ID#' => $iblockId]
@@ -488,7 +496,8 @@ trait IblockTrait
 
             //если инфоблок не найден, надо показать что искали
             if (false === $getIblock) {
-                throw new HelperException(
+                $this->throwException(
+                    __METHOD__,
                     Locale::getMessage(
                         'ERR_IB_NOT_FOUND',
                         ['#IBLOCK#' => $iblock]
@@ -500,7 +509,8 @@ trait IblockTrait
         }
 
         if (empty($iblock['IBLOCK_TYPE_ID'])) {
-            throw new HelperException(
+            $this->throwException(
+                __METHOD__,
                 Locale::getMessage(
                     'ERR_TYPE_OF_IB_NOT_FOUND',
                     ['#IBLOCK_ID#' => $iblock['ID']]
@@ -509,7 +519,8 @@ trait IblockTrait
         }
 
         if (empty($iblock['CODE'])) {
-            throw new HelperException(
+            $this->throwException(
+                __METHOD__,
                 Locale::getMessage(
                     'ERR_IB_CODE_NOT_FOUND',
                     ['#IBLOCK_ID#' => $iblock['ID']]
@@ -523,7 +534,6 @@ trait IblockTrait
     /**
      * @param $iblockUid
      *
-     * @throws HelperException
      * @return int
      */
     public function getIblockIdByUid($iblockUid)
@@ -534,9 +544,9 @@ trait IblockTrait
             return $iblockId;
         }
 
-        [$type, $code] = explode(':', $iblockUid);
+        list($type, $code) = explode(':', $iblockUid);
         if (!empty($type) && !empty($code)) {
-            $iblockId = $this->getIblockIdIfExists($code, $type);
+            $iblockId = $this->getIblockId($code, $type);
         }
 
         return $iblockId;
@@ -576,7 +586,6 @@ trait IblockTrait
         unset($iblock['ID']);
         unset($iblock['TIMESTAMP_X']);
         unset($iblock['TMP_ID']);
-        unset($iblock['SERVER_NAME']);
 
         return $iblock;
     }

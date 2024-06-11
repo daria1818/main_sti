@@ -3,13 +3,9 @@
 namespace Sprint\Migration;
 
 use Sprint\Migration\Enum\VersionEnum;
-use Sprint\Migration\Exceptions\MigrationException;
-use Sprint\Migration\Traits\CurrentUserTrait;
 
 abstract class VersionBuilder extends AbstractBuilder
 {
-    use CurrentUserTrait;
-
     protected function addVersionFields()
     {
         $this->addField(
@@ -37,71 +33,83 @@ abstract class VersionBuilder extends AbstractBuilder
             $prefix = trim($prefix);
         }
 
+        $default = 'Version';
+        if (empty($prefix)) {
+            return $default;
+        }
+
         $prefix = preg_replace("/[^a-z0-9_]/i", '', $prefix);
-        if (empty($prefix) || preg_match('/^\d/', $prefix)) {
-            return 'Version';
+        if (empty($prefix)) {
+            return $default;
+        }
+
+        if (preg_match('/^\d/', $prefix)) {
+            return $default;
         }
 
         return $prefix;
     }
 
-    protected function purifyDescription($descr = ''): string
+    protected function purifyDescription($descr = '')
     {
-        return addslashes(strip_tags(trim($descr)));
+        $descr = strval($descr);
+        $descr = str_replace(["\n\r", "\r\n", "\n", "\r"], ' ', $descr);
+        $descr = strip_tags($descr);
+        $descr = addslashes($descr);
+        return $descr;
     }
 
-    protected function getVersionFile($versionName): string
+    protected function getVersionFile($versionName)
     {
-        $dir = $this->getVersionConfig()->getVal('migration_dir');
-        return $dir . '/' . $versionName . '.php';
+        return $this->getVersionConfig()->getVal('migration_dir') . '/' . $versionName . '.php';
     }
 
-    protected function getVersionResourceFile($versionName, $name): string
+    protected function getVersionResourceFile($versionName, $name)
     {
-        $dir = $this->getVersionConfig()->getVal('exchange_dir');
-        return $dir . '/' . $versionName . '_files/' . $name;
+        return $this->getVersionConfig()->getVal('migration_dir') . '/' . $versionName . '_files/' . $name;
     }
 
     protected function getVersionName()
     {
         if (!isset($this->params['~version_name'])) {
             $this->params['~version_name'] = $this->createVersionName();
+            $versionName = $this->params['~version_name'];
+        } else {
+            $versionName = $this->params['~version_name'];
         }
-        return $this->params['~version_name'];
+        return $versionName;
     }
 
-    protected function createVersionName(): string
+    protected function createVersionName()
     {
         return strtr(
             $this->getVersionConfig()->getVal('version_name_template'),
             [
                 '#NAME#'      => $this->purifyPrefix($this->getFieldValue('prefix')),
-                '#TIMESTAMP#' => $this->getTimestamp(
-                    $this->getVersionConfig()->getVal('version_timestamp_format')
-                ),
+                '#TIMESTAMP#' => $this->getTimestamp(),
             ]
         );
     }
 
     /**
-     * @throws MigrationException
+     * @param string $templateFile
+     * @param array  $templateVars
+     * @param bool   $markAsInstalled
+     *
+     * @throws Exceptions\MigrationException
+     * @return bool|string
      */
-    protected function createVersionFile(
-        string $templateFile = '',
-        array $templateVars = [],
-        bool $markAsInstalled = true
-    ): string {
+    protected function createVersionFile($templateFile = '', $templateVars = [], $markAsInstalled = true)
+    {
         $templateVars['description'] = $this->purifyDescription(
             $this->getFieldValue('description')
         );
-        $templateVars['author'] = $this->purifyDescription(
-            $this->getCurrentUserLogin()
-        );
+
         if (empty($templateVars['version'])) {
             $templateVars['version'] = $this->getVersionName();
         }
 
-        [$extendUse, $extendClass] = explode(' as ', $this->getVersionConfig()->getVal('migration_extend_class'));
+        list($extendUse, $extendClass) = explode(' as ', $this->getVersionConfig()->getVal('migration_extend_class'));
         $extendUse = trim($extendUse);
         $extendClass = trim($extendClass);
 
@@ -112,27 +120,32 @@ abstract class VersionBuilder extends AbstractBuilder
             $extendUse = '';
         }
 
-        $templateVars['extendUse'] = $extendUse;
-        $templateVars['extendClass'] = $extendClass;
-        $templateVars['moduleVersion'] = Module::getVersion();
+        $tplVars = array_merge(
+            [
+                'extendUse'     => $extendUse,
+                'extendClass'   => $extendClass,
+                'moduleVersion' => Module::getVersion(),
+            ], $templateVars
+        );
 
         if (!is_file($templateFile)) {
             $templateFile = Module::getModuleDir() . '/templates/version.php';
         }
 
         $fileName = $this->getVersionFile($templateVars['version']);
-        $fileContent = $this->renderFile($templateFile, $templateVars);
+        $fileContent = $this->renderFile($templateFile, $tplVars);
 
         file_put_contents($fileName, $fileContent);
 
         if (!is_file($fileName)) {
-            throw new MigrationException(
+            Out::outError(
                 Locale::getMessage(
                     'ERR_CANT_CREATE_FILE', [
                         '#NAME#' => $fileName,
                     ]
                 )
             );
+            return false;
         }
 
         Out::outSuccess(
@@ -152,11 +165,11 @@ abstract class VersionBuilder extends AbstractBuilder
         return $templateVars['version'];
     }
 
-    protected function getTimestamp($versionTimestampFormat)
+    protected function getTimestamp()
     {
         $originTz = date_default_timezone_get();
         date_default_timezone_set('Europe/Moscow');
-        $ts = date($versionTimestampFormat);
+        $ts = date('YmdHis');
         date_default_timezone_set($originTz);
         return $ts;
     }

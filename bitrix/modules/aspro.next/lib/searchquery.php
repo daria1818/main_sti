@@ -67,7 +67,7 @@ class SearchQuery {
 	public function setQuery($query, $lang = 'ru'){
 		$this->_reset();
 
-		if(strlen($query)){
+		if($query && strlen($query)){
 			$query = \ToLower($query, $lang);
 			$query = str_replace(CYR_IO, CYR_E, $query);
 			$query = preg_replace('/&#?[a-z0-9]{2,8};/'.BX_UTF_PCRE_MODIFIER, '' ,$query);
@@ -200,7 +200,7 @@ class SearchQuery {
 						foreach($arLanding['PROPERTY_QUERY_VALUE'] as $i => $query){
 							$query = htmlspecialchars_decode($query);
 
-							if(strlen($query) && isset($arPossibleLandingsQuery[$query]) && isset($arLanding['PROPERTY_META_HASH_VALUE'][$i]) && strlen($hash = $arLanding['PROPERTY_META_HASH_VALUE'][$i]) && isset($arLanding['PROPERTY_META_DATA_VALUE'][$i]) && strlen($arData = $arLanding['PROPERTY_META_DATA_VALUE'][$i])
+							if($query && strlen($query) && isset($arPossibleLandingsQuery[$query]) && isset($arLanding['PROPERTY_META_HASH_VALUE'][$i]) && strlen($hash = $arLanding['PROPERTY_META_HASH_VALUE'][$i]) && isset($arLanding['PROPERTY_META_DATA_VALUE'][$i]) && strlen($arData = $arLanding['PROPERTY_META_DATA_VALUE'][$i])
 							){
 								$bStrongChecked = true;
 
@@ -449,7 +449,7 @@ class SearchQuery {
 			$arLandings = $oSearchQuery->getLandings(array(), $arFilter, false, false, $arSelect, false, false);
 
 			// alt query
-			if(!$arLandings && strlen($altQuery)){
+			if(!$arLandings && $altQuery && strlen($altQuery)){
 				$oSearchQuery->setQuery($altQuery);
 				$arLandings = $oSearchQuery->getLandings(array(), $arFilter, false, false, $arSelect, false, false);
 			}
@@ -956,11 +956,11 @@ class SearchQuery {
 	}
 
 	public static function sentence2words($sentence){
-		return strlen($sentence) ? (preg_match_all('/[a-zA-Z'.TREG_CYR.'0-9-]+/'.BX_UTF_PCRE_MODIFIER, $sentence, $arMatches) ? $arMatches[0] : array()) : array();
+		return $sentence && strlen($sentence) ? (preg_match_all('/[a-zA-Z'.TREG_CYR.'0-9-]+/'.BX_UTF_PCRE_MODIFIER, $sentence, $arMatches) ? $arMatches[0] : array()) : array();
 	}
 
 	public static function stemming($sentence, $lang = 'ru'){
-		if(self::_isBxSearch()){
+		if(self::_isBxSearch() && $sentence){
 			if($stem = \stemming($sentence, $lang)){
 				$arStems = array();
 				foreach(array_keys($stem) as $word){
@@ -981,7 +981,7 @@ class SearchQuery {
 		$arIBlockIDs = array();
 
 		foreach(Cache::$arIBlocksInfo as $IBLOCK_ID => $arIBlock){
-			if(strpos($arIBlock['CODE'], self::IBLOCK_CODE) !== false){
+			if($arIBlock['CODE'] && strpos($arIBlock['CODE'], self::IBLOCK_CODE) !== false){
 				if(!$siteId || in_array($siteId, $arIBlock['LID'])){
 					if(!$indexElement || ($indexElement === $arIBlock['INDEX_ELEMENT'])){
 						$arIBlockIDs[] = $IBLOCK_ID;

@@ -7,7 +7,6 @@
  * @var $moduleVersion
  * @var $iblock
  * @var $sectionTree
- * @var $author
  * @formatter:off
  */
 
@@ -20,8 +19,6 @@ namespace Sprint\Migration;
 class <?php echo $version ?> extends <?php echo $extendClass ?>
 
 {
-    protected $author = "<?php echo $author ?>";
-
     protected $description = "<?php echo $description ?>";
 
     protected $moduleVersion = "<?php echo $moduleVersion ?>";
@@ -43,5 +40,10 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
             $iblockId,
             <?php echo var_export($sectionTree, 1) ?>
         );
+    }
+
+    public function down()
+    {
+        //your code ...
     }
 }

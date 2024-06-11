@@ -6,7 +6,6 @@
  * @var $extendUse
  * @var $extendClass
  * @var $moduleVersion
- * @var $author
  * @formatter:off
  */
 
@@ -19,8 +18,6 @@ namespace Sprint\Migration;
 class <?php echo $version ?> extends <?php echo $extendClass ?>
 
 {
-    protected $author = "<?php echo $author ?>";
-
     protected $description = "<?php echo $description ?>";
 
     protected $moduleVersion = "<?php echo $moduleVersion ?>";
@@ -46,4 +43,8 @@ class <?php echo $version ?> extends <?php echo $extendClass ?>
 
     }
 
+    public function down()
+    {
+        //your code ...
+    }
 }

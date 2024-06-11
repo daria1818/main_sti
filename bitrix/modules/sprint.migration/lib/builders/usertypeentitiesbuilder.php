@@ -2,8 +2,8 @@
 
 namespace Sprint\Migration\Builders;
 
+use CUserTypeEntity;
 use Sprint\Migration\Exceptions\HelperException;
-use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RebuildException;
 use Sprint\Migration\Locale;
 use Sprint\Migration\Module;
@@ -19,15 +19,14 @@ class UserTypeEntitiesBuilder extends VersionBuilder
     protected function initialize()
     {
         $this->setTitle(Locale::getMessage('BUILDER_UserTypeEntities1'));
-        $this->setGroup('Main');
+        $this->setDescription(Locale::getMessage('BUILDER_UserTypeEntities2'));
 
         $this->addVersionFields();
     }
 
     /**
-     * @throws RebuildException
      * @throws HelperException
-     * @throws MigrationException
+     * @throws RebuildException
      */
     protected function execute()
     {
@@ -40,7 +39,7 @@ class UserTypeEntitiesBuilder extends VersionBuilder
                 'placeholder' => '',
                 'width'       => 250,
                 'multiple'    => 1,
-                'items'       => $this->getEntitiesSelect(),
+                'items'       => $this->getEntitiesStructure(),
                 'value'       => [],
             ]
         );
@@ -61,13 +60,28 @@ class UserTypeEntitiesBuilder extends VersionBuilder
         );
     }
 
-    protected function getEntitiesSelect(): array
+    protected function getEntitiesStructure()
     {
-        return $this->createSelectWithGroups(
-            $this->getHelperManager()->UserTypeEntity()->getList(),
-            'ENTITY_ID',
-            'ID',
-            'FIELD_NAME'
-        );
+        /** @noinspection PhpDynamicAsStaticMethodCallInspection */
+        $dbRes = CUserTypeEntity::GetList([], []);
+
+        $structure = [];
+        while ($item = $dbRes->Fetch()) {
+            $entId = $item['ENTITY_ID'];
+
+            if (!isset($structure[$entId])) {
+                $structure[$entId] = [
+                    'title' => $entId,
+                    'items' => [],
+                ];
+            }
+
+            $structure[$entId]['items'][] = [
+                'title' => $item['FIELD_NAME'],
+                'value' => $item['ID'],
+            ];
+        }
+
+        return $structure;
     }
 }

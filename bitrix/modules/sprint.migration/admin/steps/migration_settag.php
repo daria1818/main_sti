@@ -23,8 +23,8 @@ if ($existsEvents && check_bitrix_sessid('send_sessid')) {
     Sprint\Migration\Out::outMessages($settagresult);
     ?>
     <script>
-        migrationListRefresh(function () {
-            migrationListScroll();
+        migrationMigrationRefresh(function () {
+            migrationScrollList();
             migrationEnableButtons(1);
         });
     </script><?php

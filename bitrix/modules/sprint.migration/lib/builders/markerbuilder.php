@@ -9,27 +9,29 @@ use Sprint\Migration\VersionManager;
 
 class MarkerBuilder extends AbstractBuilder
 {
+
     protected function isBuilderEnabled()
     {
         return true;
     }
 
+
     protected function initialize()
     {
         $this->setTitle(Locale::getMessage('MARK'));
-        $this->setGroup('Tools');
+        $this->setGroup('configurator');
 
         $this->addField('mark_version', [
-            'title'       => Locale::getMessage('MARK_FIELD1'),
+            'title' => Locale::getMessage('MARK_FIELD1'),
             'placeholder' => Locale::getMessage('MARK_VERSION'),
-            'width'       => 250,
+            'width' => 250,
         ]);
 
         $this->addField('mark_status', [
-            'title'       => Locale::getMessage('MARK_FIELD2'),
+            'title' => Locale::getMessage('MARK_FIELD2'),
             'placeholder' => '',
-            'width'       => 250,
-            'select'      => [
+            'width' => 250,
+            'select' => [
                 [
                     'title' => Locale::getMessage('MARK_AS_INSTALLED'),
                     'value' => VersionEnum::STATUS_INSTALLED,
@@ -40,6 +42,7 @@ class MarkerBuilder extends AbstractBuilder
                 ],
             ],
         ]);
+
     }
 
     protected function execute()
@@ -48,7 +51,7 @@ class MarkerBuilder extends AbstractBuilder
         $status = $this->getFieldValue('mark_status');
 
         $versionManager = new VersionManager(
-            $this->getVersionConfig()
+            $this->getVersionConfig()->getName()
         );
 
         $markresult = $versionManager->markMigration(

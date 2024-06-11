@@ -2,11 +2,11 @@
 
 namespace Sprint\Migration\Builders;
 
+use Sprint\Migration\Exceptions\ExchangeException;
 use Sprint\Migration\Exceptions\HelperException;
 use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RebuildException;
 use Sprint\Migration\Exceptions\RestartException;
-use Sprint\Migration\Exchange\IblockElementsExport;
 use Sprint\Migration\Locale;
 use Sprint\Migration\Module;
 use Sprint\Migration\VersionBuilder;
@@ -25,16 +25,15 @@ class IblockElementsBuilder extends VersionBuilder
     {
         $this->setTitle(Locale::getMessage('BUILDER_IblockElementsExport1'));
         $this->setDescription(Locale::getMessage('BUILDER_IblockElementsExport2'));
-        $this->setGroup('Iblock');
-
         $this->addVersionFields();
     }
 
     /**
      * @throws RebuildException
-     * @throws MigrationException
+     * @throws ExchangeException
      * @throws RestartException
      * @throws HelperException
+     * @throws MigrationException
      */
     protected function execute()
     {
@@ -47,7 +46,6 @@ class IblockElementsBuilder extends VersionBuilder
 
         $this->getExchangeManager()
              ->IblockElementsExport()
-             ->setUpdateMode($updateMode)
              ->setExportFilter($exportFilter)
              ->setExportFields($exportFields)
              ->setExportProperties($exportProps)
@@ -83,15 +81,15 @@ class IblockElementsBuilder extends VersionBuilder
                 'width'  => 250,
                 'select' => [
                     [
-                        'title' => Locale::getMessage('BUILDER_SelectAll'),
+                        'title' => Locale::getMessage('BUILDER_IblockElementsExport_SelectAll'),
                         'value' => 'all',
                     ],
                     [
-                        'title' => Locale::getMessage('BUILDER_SelectNone'),
+                        'title' => Locale::getMessage('BUILDER_IblockElementsExport_SelectNone'),
                         'value' => 'none',
                     ],
                     [
-                        'title' => Locale::getMessage('BUILDER_SelectSome'),
+                        'title' => Locale::getMessage('BUILDER_IblockElementsExport_SelectSome'),
                         'value' => 'some',
                     ],
                 ],
@@ -132,7 +130,7 @@ class IblockElementsBuilder extends VersionBuilder
                 'width'  => 250,
                 'select' => [
                     [
-                        'title' => Locale::getMessage('BUILDER_SelectAll'),
+                        'title' => Locale::getMessage('BUILDER_IblockElementsExport_SelectAll'),
                         'value' => 'all',
                     ],
                     [
@@ -196,15 +194,15 @@ class IblockElementsBuilder extends VersionBuilder
                 'width'  => 250,
                 'select' => [
                     [
-                        'title' => Locale::getMessage('BUILDER_SelectAll'),
+                        'title' => Locale::getMessage('BUILDER_IblockElementsExport_SelectAll'),
                         'value' => 'all',
                     ],
                     [
-                        'title' => Locale::getMessage('BUILDER_SelectNone'),
+                        'title' => Locale::getMessage('BUILDER_IblockElementsExport_SelectNone'),
                         'value' => 'none',
                     ],
                     [
-                        'title' => Locale::getMessage('BUILDER_SelectSome'),
+                        'title' => Locale::getMessage('BUILDER_IblockElementsExport_SelectSome'),
                         'value' => 'some',
                     ],
                 ],
@@ -228,11 +226,11 @@ class IblockElementsBuilder extends VersionBuilder
             $exportFields = [];
         }
 
-        if ($updateMode == IblockElementsExport::UPDATE_MODE_CODE) {
+        if ($updateMode == 'code') {
             if (!in_array('CODE', $exportFields)) {
                 $exportFields[] = 'CODE';
             }
-        } elseif ($updateMode == IblockElementsExport::UPDATE_MODE_XML_ID) {
+        } elseif ($updateMode == 'xml_id') {
             if (!in_array('XML_ID', $exportFields)) {
                 $exportFields[] = 'XML_ID';
             }
@@ -273,7 +271,7 @@ class IblockElementsBuilder extends VersionBuilder
      */
     protected function getFieldValueUpdateMode()
     {
-        return $this->addFieldAndReturn(
+        $updateMode = $this->addFieldAndReturn(
             'update_mode', [
                 'title'       => Locale::getMessage('BUILDER_IblockElementsExport_UpdateMode'),
                 'placeholder' => '',
@@ -281,24 +279,34 @@ class IblockElementsBuilder extends VersionBuilder
                 'select'      => [
                     [
                         'title' => Locale::getMessage('BUILDER_IblockElementsExport_NotUpdate'),
-                        'value' => IblockElementsExport::UPDATE_MODE_NOT,
+                        'value' => 'not',
                     ],
                     [
                         'title' => Locale::getMessage('BUILDER_IblockElementsExport_UpdateByCode'),
-                        'value' => IblockElementsExport::UPDATE_MODE_CODE,
+                        'value' => 'code',
                     ],
                     [
                         'title' => Locale::getMessage('BUILDER_IblockElementsExport_UpdateByXmlId'),
-                        'value' => IblockElementsExport::UPDATE_MODE_XML_ID,
+                        'value' => 'xml_id',
                     ],
                 ],
             ]
         );
+
+        return $updateMode;
     }
 
-    protected function explodeString($string, $delimiter = ' ')
+    protected function explodeString($string, $delimiter = ',')
     {
         $values = explode($delimiter, trim($string));
-        return array_filter($values);
+
+        $cleaned = [];
+        foreach ($values as $value) {
+            $value = trim(strval($value));
+            if (!empty($value)) {
+                $cleaned[] = $value;
+            }
+        }
+        return $cleaned;
     }
 }

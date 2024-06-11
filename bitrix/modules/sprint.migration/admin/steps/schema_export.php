@@ -38,8 +38,13 @@ if ($_POST["step_code"] == "schema_export" && check_bitrix_sessid('send_sessid')
             schemaExecuteStep('schema_export', <?=$json?>);
         </script>
         <?php
+    } catch (Exception $e) {
+        Out::outError($e->getMessage());
+        $error = true;
+
     } catch (Throwable $e) {
-        Out::outException($e);
+        Out::outError($e->getMessage());
+        $error = true;
     }
 
     $progress = $schemaManager->getProgress();

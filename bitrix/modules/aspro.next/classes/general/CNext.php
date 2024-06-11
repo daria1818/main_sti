@@ -33,7 +33,7 @@ class CNext{
 	public static $arPresetsList = array();
 	private static $arMetaParams = array();
 
-	function Check(){}
+	public static function Check(){}
 
 	public static function isPageSpeedTest(){
 		return isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) && strpos($_SERVER['HTTP_USER_AGENT'], 'Lighthouse') !== false;
@@ -241,13 +241,13 @@ class CNext{
 								<?else:?>
 									<?if($arResult['DISPLAY_PROPERTIES']['FORM_ORDER']['VALUE_XML_ID'] == 'YES'):?>
 										<span>
-											<span class="btn btn-default animate-load" data-event="jqm" data-param-form_id="<?=($arParams["FORM_ID_ORDER_SERVISE"] ? $arParams["FORM_ID_ORDER_SERVISE"] : 'SERVICES');?>" data-name="order_services" data-autoload-service="<?=self::formatJsName($arResult['NAME']);?>" data-autoload-project="<?=self::formatJsName($arResult['NAME']);?>" data-autoload-product="<?=self::formatJsName($arResult['NAME']);?>"><span><?=(strlen($arParams['S_ORDER_SERVISE']) ? $arParams['S_ORDER_SERVISE'] : Loc::getMessage('S_ORDER_SERVISE'))?></span></span>
+											<span class="btn btn-default animate-load" data-event="jqm" data-param-form_id="<?=($arParams["FORM_ID_ORDER_SERVISE"] ? $arParams["FORM_ID_ORDER_SERVISE"] : 'SERVICES');?>" data-name="order_services" data-autoload-service="<?=self::formatJsName($arResult['NAME']);?>" data-autoload-project="<?=self::formatJsName($arResult['NAME']);?>" data-autoload-product="<?=self::formatJsName($arResult['NAME']);?>"><span><?=($arParams['S_ORDER_SERVISE'] && strlen($arParams['S_ORDER_SERVISE']) ? $arParams['S_ORDER_SERVISE'] : Loc::getMessage('S_ORDER_SERVISE'))?></span></span>
 										</span>
 									<?endif;?>
 
 									<?if($arResult['DISPLAY_PROPERTIES']['FORM_QUESTION']['VALUE_XML_ID'] == 'YES'):?>
 										<span>
-											<span class="btn btn-default white animate-load" data-event="jqm" data-param-form_id="ASK" data-autoload-need_product="<?=self::formatJsName($arResult['NAME']);?>" data-name="question"><span><?=(strlen($arParams['S_ASK_QUESTION']) ? $arParams['S_ASK_QUESTION'] : Loc::getMessage('S_ASK_QUESTION'))?></span></span>
+											<span class="btn btn-default white animate-load" data-event="jqm" data-param-form_id="ASK" data-autoload-need_product="<?=self::formatJsName($arResult['NAME']);?>" data-name="question"><span><?=($arParams['S_ASK_QUESTION'] && strlen($arParams['S_ASK_QUESTION']) ? $arParams['S_ASK_QUESTION'] : Loc::getMessage('S_ASK_QUESTION'))?></span></span>
 										</span>
 									<?endif;?>
 								<?endif;?>
@@ -543,7 +543,7 @@ class CNext{
 				{
 					foreach($arValues as $optionCode => $arOption)
 					{
-						if(!is_array($arOption))
+						if(!is_array($arOption) && is_string($arOption))
 							$arValues[$optionCode] = str_replace('#SITE_DIR#', $SITE_DIR, $arOption);
 					}
 				}
@@ -554,7 +554,7 @@ class CNext{
 	}
 
 	public static function GetFrontParametrsValues($SITE_ID){
-		if(!strlen($SITE_ID))
+		if(!$SITE_ID || !strlen($SITE_ID))
 			$SITE_ID = SITE_ID;
 
 		$arBackParametrs = self::GetBackParametrsValues($SITE_ID);
@@ -975,7 +975,7 @@ class CNext{
 		<?
 		$basketUrl = trim($arTheme['BASKET_PAGE_URL']['VALUE']);
 		$compareUrl = trim($arTheme['COMPARE_PAGE_URL']['VALUE']);
-		$bShowBasket = (strlen($basketUrl) && self::getShowBasket());
+		$bShowBasket = ($basketUrl && strlen($basketUrl) && self::getShowBasket());
 		static $mbasket_call;
 
 		$iCalledID = ++$mbasket_call;
@@ -1246,7 +1246,7 @@ class CNext{
 	}
 
 	public static function GetDirMenuParametrs($dir){
-		if(strlen($dir)){
+		if($dir && strlen($dir)){
 			$file = str_replace('//', '/', $dir.'/.section.php');
 			if(file_exists($file)){
 				@include($file);
@@ -1259,7 +1259,7 @@ class CNext{
 
 	public static function FormatNewsUrl($arItem){
     	$url = $arItem['DETAIL_PAGE_URL'];
-    	if(strlen($arItem['DISPLAY_PROPERTIES']['REDIRECT']['VALUE']))
+    	if($arItem['DISPLAY_PROPERTIES']['REDIRECT']['VALUE'] && strlen($arItem['DISPLAY_PROPERTIES']['REDIRECT']['VALUE']))
 		{
 			$url = $arItem['DISPLAY_PROPERTIES']['REDIRECT']['VALUE'];
 			return $url;
@@ -1402,7 +1402,9 @@ class CNext{
 				{
 					if($optionsSiteID)
 					{
-						if($arForms = CNextCache::CForm_GetList($by = array('by' => 's_id', 'CACHE' => array('TAG' => 'forms')), $order = 'asc', array('SITE' => $optionsSiteID, 'SITE_EXACT_MATCH' => 'Y'), $is_filtered))
+						$by = array('by' => 's_id', 'CACHE' => array('TAG' => 'forms'));
+						$order = 'asc';
+						if($arForms = CNextCache::CForm_GetList($by, $order, array('SITE' => $optionsSiteID, 'SITE_EXACT_MATCH' => 'Y'), $is_filtered))
 						{
 							foreach($arForms as $arForm)
 								$FORMS_GOALS_LIST .= $arForm['NAME'].' - <i>goal_webform_success_'.$arForm['ID'].'</i><br />';
@@ -1425,7 +1427,7 @@ class CNext{
 					<?else:?>
 						<?=$optionName.($optionCode == "BASE_COLOR_CUSTOM" ? ' #' : '')?>
 					<?endif;?>
-					<?if(strlen($optionSup_text)):?>
+					<?if($optionSup_text && strlen($optionSup_text)):?>
 						<span class="required"><sup><?=$optionSup_text?></sup></span>
 					<?endif;?>
 				</td>
@@ -1531,7 +1533,7 @@ class CNext{
 				?>
 
 				<?if($optionType == "checkbox"):?>
-					<input type="checkbox" <?=((isset($arOption['DEPENDENT_PARAMS']) && $arOption['DEPENDENT_PARAMS']) ? "class='depend-check'" : "");?> <?=$optionController?> id="<?=htmlspecialcharsbx($optionCode)."_".$optionsSiteID?>" name="<?=htmlspecialcharsbx($optionCode)."_".$optionsSiteID?>" value="Y" <?=$optionChecked?> <?=$optionDisabled?> <?=(strlen($optionDefault) ? $optionDefault : "")?>>
+					<input type="checkbox" <?=((isset($arOption['DEPENDENT_PARAMS']) && $arOption['DEPENDENT_PARAMS']) ? "class='depend-check'" : "");?> <?=$optionController?> id="<?=htmlspecialcharsbx($optionCode)."_".$optionsSiteID?>" name="<?=htmlspecialcharsbx($optionCode)."_".$optionsSiteID?>" value="Y" <?=$optionChecked?> <?=$optionDisabled?> <?=($optionDefault && strlen($optionDefault) ? $optionDefault : "")?>>
 				<?elseif($optionType == "text" || $optionType == "password"):?>
 					<input type="<?=$optionType?>" <?=((isset($arOption['PARAMS']) && isset($arOption['PARAMS']['WIDTH'])) ? 'style="width:'.$arOption['PARAMS']['WIDTH'].'"' : '');?> <?=$optionController?> size="<?=$optionSize?>" maxlength="255" value="<?=htmlspecialcharsbx($optionVal)?>" name="<?=htmlspecialcharsbx($optionCode)."_".$optionsSiteID?>" <?=$optionDisabled?> <?=($optionCode == "password" ? "autocomplete='off'" : "")?>>
 				<?elseif($optionType == "selectbox"):?>
@@ -2090,7 +2092,7 @@ class CNext{
 				if($arTheme['VIEWED_TYPE'] == 'LOCAL')
 					CJSCore::Init(array('ls'));
 
-				if((!isset($_SERVER['HTTP_X_REQUESTED_WITH']) ||(isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) != 'xmlhttprequest')) && (strtolower($_REQUEST['ajax']) != 'y'))
+				if((!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) != 'xmlhttprequest')) && (!isset($_REQUEST['ajax']) || (isset($_REQUEST['ajax']) && strtolower($_REQUEST['ajax']) != 'y')))
 				{
 					$APPLICATION->AddHeadScript(SITE_TEMPLATE_PATH.'/js/video_banner.js');
 					$APPLICATION->AddHeadScript(SITE_TEMPLATE_PATH.'/js/main.js');
@@ -2098,7 +2100,7 @@ class CNext{
 				}
 			}
 
-			if(strlen($arTheme['FAVICON_IMAGE'])){
+			if($arTheme['FAVICON_IMAGE'] && strlen($arTheme['FAVICON_IMAGE'])){
 				$file_ext = pathinfo($arTheme['FAVICON_IMAGE'], PATHINFO_EXTENSION);
 				$fav_ext = $file_ext ? $file_ext : 'ico';
 				$fav_type = '';
@@ -2127,7 +2129,7 @@ class CNext{
 				$APPLICATION->AddHeadString('<link rel="shortcut icon" href="'.$arTheme['FAVICON_IMAGE'].'" type="'.$fav_type.'" />', true);
 			}
 
-			if(strlen($arTheme['APPLE_TOUCH_ICON_IMAGE']))
+			if($arTheme['APPLE_TOUCH_ICON_IMAGE'] && strlen($arTheme['APPLE_TOUCH_ICON_IMAGE']))
 				$APPLICATION->AddHeadString('<link rel="apple-touch-icon" sizes="180x180" href="'.$arTheme['APPLE_TOUCH_ICON_IMAGE'].'" />', true);
 
 			CJSCore::Init(array('jquery2'));
@@ -2406,13 +2408,13 @@ class CNext{
     	return $arResult;
     }
 
-    protected function IsComponentTemplateHasModuleElementsPageBlocksParam($templateName, $arExtParams = array()){
+    protected static function IsComponentTemplateHasModuleElementsPageBlocksParam($templateName, $arExtParams = array()){
     	$section_param = ((isset($arExtParams['SECTION']) && $arExtParams['SECTION']) ? $arExtParams['SECTION'] : 'SECTION');
     	$template_param = ((isset($arExtParams['OPTION']) && $arExtParams['OPTION']) ? $arExtParams['OPTION'] : strtoupper($templateName));
 	    return $templateName && isset(self::$arParametrsList[$section_param]['OPTIONS'][$template_param.'_PAGE']);
     }
 
-    protected function IsComponentTemplateHasModuleElementPageBlocksParam($templateName, $arExtParams = array()){
+    protected static function IsComponentTemplateHasModuleElementPageBlocksParam($templateName, $arExtParams = array()){
     	$section_param = ((isset($arExtParams['SECTION']) && $arExtParams['SECTION']) ? $arExtParams['SECTION'] : 'SECTION');
     	$template_param = ((isset($arExtParams['OPTION']) && $arExtParams['OPTION']) ? $arExtParams['OPTION'] : strtoupper($templateName));
 	    return $templateName && isset(self::$arParametrsList[$section_param]['OPTIONS'][$template_param.'_PAGE_DETAIL']);
@@ -2496,7 +2498,7 @@ class CNext{
         if($arVariables['ELEMENT_ID']){
             $arFilter['ID'] = $arVariables['ELEMENT_ID'];
         }
-        elseif(strlen($arVariables['ELEMENT_CODE'])){
+        elseif($arVariables['ELEMENT_CODE'] && strlen($arVariables['ELEMENT_CODE'])){
             $arFilter['CODE'] = $arVariables['ELEMENT_CODE'];
         }
 		if($arVariables['SECTION_ID']){
@@ -2508,7 +2510,7 @@ class CNext{
         if(!$arFilter['SECTION_ID'] && !$arFilter['SECTION_CODE']){
             unset($arFilter['SECTION_GLOBAL_ACTIVE']);
         }
-        if(strlen($arParams['FILTER_NAME'])){
+        if($arParams['FILTER_NAME'] && strlen($arParams['FILTER_NAME'])){
         	if($GLOBALS[$arParams['FILTER_NAME']]){
 				$arFilter = array_merge($arFilter, $GLOBALS[$arParams['FILTER_NAME']]);
 			}
@@ -2524,7 +2526,7 @@ class CNext{
 		if($arVariables['SECTION_ID']){
 			$arFilter['ID'] = $arVariables['SECTION_ID'];
 		}
-		if(strlen($arVariables['SECTION_CODE'])){
+		if($arVariables['SECTION_CODE'] && strlen($arVariables['SECTION_CODE'])){
 			$arFilter['CODE'] = $arVariables['SECTION_CODE'];
 		}
 		if(!$arVariables['SECTION_ID'] && !strlen($arFilter['CODE'])){
@@ -2541,7 +2543,7 @@ class CNext{
 		if(!$arFilter['SECTION_ID'] = ($CurrentSectionID !== false ? $CurrentSectionID : ($arVariables['SECTION_ID'] ? $arVariables['SECTION_ID'] : false))){
 			unset($arFilter['SECTION_GLOBAL_ACTIVE']);
 		}
-		if(strlen($arParams['FILTER_NAME'])){
+		if($arParams['FILTER_NAME'] && strlen($arParams['FILTER_NAME'])){
 			$GLOBALS[$arParams['FILTER_NAME']] = (array)$GLOBALS[$arParams['FILTER_NAME']];
 			foreach($arUnsetFilterFields = array('SECTION_ID', 'SECTION_CODE', 'SECTION_ACTIVE', 'SECTION_GLOBAL_ACTIVE') as $filterUnsetField){
 				foreach($GLOBALS[$arParams['FILTER_NAME']] as $filterField => $filterValue){
@@ -2704,7 +2706,7 @@ class CNext{
 			if(!$page)
 			{
 				$arOptions = self::GetBackParametrsValues(SITE_ID);
-				if(!strlen($arOptions['BASKET_PAGE_URL']))
+				if(!$arOptions['BASKET_PAGE_URL'] || !strlen($arOptions['BASKET_PAGE_URL']))
 					$arOptions['BASKET_PAGE_URL'] = SITE_DIR.'basket/';
 				$page = $arOptions['BASKET_PAGE_URL'];
 			}
@@ -2722,7 +2724,7 @@ class CNext{
 			if(!$page)
 			{
 				$arOptions = self::GetBackParametrsValues(SITE_ID);
-				if(!strlen($arOptions['CATALOG_PAGE_URL']))
+				if(!$arOptions['CATALOG_PAGE_URL'] && !strlen($arOptions['CATALOG_PAGE_URL']))
 					$arOptions['CATALOG_PAGE_URL'] = SITE_DIR.'catalog/';
 				$page = $arOptions['CATALOG_PAGE_URL'];
 			}
@@ -2740,7 +2742,7 @@ class CNext{
 			if(!$page)
 			{
 				$arOptions = self::GetBackParametrsValues(SITE_ID);
-				if(!strlen($arOptions['ORDER_PAGE_URL']))
+				if(!$arOptions['ORDER_PAGE_URL'] || !strlen($arOptions['ORDER_PAGE_URL']))
 					$arOptions['ORDER_PAGE_URL'] = SITE_DIR.'order/';
 				$page = $arOptions['ORDER_PAGE_URL'];
 			}
@@ -2758,7 +2760,7 @@ class CNext{
 			if(!$page)
 			{
 				$arOptions = self::GetBackParametrsValues(SITE_ID);
-				if(!strlen($arOptions['PERSONAL_PAGE_URL']))
+				if(!$arOptions['PERSONAL_PAGE_URL'] || !strlen($arOptions['PERSONAL_PAGE_URL']))
 					$arOptions['PERSONAL_PAGE_URL'] = SITE_DIR.'personal/';
 				$page = $arOptions['PERSONAL_PAGE_URL'];
 			}
@@ -2820,7 +2822,7 @@ class CNext{
 		if(isset(self::$arParametrsList['MAIN']['OPTIONS']['BASE_COLOR_CUSTOM']))
 		{
 			$baseColorCustom = $arBackParametrs['BASE_COLOR_CUSTOM'] = str_replace('#', '', $arBackParametrs['BASE_COLOR_CUSTOM']);
-			if($arBackParametrs['THEME_SWITCHER'] === 'Y' && strlen($_SESSION['THEME'][SITE_ID]['BASE_COLOR_CUSTOM']))
+			if($arBackParametrs['THEME_SWITCHER'] === 'Y' && $_SESSION['THEME'][SITE_ID]['BASE_COLOR_CUSTOM'] && strlen($_SESSION['THEME'][SITE_ID]['BASE_COLOR_CUSTOM']))
 				$baseColorCustom = $_SESSION['THEME'][SITE_ID]['BASE_COLOR_CUSTOM'] = str_replace('#', '', $_SESSION['THEME'][SITE_ID]['BASE_COLOR_CUSTOM']);
 		}
 
@@ -5691,8 +5693,10 @@ class CNext{
 				<?$APPLICATION->IncludeComponent( "bitrix:sale.basket.basket.line", "actual", Array(
 					"PATH_TO_BASKET" => SITE_DIR."basket/",
 					"PATH_TO_ORDER" => SITE_DIR."order/",
+					"PATH_TO_PERSONAL" => SITE_DIR."personal/",
+					"PATH_TO_PROFILE" => SITE_DIR."personal/",
 					"SHOW_DELAY" => "Y",
-					"SHOW_PRODUCTS"=>"Y",
+					"SHOW_PRODUCTS"=>"N",
 					"SHOW_EMPTY_VALUES" => "Y",
 					"SHOW_NOTAVAIL" => "N",
 					"SHOW_SUBSCRIBE" => "N",
@@ -6098,7 +6102,7 @@ class CNext{
 		if($bRestarted)
 			die();
 
-		if((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || (strtolower($_REQUEST['ajax']) == 'y'))
+		if((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || (isset($_REQUEST['ajax']) && strtolower($_REQUEST['ajax']) == 'y'))
 		{
 			$APPLICATION->RestartBuffer();
 			$bRestarted = true;
@@ -6274,11 +6278,11 @@ class CNext{
 		return $arTemplate;
 	}
 
-	function __AdmSettingsDrawCustomRow($html){
+	public static function __AdmSettingsDrawCustomRow($html){
 		echo '<tr><td colspan="2">'.$html.'</td></tr>';
 	}
 
-	protected function __ShowFilePropertyField($name, $arOption, $values){
+	protected static function __ShowFilePropertyField($name, $arOption, $values){
 		global $bCopy, $historyId;
 
 		if(!is_array($values)){
@@ -6627,11 +6631,11 @@ class CNext{
 
 		// check Open Graph required meta properties
 		$addr = (CMain::IsHTTPS() ? 'https' : 'http').'://'.$_SERVER['HTTP_HOST'];
-		if(!strlen(self::$arMetaParams['og:title']))
+		if(self::$arMetaParams['og:title'] && !strlen(self::$arMetaParams['og:title']))
 			self::$arMetaParams['og:title'] = $PageMetaTitleBrowser;
-		if(!strlen(self::$arMetaParams['og:type']))
+		if(self::$arMetaParams['og:type'] && !strlen(self::$arMetaParams['og:type']))
 			self::$arMetaParams['og:type'] = 'website';
-		if(!strlen(self::$arMetaParams['og:image']))
+		if(self::$arMetaParams['og:image'] && !strlen(self::$arMetaParams['og:image']))
 		{
 			$logo = self::GetFrontParametrValue("LOGO_IMAGE", SITE_ID, false);
 			if($logo)
@@ -6641,9 +6645,9 @@ class CNext{
 			else
 				self::$arMetaParams['og:image'] = SITE_DIR.'logo.png'; // site logo
 		}
-		if(!strlen(self::$arMetaParams['og:url']))
+		if(self::$arMetaParams['og:url'] && !strlen(self::$arMetaParams['og:url']))
 			self::$arMetaParams['og:url'] = $_SERVER['REQUEST_URI'];
-		if(!strlen(self::$arMetaParams['og:description']))
+		if(self::$arMetaParams['og:description'] && !strlen(self::$arMetaParams['og:description']))
 			self::$arMetaParams['og:description'] = (strlen($PageMetaDescription) ? $PageMetaDescription : $DirMetaDescription);
 
 		if(self::$arMetaParams['og:description'])
@@ -7766,7 +7770,7 @@ class CNext{
 		return true;
 	}
 
-	public function checkMask($mask_exc = ''){
+	public static function checkMask($mask_exc = ''){
 		if($mask_exc)
 		{
 			$request = Application::getInstance()->getContext()->getServer();
@@ -7792,7 +7796,7 @@ class CNext{
 		return false;
 	}
 
-	public function SortBySearchRank($searchQuery, $arElements, $arParams){
+	public static function SortBySearchRank($searchQuery, $arElements, $arParams){
 		$arResult = array();
 
 		if($arElements){
@@ -7854,7 +7858,7 @@ class CNext{
 		return $arResult;
 	}
 
-	public function SortBySearchOrder($arElementsIDsSorted, $arItemsToSort){
+	public static function SortBySearchOrder($arElementsIDsSorted, $arItemsToSort){
 		$arResult = array();
 
 		if($arItemsToSort){

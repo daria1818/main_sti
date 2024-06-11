@@ -2,8 +2,6 @@
 
 namespace Sprint\Migration\Helpers\Traits\UserOptions;
 
-use Sprint\Migration\Exceptions\HelperException;
-
 trait UserTrait
 {
     public function getUserGridId()
@@ -11,9 +9,6 @@ trait UserTrait
         return 'tbl_user';
     }
 
-    /**
-     * @throws HelperException
-     */
     public function exportUserList()
     {
         return $this->exportList([
@@ -21,9 +16,6 @@ trait UserTrait
         ]);
     }
 
-    /**
-     * @throws HelperException
-     */
     public function buildUserList($listData = [])
     {
         return $this->buildList($listData, [
@@ -31,9 +23,6 @@ trait UserTrait
         ]);
     }
 
-    /**
-     * @throws HelperException
-     */
     public function saveUserList($listData = [])
     {
         return $this->saveList($listData, [
@@ -46,9 +35,6 @@ trait UserTrait
         return $this->saveGrid($this->getUserGridId(), $params);
     }
 
-    /**
-     * @throws HelperException
-     */
     public function exportUserForm()
     {
         return $this->exportForm([
@@ -56,9 +42,6 @@ trait UserTrait
         ]);
     }
 
-    /**
-     * @throws HelperException
-     */
     public function buildUserForm($formData = [])
     {
         $this->buildForm($formData, [
@@ -66,9 +49,6 @@ trait UserTrait
         ]);
     }
 
-    /**
-     * @throws HelperException
-     */
     public function saveUserForm($formData = [])
     {
         $this->saveForm($formData, [

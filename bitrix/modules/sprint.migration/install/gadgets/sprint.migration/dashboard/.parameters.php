@@ -21,9 +21,7 @@ $configValues = [];
 foreach ($configs as $config) {
     $configValues[$config['name']] = $config['title'];
 
-    $schemas = (new SchemaManager(
-        new VersionConfig($config['name'])
-    ))->getEnabledSchemas();
+    $schemas = (new SchemaManager($config['name']))->getEnabledSchemas();
     foreach ($schemas as $schema) {
         $schemaValues[$schema->getName()] = $schema->getTitle();
     }

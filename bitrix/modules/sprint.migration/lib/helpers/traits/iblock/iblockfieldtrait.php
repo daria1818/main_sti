@@ -65,6 +65,17 @@ trait IblockFieldTrait
             return $ok;
         }
 
+        if ($this->getMode('out_equal')) {
+            $this->out(
+                Locale::getMessage(
+                    'IB_FIELDS_EQUAL',
+                    [
+                        '#NAME#' => $iblockId,
+                    ]
+                )
+            );
+        }
+
         return true;
     }
 
@@ -120,15 +131,35 @@ trait IblockFieldTrait
 
     protected function prepareExportIblockFields($fields)
     {
-        return array_filter($fields, function ($field, $code) {
-            return ($field['VISIBLE'] != 'N');
-        }, ARRAY_FILTER_USE_BOTH);
+        if (empty($fields)) {
+            return $fields;
+        }
+
+        $exportFields = [];
+        foreach ($fields as $code => $field) {
+            if ($field['VISIBLE'] == 'N' || preg_match('/^(LOG_)/', $code)) {
+                continue;
+            }
+            $exportFields[$code] = $field;
+        }
+
+        return $exportFields;
     }
 
     protected function prepareExportIblockElementFields($fields)
     {
-        return array_filter($fields, function ($field, $code) {
-            return !($field['VISIBLE'] == 'N' || preg_match('/^(SECTION_|LOG_)/', $code));
-        },ARRAY_FILTER_USE_BOTH);
+        if (empty($fields)) {
+            return $fields;
+        }
+
+        $exportFields = [];
+        foreach ($fields as $code => $field) {
+            if ($field['VISIBLE'] == 'N' || preg_match('/^(SECTION_|LOG_)/', $code)) {
+                continue;
+            }
+            $exportFields[$code] = $field;
+        }
+
+        return $exportFields;
     }
 }

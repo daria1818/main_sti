@@ -3,7 +3,6 @@
 namespace Sprint\Migration\Builders;
 
 use Sprint\Migration\Exceptions\HelperException;
-use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RebuildException;
 use Sprint\Migration\Locale;
 use Sprint\Migration\Module;
@@ -20,15 +19,12 @@ class UserGroupBuilder extends VersionBuilder
     {
         $this->setTitle(Locale::getMessage('BUILDER_UserGroupExport1'));
         $this->setDescription(Locale::getMessage('BUILDER_UserGroupExport2'));
-        $this->setGroup('Main');
-
         $this->addVersionFields();
     }
 
     /**
-     * @throws RebuildException
      * @throws HelperException
-     * @throws MigrationException
+     * @throws RebuildException
      */
     protected function execute()
     {
@@ -42,7 +38,7 @@ class UserGroupBuilder extends VersionBuilder
                 'multiple'    => 1,
                 'value'       => [],
                 'width'       => 250,
-                'select'      => $this->getUserGroupsSelect(),
+                'select'      => $this->getUserGroups(),
             ]
         );
 
@@ -70,23 +66,22 @@ class UserGroupBuilder extends VersionBuilder
         );
     }
 
-    protected function getUserGroupsSelect(): array
+    protected function getUserGroups()
     {
         $helper = $this->getHelperManager();
 
-        $items = array_filter($helper->UserGroup()->getGroups(), function ($item) {
-            return !empty($item['STRING_ID']);
-        });
+        $groups = $helper->UserGroup()->getGroups();
 
-        $items = array_map(function ($item) {
-            $item['NAME'] = '[' . $item['STRING_ID'] . '] ' . $item['NAME'];
-            return $item;
-        }, $items);
+        $result = [];
+        foreach ($groups as $group) {
+            if (!empty($group['STRING_ID'])) {
+                $result[] = [
+                    'title' => '[' . $group['STRING_ID'] . '] ' . $group['NAME'],
+                    'value' => $group['ID'],
+                ];
+            }
+        }
 
-        return $this->createSelect(
-            $items,
-            'ID',
-            'NAME'
-        );
+        return $result;
     }
 }

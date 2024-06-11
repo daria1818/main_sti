@@ -2,67 +2,59 @@
 
 namespace Sprint\Migration\Tables;
 
-use Sprint\Migration\Exceptions\MigrationException;
-use Sprint\Migration\Traits\CurrentUserTrait;
+use Bitrix\Main\DB\SqlQueryException;
 
 class VersionTable extends AbstractTable
 {
-    use CurrentUserTrait;
-
-    const DATE_FORMAT = 'Y-m-d H:i:s';
-    protected int $tableVersion = 4;
+    protected $tableVersion = 3;
 
     /**
-     * @throws MigrationException
+     * @throws SqlQueryException
+     * @return array
      */
-    public function getRecords(): array
+    public function getRecords()
     {
-        $records = $this->query('SELECT * FROM `#TABLE1#`')->fetchAll();
-
-        return array_map(function ($record) {
-            return $this->prepareFetch($record);
-        }, $records);
+        return $this->query('SELECT * FROM `#TABLE1#`')->fetchAll();
     }
 
     /**
-     * @throws MigrationException
+     * @param $versionName
+     *
+     * @throws SqlQueryException
+     * @return array|false
      */
-    public function getRecord(string $versionName): array
+    public function getRecord($versionName)
     {
-        $record = $this->query(
-            'SELECT * FROM `#TABLE1#` WHERE `version` = "%s" LIMIT 1',
+        return $this->query(
+            'SELECT * FROM `#TABLE1#` WHERE `version` = "%s"',
             $this->forSql($versionName)
         )->fetch();
-
-        return $record ? $this->prepareFetch($record) : [];
     }
 
     /**
-     * @throws MigrationException
+     * @param $meta
+     *
+     * @throws SqlQueryException
      */
-    public function addRecord(array $record)
+    public function addRecord($meta)
     {
-        $version = $this->forSql($record['version']);
-        $hash = $this->forSql($record['hash']);
-        $tag = $this->forSql($record['tag']);
-
-        $meta = $this->forSql(serialize([
-            'created_by' => $this->getCurrentUserLogin(),
-            'created_at' => date(VersionTable::DATE_FORMAT),
-        ]));
+        $version = $this->forSql($meta['version']);
+        $hash = $this->forSql($meta['hash']);
+        $tag = $this->forSql($meta['tag']);
 
         $this->query(
-            'INSERT INTO `#TABLE1#` (`version`, `hash`, `tag`, `meta`) ' .
-            'VALUES ("%s", "%s", "%s", "%s") ' .
-            'ON DUPLICATE KEY UPDATE `hash` = "%s", `tag` = "%s"',
-            $version, $hash, $tag, $meta, $hash, $tag
+            'INSERT INTO `#TABLE1#` (`version`, `hash`, `tag`) VALUES ("%s", "%s", "%s") 
+                    ON DUPLICATE KEY UPDATE `hash` = "%s", `tag` = "%s"',
+            $version, $hash, $tag, $hash, $tag
         );
     }
 
     /**
-     * @throws MigrationException
+     * @param $meta
+     *
+     * @throws SqlQueryException
      */
-    public function removeRecord(array $meta)
+    public function removeRecord($meta)
     {
         $version = $this->forSql($meta['version']);
 
@@ -70,18 +62,21 @@ class VersionTable extends AbstractTable
     }
 
     /**
-     * @throws MigrationException
+     * @param        $version
+     * @param string $tag
+     *
+     * @throws SqlQueryException
      */
-    public function updateTag(string $versionName, string $tag = '')
+    public function updateTag($version, $tag = '')
     {
-        $versionName = $this->forSql($versionName);
+        $version = $this->forSql($version);
         $tag = $this->forSql($tag);
 
-        $this->query('UPDATE `#TABLE1#` SET `tag` = "%s" WHERE `version` = "%s"', $tag, $versionName);
+        $this->query('UPDATE `#TABLE1#` SET `tag` = "%s" WHERE `version` = "%s"', $tag, $version);
     }
 
     /**
-     * @throws MigrationException
+     * @throws SqlQueryException
      */
     protected function createTable()
     {
@@ -103,25 +98,13 @@ class VersionTable extends AbstractTable
         if (empty($this->query('SHOW COLUMNS FROM `#TABLE1#` LIKE "tag"')->fetch())) {
             $this->query('ALTER TABLE `#TABLE1#` ADD COLUMN `tag` VARCHAR(50) NULL AFTER `hash`');
         }
-
-        //tableVersion 4
-        $this->query('ALTER TABLE `#TABLE1#` MODIFY `hash` VARCHAR(255)');
-        if (empty($this->query('SHOW COLUMNS FROM `#TABLE1#` LIKE "meta"')->fetch())) {
-            $this->query('ALTER TABLE `#TABLE1#` ADD COLUMN `meta` TEXT NULL AFTER `tag`');
-        }
     }
 
     /**
-     * @throws MigrationException
+     * @throws SqlQueryException
      */
     protected function dropTable()
     {
         $this->query('DROP TABLE IF EXISTS `#TABLE1#`;');
-    }
-
-    private function prepareFetch(array $record): array
-    {
-        $record['meta'] = unserialize($record['meta']);
-        return $record;
     }
 }

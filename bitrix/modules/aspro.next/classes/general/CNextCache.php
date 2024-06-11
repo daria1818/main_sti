@@ -63,7 +63,7 @@ if(!class_exists("CNextCache")){
 			else{
 				$arRes = array();
 				$arResultGroupBy = array("GROUP" => $arOrder["CACHE"]["GROUP"], "MULTI" => $arOrder["CACHE"]["MULTI"], "RESULT" => $arOrder["CACHE"]["RESULT"]);
-				$urlTemplate = $arOrder["CACHE"]["URL_TEMPLATE"];
+				$urlTemplate = $arOrder["CACHE"]["URL_TEMPLATE"] ?? "";
 
 				$bCanMultiSection = !isset($arOrder["CACHE"]["CAN_MULTI_SECTION"]) || $arOrder["CACHE"]["CAN_MULTI_SECTION"] === 'Y';
 
@@ -195,7 +195,7 @@ if(!class_exists("CNextCache")){
 			else{
 				$arRes = array();
 				$arResultGroupBy = array("GROUP" => $arOrder["CACHE"]["GROUP"], "MULTI" => $arOrder["CACHE"]["MULTI"], "RESULT" => $arOrder["CACHE"]["RESULT"]);
-				$urlTemplate = $arOrder["CACHE"]["URL_TEMPLATE"];
+				$urlTemplate = $arOrder["CACHE"]["URL_TEMPLATE"] ?? '';
 				unset($arOrder["CACHE"]);
 
 				$dbRes = CIBlockSection::GetList($arOrder, $arFilter, $bIncCnt, $arSelectFields, $arNavStartParams);
@@ -380,7 +380,7 @@ if(!class_exists("CNextCache")){
 			return $arRes;
 		}
 
-		public static function CForm_GetList(&$by = array('CACHE' => array('MULTI' => 'Y', 'GROUP' => array(), 'RESULT' => array(), 'TAG' => '', 'PATH' => '', 'TIME' => 36000000)), &$order = 'asc', $arFilter = array(), &$is_filtered, $min_permission = 10){
+		public static function CForm_GetList(&$by = array('CACHE' => array('MULTI' => 'Y', 'GROUP' => array(), 'RESULT' => array(), 'TAG' => '', 'PATH' => '', 'TIME' => 36000000)), &$order = 'asc', $arFilter = array(), &$is_filtered = false, $min_permission = 10){
 			CModule::IncludeModule('form');
 			if(!is_array($by)){
 				$by = array($by);
@@ -497,11 +497,11 @@ if(!class_exists("CNextCache")){
 		}
 
 		private static function _MakeResultTreeArray($arParams, &$arItem, &$arItemResval, &$to){
+			$to = $to ? $to : [];
 			if($arParams["GROUP"]){
 				$newto = $to;
 				$FieldID = array_shift($arParams["GROUP"]);
 				$arFieldValue = (is_array($arItem[$FieldID]) ? $arItem[$FieldID] : array($arItem[$FieldID]));
-
 				foreach($arFieldValue as $FieldValue){
 					if(!isset($to[$FieldValue])){
 						$to[$FieldValue] = false;
@@ -558,10 +558,10 @@ if(!class_exists("CNextCache")){
 			$cacheTag = $arCache["TAG"];
 			$cachePath = $arCache["PATH"];
 			$cacheTime = ($arCache["TIME"] > 0 ? $arCache["TIME"] : 36000000);
-			if(!strlen($cacheTag)){
+			if(!$cacheTag){
 				$cacheTag = "_notag";
 			}
-			if(!strlen($cachePath)){
+			if(!$cachePath){
 				$cachePath = "/CNextCache/".$moduleName."/".$functionName."/".$cacheTag."/";
 			}
 			return array($cacheTag, $cachePath, $cacheTime);
@@ -626,7 +626,7 @@ if(!class_exists("CNextCache")){
 							$item["IBLOCK_SECTION_ID"] = self::_GetElementSectionsArray($item["ID"]);
 						unset($item["~IBLOCK_SECTION_ID"]);
 					}
-					if(in_array("ElementValues", $arSelectFields) && isset($item["IBLOCK_ID"]))
+					if(is_array($arSelectFields) && in_array("ElementValues", $arSelectFields) && isset($item["IBLOCK_ID"]))
 					{
 						$ipropValues = new \Bitrix\Iblock\InheritedProperty\ElementValues($item["IBLOCK_ID"], $item["ID"]);
 						$item["IPROPERTY_VALUES"] = $ipropValues->getValues();

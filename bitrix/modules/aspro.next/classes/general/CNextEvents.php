@@ -16,10 +16,10 @@ class CNextEvents{
     const solutionName	= "next";
     const wizardID		= "aspro:next";
 
-	function ShowPanel(){
+	public static function ShowPanel(){
     }
 
-	function BeforeSendEvent(\Bitrix\Main\Event $event){
+	public static function BeforeSendEvent(\Bitrix\Main\Event $event){
 		if(isset($_REQUEST["ONE_CLICK_BUY"]) && method_exists('\Bitrix\Sale\Compatible\EventCompatibility', 'setDisableMailSend')){
 			\Bitrix\Sale\Compatible\EventCompatibility::setDisableMailSend(true);
 			if(method_exists('\Bitrix\Sale\Notify', 'setNotifyDisable'))
@@ -68,7 +68,7 @@ class CNextEvents{
 		$arCurrentRegion = array();
 	}
 
-	function OnFindSocialservicesUserHandler($arFields){
+	public static function OnFindSocialservicesUserHandler($arFields){
 		// check for user with email
 		if($arFields['EMAIL'])
 		{
@@ -135,7 +135,7 @@ class CNextEvents{
 		return false;
 	}
 
-	function OnAfterSocServUserAddHandler( $arFields ){
+	public static function OnAfterSocServUserAddHandler( $arFields ){
 		if($arFields["EMAIL"]){
 			global $USER;
 			$userEmail=$USER->GetEmail();
@@ -205,7 +205,7 @@ class CNextEvents{
 		}
 	}
 
-	function OnSaleComponentOrderProperties(&$arUserResult, $arRequest, $arParams, $arResult){
+	public static function OnSaleComponentOrderProperties(&$arUserResult, $arRequest, $arParams, $arResult){
 
 		if($arUserResult['ORDER_PROP'])
 		{
@@ -273,7 +273,7 @@ class CNextEvents{
 		}
 	}
 
-	function OnSaleComponentOrderOneStepComplete($ID, $arOrder, $arParams){
+	public static function OnSaleComponentOrderOneStepComplete($ID, $arOrder, $arParams){
 		$arOrderProps = array();
 		$resOrder = CSaleOrderPropsValue::GetList(array(), array('ORDER_ID' => $ID));
 		while($item = $resOrder->fetch())
@@ -321,7 +321,7 @@ class CNextEvents{
 		}
 	}
 
-	function correctInstall(){
+	public static function correctInstall(){
 		if(COption::GetOptionString(self::moduleID, "WIZARD_DEMO_INSTALLED") == "Y"){
 			if(CModule::IncludeModule("main")){
 				require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/general/wizard.php");
@@ -333,7 +333,7 @@ class CNextEvents{
 		}
 	}
 
-	function OnBeforeUserUpdateHandler(&$arFields){
+	public static function OnBeforeUserUpdateHandler(&$arFields){
 		$bTmpUser = false;
 		$bAdminSection = (defined('ADMIN_SECTION') && ADMIN_SECTION === true);
 
@@ -1794,7 +1794,7 @@ class CNextEvents{
 		return $arFields["URL"];
     }
 
-	function OnBeforeBasketUpdateHandler($ID, &$arFields){
+	public static function OnBeforeBasketUpdateHandler($ID, &$arFields){
 		global $arRegion;
 		if (!defined('ADMIN_SECTION') && $arFields['QUANTITY'] && $arRegion) {
 			//get PRODUCT_ID
@@ -1846,7 +1846,7 @@ class CNextEvents{
 		}
 	}
 
-	function OnGetOptimalPriceHandler($intProductID, $quantity = 1, $arUserGroups = array(), $renewal = "N", $priceList = array(), $siteID = false, $arDiscountCoupons = false){
+	public static function OnGetOptimalPriceHandler($intProductID, $quantity = 1, $arUserGroups = array(), $renewal = "N", $priceList = array(), $siteID = false, $arDiscountCoupons = false){
 		global $APPLICATION, $arRegion;
 		static $priceTypeCache = array();
 

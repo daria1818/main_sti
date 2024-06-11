@@ -3,8 +3,8 @@
 namespace Sprint\Migration\Exchange;
 
 use Sprint\Migration\AbstractExchange;
+use Sprint\Migration\Exceptions\ExchangeException;
 use Sprint\Migration\Exceptions\HelperException;
-use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RestartException;
 use Sprint\Migration\Locale;
 use XMLReader;
@@ -16,6 +16,7 @@ class HlblockElementsImport extends AbstractExchange
     /**
      * @param callable $converter
      *
+     * @throws ExchangeException
      * @throws RestartException
      * @throws HelperException
      */
@@ -27,22 +28,23 @@ class HlblockElementsImport extends AbstractExchange
         $params = $this->exchangeEntity->getRestartParams();
 
         if (!isset($params['total'])) {
-            if (!is_file($this->file)){
-                throw new HelperException(
-                    Locale::getMessage('ERR_EXCHANGE_FILE_NOT_FOUND', ['#FILE#' => $this->file])
-                );
-            }
+            $this->exchangeEntity->exitIf(
+                !is_file($this->file),
+                Locale::getMessage('ERR_EXCHANGE_FILE_NOT_FOUND')
+            );
 
             $reader = new XMLReader();
             $reader->open($this->getExchangeFile());
             $params['total'] = 0;
             $params['offset'] = 0;
-            $hlblockUid = '';
+            $params['hlblock_id'] = 0;
             $exchangeVersion = 0;
             while ($reader->read()) {
                 if ($this->isOpenTag($reader, 'items')) {
                     $exchangeVersion = (int)$reader->getAttribute('exchangeVersion');
-                    $hlblockUid = $reader->getAttribute('hlblockUid');
+                    $params['hlblock_id'] = $hblockExchange->getHlblockIdByUid(
+                        $reader->getAttribute('hlblockUid')
+                    );
                 }
                 if ($this->isOpenTag($reader, 'item')) {
                     $params['total']++;
@@ -51,13 +53,16 @@ class HlblockElementsImport extends AbstractExchange
             $reader->close();
 
             if (!$exchangeVersion || $exchangeVersion < self::EXCHANGE_VERSION) {
-                throw new HelperException(
+                $this->exchangeEntity->exitWithMessage(
                     Locale::getMessage('ERR_EXCHANGE_VERSION', ['#NAME#' => $this->getExchangeFile()])
                 );
             }
 
-            $params['hlblock_id'] = $hblockExchange->getHlblockIdByUid($hlblockUid);
-       }
+            $this->exchangeEntity->exitIfEmpty(
+                $params['hlblock_id'],
+                Locale::getMessage('ERR_HLBLOCK_NOT_FOUND', ['#HLBLOCK#' => $params['hlblock_id']])
+            );
+        }
 
         $reader = new XMLReader();
         $reader->open($this->getExchangeFile());

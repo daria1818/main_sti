@@ -1,15 +1,18 @@
 <?php
-if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED!==true)
+
+if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
 {
 	die();
 }
 
+use Bitrix\Crm\Activity\TodoPingSettingsProvider;
 use Bitrix\Crm\Integration\PullManager;
 use Bitrix\Crm\Kanban;
 use Bitrix\Crm\Kanban\EntityActivityCounter;
 use Bitrix\Crm\Order;
 use Bitrix\Crm\Service\Container;
 use Bitrix\Crm\Service\Timeline;
+use Bitrix\Crm\Settings\CounterSettings;
 use Bitrix\Main\Application;
 use Bitrix\Main\Entity\AddResult;
 use Bitrix\Main\Error;
@@ -37,6 +40,7 @@ class CrmKanbanComponent extends \CBitrixComponent
 
 	protected $currentUserID = 0;
 	protected $componentParams = [];
+	protected bool $needPrepareColumns = false;
 
 	public function onPrepareComponentParams($arParams): array
 	{
@@ -141,6 +145,10 @@ class CrmKanbanComponent extends \CBitrixComponent
 
 		$this->arParams['USER_ID'] = $this->currentUserID;
 		$this->arParams['LAYOUT_CURRENT_USER'] = Timeline\Layout\User::current()->toArray();
+		$this->arParams['PING_SETTINGS'] = (new TodoPingSettingsProvider(
+			$this->getEntityTypeId(),
+			$categoryId
+		))->fetchForJsComponent();
 		$this->arParams['CURRENCY'] = $this->componentParams['CURRENCY'];
 		$this->arParams['PATH_TO_IMPORT'] = $this->componentParams['PATH_TO_IMPORT'];
 
@@ -322,6 +330,12 @@ class CrmKanbanComponent extends \CBitrixComponent
 				}
 			}
 
+			if ($this->needPrepareColumns)
+			{
+				$this->getColumns(true);
+				$this->needPrepareColumns = false;
+			}
+
 			if ($this->arParams['IS_AJAX'] !== 'Y')
 			{
 				$uri = new Uri($request->getRequestUri());
@@ -349,6 +363,7 @@ class CrmKanbanComponent extends \CBitrixComponent
 		$this->arResult['CATEGORIES'] = $this->componentParams['CATEGORIES'];
 		$this->arResult['FIELDS_SECTIONS'] = $this->componentParams['FIELDS_SECTIONS'] ?? null;
 		//$this->arResult['STUB'] = $this->getStub(); TODO: исправить, когда по€в€тс€ актуальные тексты
+		$this->arResult['SHOW_ERROR_COUNTER_BY_ACTIVITY_RESPONSIBLE'] = $this->showErrorCounterByActivityResponsible();
 
 		$context = Application::getInstance()->getContext();
 		$request = $context->getRequest();
@@ -500,8 +515,7 @@ class CrmKanbanComponent extends \CBitrixComponent
 			return $this->arResult;
 		}
 
-		$this->arResult = array_merge($this->arResult, $this->getEntity()->getFieldsRestrictions());
-		
+		$this->arResult['RESTRICTED_FIELDS_ENGINE'] = $this->getEntity()->getFieldsRestrictionsEngine();
 		$this->arResult['SORT_SETTINGS'] = $this->getEntity()->getSortSettings();
 		$this->arResult['IS_LAST_ACTIVITY_ENABLED'] = $this->getEntity()->isLastActivityEnabled();
 		$GLOBALS['APPLICATION']->setTitle($this->getEntity()->getTitle());
@@ -1137,7 +1151,7 @@ class CrmKanbanComponent extends \CBitrixComponent
 		}
 
 		$statusKey = $this->statusKey;
-		$isStatusChanged = ($item[$statusKey] !== $status);
+		$isStatusChanged = (($item[$statusKey] ?? null) !== $status);
 		if(!$isStatusChanged)
 		{
 			return $result;
@@ -1157,7 +1171,7 @@ class CrmKanbanComponent extends \CBitrixComponent
 			return $result;
 		}
 
-		$this->getColumns(true);
+		$this->needPrepareColumns = true;
 
 		return $result;
 	}
@@ -1427,7 +1441,7 @@ class CrmKanbanComponent extends \CBitrixComponent
 		if ($type === CCrmOwnerType::QuoteName)
 		{
 			return [
-				'title' => Loc::getMessage('CRM_KANBAN_TITLE_QUOTE'),
+				'title' => Loc::getMessage('CRM_KANBAN_TITLE_QUOTE_MSGVER_1'),
 				'description' => Loc::getMessage('CRM_KANBAN_NO_DATA_TEXT')
 			];
 		}
@@ -1436,5 +1450,10 @@ class CrmKanbanComponent extends \CBitrixComponent
 			'title' => '',
 			'description' => Loc::getMessage('CRM_KANBAN_NO_DATA_TEXT')
 		];
+	}
+
+	private function showErrorCounterByActivityResponsible(): bool
+	{
+		return CounterSettings::getInstance()->useActivityResponsible();
 	}
 }

@@ -23,7 +23,8 @@ trait IblockTypeTrait
             return $item;
         }
 
-        throw new HelperException(
+        $this->throwException(
+            __METHOD__,
             Locale::getMessage(
                 'ERR_IB_TYPE_NOT_FOUND'
             )
@@ -43,7 +44,8 @@ trait IblockTypeTrait
             return $item['ID'];
         }
 
-        throw new HelperException(
+        $this->throwException(
+            __METHOD__,
             Locale::getMessage(
                 'ERR_IB_TYPE_NOT_FOUND'
             )
@@ -110,7 +112,7 @@ trait IblockTypeTrait
      */
     public function addIblockTypeIfNotExists($fields = [])
     {
-        $this->checkRequiredKeys($fields, ['ID']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['ID']);
 
         $iblockType = $this->getIblockType($fields['ID']);
         if ($iblockType) {
@@ -154,7 +156,7 @@ trait IblockTypeTrait
             return $fields['ID'];
         }
 
-        throw new HelperException($ib->LAST_ERROR);
+        $this->throwException(__METHOD__, $ib->LAST_ERROR);
     }
 
     /**
@@ -171,7 +173,7 @@ trait IblockTypeTrait
             return $iblockTypeId;
         }
 
-        throw new HelperException($ib->LAST_ERROR);
+        $this->throwException(__METHOD__, $ib->LAST_ERROR);
     }
 
     /**
@@ -203,7 +205,8 @@ trait IblockTypeTrait
             return true;
         }
 
-        throw new HelperException(
+        $this->throwException(
+            __METHOD__,
             Locale::getMessage(
                 'ERR_CANT_DELETE_IBLOCK_TYPE', [
                     '#NAME#' => $typeId,
@@ -246,7 +249,7 @@ trait IblockTypeTrait
      */
     public function saveIblockType($fields = [])
     {
-        $this->checkRequiredKeys($fields, ['ID']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['ID']);
 
         $item = $this->getIblockType($fields['ID']);
         $exists = $this->prepareExportIblockType($item);
@@ -283,7 +286,19 @@ trait IblockTypeTrait
             return $ok;
         }
 
-        return $this->getMode('test') ? true : $fields['ID'];
+        $ok = $this->getMode('test') ? true : $fields['ID'];
+        if ($this->getMode('out_equal')) {
+            $this->outIf(
+                $ok,
+                Locale::getMessage(
+                    'IB_TYPE_EQUAL',
+                    [
+                        '#NAME#' => $fields['ID'],
+                    ]
+                )
+            );
+        }
+        return $ok;
     }
 
     /**

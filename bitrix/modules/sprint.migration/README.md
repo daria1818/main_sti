@@ -65,7 +65,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/sprint.migration/tools
 
 `php bin/console sprint:migration`
 
-Пример регистрации бандла:
+Пример регистрации модуля:
 
 ```
 // app/AppKernel.php
@@ -78,19 +78,6 @@ public function registerBundles()
     );
     return $bundles;
 }
-```
-
-Пример без регистрации бандла, только команды в symfony/console
-```
-// bin/console
-use Sprint\Migration\SymfonyBundle\Command\ConsoleCommand;
-use Symfony\Component\Console\Application;
-
-$app = new Application();
-$app->add(new ConsoleCommand());
-
-$app->run();
-
 ```
 
 Классы модуля должны уже быть автозагружены, через `CModule::IncludeModule('sprint.migration')`

@@ -85,7 +85,7 @@ trait IblockSectionTrait
      * Сохраняет категорию инфоблока
      * Создаст если не было, обновит если существует (поиск по коду)
      *
-     * @param       $iblockId
+     * @param $iblockId
      * @param array $fields
      *
      * @throws HelperException
@@ -93,7 +93,7 @@ trait IblockSectionTrait
      */
     public function saveSection($iblockId, $fields)
     {
-        $this->checkRequiredKeys($fields, ['CODE']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE']);
 
         $item = $this->getSection($iblockId, $fields['CODE']);
         if (!empty($item['ID'])) {
@@ -106,7 +106,7 @@ trait IblockSectionTrait
     /**
      * Добавляет секцию инфоблока если она не существует
      *
-     * @param       $iblockId
+     * @param $iblockId
      * @param array $fields
      *
      * @throws HelperException
@@ -114,7 +114,7 @@ trait IblockSectionTrait
      */
     public function addSectionIfNotExists($iblockId, $fields)
     {
-        $this->checkRequiredKeys($fields, ['CODE']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE']);
 
         $item = $this->getSection($iblockId, $fields['CODE']);
         if ($item) {
@@ -156,13 +156,13 @@ trait IblockSectionTrait
             return $id;
         }
 
-        throw new HelperException($ib->LAST_ERROR);
+        $this->throwException(__METHOD__, $ib->LAST_ERROR);
     }
 
     /**
      * Обновляет секцию инфоблока если она существует
      *
-     * @param       $iblockId
+     * @param $iblockId
      * @param array $fields
      *
      * @throws HelperException
@@ -170,7 +170,7 @@ trait IblockSectionTrait
      */
     public function updateSectionIfExists($iblockId, $fields)
     {
-        $this->checkRequiredKeys($fields, ['CODE']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['CODE']);
 
         $item = $this->getSection($iblockId, $fields['CODE']);
         if (!$item) {
@@ -198,7 +198,7 @@ trait IblockSectionTrait
             return $sectionId;
         }
 
-        throw new HelperException($ib->LAST_ERROR);
+        $this->throwException(__METHOD__, $ib->LAST_ERROR);
     }
 
     /**
@@ -235,7 +235,7 @@ trait IblockSectionTrait
             return true;
         }
 
-        throw new HelperException($ib->LAST_ERROR);
+        $this->throwException(__METHOD__, $ib->LAST_ERROR);
     }
 
     /**
@@ -294,7 +294,8 @@ trait IblockSectionTrait
     {
         foreach ($tree as $item) {
             if (empty($item['NAME'])) {
-                throw new HelperException(
+                $this->throwException(
+                    __METHOD__,
                     Locale::getMessage(
                         'ERR_IB_SECTION_NAME_NOT_FOUND'
                     )
@@ -342,12 +343,13 @@ trait IblockSectionTrait
      * @param $sectionId
      *
      * @throws HelperException
-     * @return array
+     * @return string
      */
-    public function getSectionUniqFilterById($iblockId, $sectionId)
+    public function getSectionUniqNameById($iblockId, $sectionId)
     {
         if (empty($sectionId)) {
-            throw new HelperException(
+            $this->throwException(
+                __METHOD__,
                 Locale::getMessage(
                     'ERR_IB_SECTION_ID_EMPTY',
                     [
@@ -366,7 +368,8 @@ trait IblockSectionTrait
         )->Fetch();
 
         if (empty($section['ID'])) {
-            throw new HelperException(
+            $this->throwException(
+                __METHOD__,
                 Locale::getMessage(
                     'ERR_IB_SECTION_ID_NOT_FOUND',
                     [
@@ -377,20 +380,21 @@ trait IblockSectionTrait
             );
         }
 
-        return [
-            'NAME'        => $section['NAME'],
-            'DEPTH_LEVEL' => (int)$section['DEPTH_LEVEL'],
-            'CODE'        => $section['CODE'],
-        ];
+        return $section['NAME'] . '|' . (int)$section['DEPTH_LEVEL'];
     }
 
     /**
+     * @param $iblockId
+     * @param $uniqName
+     *
      * @throws HelperException
+     * @return int|mixed|string
      */
-    public function getSectionIdByUniqFilter($iblockId, $uniqFilter)
+    public function getSectionIdByUniqName($iblockId, $uniqName)
     {
-        if (empty($uniqFilter)) {
-            throw new HelperException(
+        if (empty($uniqName)) {
+            $this->throwException(
+                __METHOD__,
                 Locale::getMessage(
                     'ERR_IB_SECTION_ID_EMPTY',
                     [
@@ -400,24 +404,79 @@ trait IblockSectionTrait
             );
         }
 
-        $uniqFilter['IBLOCK_ID'] = $iblockId;
+        if (is_numeric($uniqName)) {
+            return $uniqName;
+        }
 
-        $section = CIBlockSection::GetList([], $uniqFilter)->Fetch();
+        list($sectionName, $depthLevel) = explode('|', $uniqName);
+
+        $section = CIBlockSection::GetList(
+            [],
+            [
+                'NAME'        => $sectionName,
+                'DEPTH_LEVEL' => $depthLevel,
+                'IBLOCK_ID'   => $iblockId,
+            ]
+        )->Fetch();
 
         if (empty($section['ID'])) {
-            throw new HelperException(
+            $this->throwException(
+                __METHOD__,
                 Locale::getMessage(
-                    'ERR_IB_SECTION_BY_FILTER_NOT_FOUND',
+                    'ERR_IB_SECTION_ON_LEVEL_NOT_FOUND',
                     [
-                        '#IBLOCK_ID#'   => $uniqFilter['IBLOCK_ID'],
-                        '#NAME#'        => $uniqFilter['NAME'],
-                        '#DEPTH_LEVEL#' => $uniqFilter['DEPTH_LEVEL'],
+                        '#SECTION_NAME#' => $sectionName,
+                        '#DEPTH_LEVEL#'  => $depthLevel,
                     ]
                 )
             );
         }
 
         return $section['ID'];
+    }
+
+    /**
+     * @param       $iblockId
+     * @param array $sectionIds
+     *
+     * @throws HelperException
+     * @return array
+     */
+    public function getSectionUniqNamesByIds($iblockId, $sectionIds = [])
+    {
+        $uniqNames = [];
+        $sectionIds = is_array($sectionIds) ? array_filter($sectionIds) : [];
+
+        if (empty($sectionIds)) {
+            return $uniqNames;
+        }
+        foreach ($sectionIds as $sectionId) {
+            $uniqNames[] = $this->getSectionUniqNameById($iblockId, $sectionId);
+        }
+
+        return $uniqNames;
+    }
+
+    /**
+     * @param       $iblockId
+     * @param array $uniqNames
+     *
+     * @throws HelperException
+     * @return array
+     */
+    public function getSectionIdsByUniqNames($iblockId, $uniqNames = [])
+    {
+        $ids = [];
+        $uniqNames = is_array($uniqNames) ? array_filter($uniqNames) : [];
+
+        if (empty($uniqNames)) {
+            return $ids;
+        }
+
+        foreach ($uniqNames as $uniqName) {
+            $ids[] = $this->getSectionIdByUniqName($iblockId, $uniqName);
+        }
+        return $ids;
     }
 
     /**

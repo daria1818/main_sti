@@ -2,8 +2,6 @@
 
 namespace Sprint\Migration;
 
-use Throwable;
-
 trait OutTrait
 {
 
@@ -86,8 +84,5 @@ trait OutTrait
     {
         call_user_func_array(['Sprint\Migration\Out', 'outMessages'], func_get_args());
     }
-    protected function outException(Throwable $exception)
-    {
-        call_user_func_array(['Sprint\Migration\Out', 'outException'], func_get_args());
-    }
+
 }

@@ -2,16 +2,21 @@
 
 namespace Sprint\Migration\SymfonyBundle\Command;
 
+use Exception;
 use Sprint\Migration\Console;
 use Sprint\Migration\Module;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Throwable;
 
 class ConsoleCommand extends Command
 {
+    /**
+     * @inheritDoc
+     * @throws InvalidArgumentException
+     */
     protected function configure()
     {
         $this->setName('sprint:migration')
@@ -29,7 +34,14 @@ class ConsoleCommand extends Command
         }
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    /**
+     * @param InputInterface  $input
+     * @param OutputInterface $output
+     *
+     * @throws Exception
+     * @return null|int|void
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
     {
         $args = [];
         foreach ($input->getArguments() as $val) {
@@ -47,17 +59,12 @@ class ConsoleCommand extends Command
                 }
             }
         }
-        try {
-            Module::checkHealth();
-            $console = new Console($args);
-            $console->executeConsoleCommand();
-            return self::SUCCESS;
-        } catch (Throwable $e) {
-            return self::FAILURE;
-        }
+        Module::checkHealth();
+        $console = new Console($args);
+        $console->executeConsoleCommand();
     }
 
-    protected function getOptionsWithValues(): array
+    protected function getOptionsWithValues()
     {
         return [
             'desc',
@@ -72,7 +79,7 @@ class ConsoleCommand extends Command
         ];
     }
 
-    protected function getOptionsWithoutValues(): array
+    protected function getOptionsWithoutValues()
     {
         return [
             'new',
@@ -86,7 +93,7 @@ class ConsoleCommand extends Command
         ];
     }
 
-    protected function getArguments(): array
+    protected function getArguments()
     {
         return [
             'arg1',

@@ -35,17 +35,17 @@ if ($_POST["step_code"] == "migration_view_status" && check_bitrix_sessid('send_
     }
 
     ?>
-    <table class="sp-summary">
+    <table class="sp-status">
         <?php foreach ($status as $code => $cnt) {
             $ucode = strtoupper($code); ?>
             <tr>
-                <td class="sp-summary-l">
+                <td class="sp-status-l">
                 <span class="sp-item-<?= $code ?>">
                     <?= Locale::getMessage($ucode) ?>
                 </span>
                     <?= Locale::getMessage('DESC_' . $ucode) ?>
                 </td>
-                <td class="sp-summary-r">
+                <td class="sp-status-r">
                     <?= $cnt ?>
                 </td>
             </tr>

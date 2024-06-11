@@ -47,8 +47,12 @@ if ($hasSteps && check_bitrix_sessid('send_sessid')) {
             schemaExecuteStep('<?=$stepCode?>', <?=$json?>);
         </script>
         <?php
+    } catch (Exception $e) {
+        Out::outError($e->getMessage());
+        $error = true;
+
     } catch (Throwable $e) {
-        Out::outException($e);
+        Out::outError($e->getMessage());
         $error = true;
     }
 

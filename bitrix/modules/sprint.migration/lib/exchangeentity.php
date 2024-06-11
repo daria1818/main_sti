@@ -3,50 +3,131 @@
 namespace Sprint\Migration;
 
 use ReflectionClass;
+use ReflectionException;
+use Sprint\Migration\Exceptions\ExchangeException;
 use Sprint\Migration\Exceptions\RestartException;
+
 
 abstract class ExchangeEntity
 {
-    protected $params = [];
-    private   $versionConfig;
-
-    public function getVersionConfig(): VersionConfig
-    {
-        return $this->versionConfig;
+    use OutTrait {
+        out as protected;
+        outIf as protected;
+        outProgress as protected;
+        outNotice as protected;
+        outNoticeIf as protected;
+        outInfo as protected;
+        outInfoIf as protected;
+        outSuccess as protected;
+        outSuccessIf as protected;
+        outWarning as protected;
+        outWarningIf as protected;
+        outError as protected;
+        outErrorIf as protected;
+        outDiff as protected;
+        outDiffIf as protected;
+        outMessages as protected;
     }
-
     /**
-     * Не использовать
-     *
-     * @param VersionConfig $versionConfig
-     *
-     * @return void
+     * @var array
      */
-    public function setVersionConfig(VersionConfig $versionConfig)
-    {
-        $this->versionConfig = $versionConfig;
-    }
-
-    public function getClassName(): string
-    {
-        return (new ReflectionClass($this))->getShortName();
-    }
+    protected $params = [];
 
     /**
      * @throws RestartException
      */
     public function restart()
     {
-        throw new RestartException();
+        Throw new RestartException();
     }
 
-    public function getRestartParams(): array
+    /**
+     * @return array
+     */
+    public function getRestartParams()
     {
         return $this->params;
     }
 
-    public function setRestartParams(array $params = [])
+    /**
+     * @param array $params
+     */
+    public function setRestartParams($params = [])
     {
         $this->params = $params;
+    }
+
+    /**
+     * @param $name
+     * @throws ExchangeException
+     * @return string
+     */
+    public function getResourceFile($name)
+    {
+        try {
+            $classInfo = new ReflectionClass($this);
+            return dirname($classInfo->getFileName()) . '/' . $classInfo->getShortName() . '_files/' . $name;
+        } catch (ReflectionException $e) {
+            $this->exitWithMessage($e->getMessage());
+        }
+    }
+
+    /**
+     * @throws ExchangeException
+     * @return string
+     */
+    public function getClassName()
+    {
+        try {
+            $classInfo = new ReflectionClass($this);
+            $name = $classInfo->getShortName();
+        } catch (ReflectionException $e) {
+            $name = '';
+        }
+
+        $this->exitIfEmpty(
+            $name,
+            Locale::getMessage(
+                'ERR_CLASS_NOT_FOUND',
+                [
+                    '#NAME#' => $name,
+                ]
+            )
+        );
+        return $name;
+    }
+
+
+    /**
+     * @param $msg
+     * @throws ExchangeException
+     */
+    public function exitWithMessage($msg)
+    {
+        Throw new ExchangeException($msg);
+    }
+
+    /**
+     * @param $cond
+     * @param $msg
+     * @throws ExchangeException
+     */
+    public function exitIf($cond, $msg)
+    {
+        if ($cond) {
+            Throw new ExchangeException($msg);
+        }
+    }
+
+    /**
+     * @param $var
+     * @param $msg
+     * @throws ExchangeException
+     */
+    public function exitIfEmpty($var, $msg)
+    {
+        if (empty($var)) {
+            Throw new ExchangeException($msg);
+        }
     }
 }

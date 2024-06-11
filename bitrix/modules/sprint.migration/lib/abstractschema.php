@@ -10,17 +10,21 @@ use Sprint\Migration\Traits\HelperManagerTrait;
 abstract class AbstractSchema extends ExchangeEntity
 {
     use HelperManagerTrait;
-    use OutTrait;
 
     private $name;
+
     /** @var VersionConfig */
-    private   $versionConfig;
-    private   $queue     = [];
-    protected $testMode  = 0;
-    protected $info      = [
+    private $versionConfig;
+
+    private $queue = [];
+
+    protected $testMode = 0;
+
+    protected $info = [
         'title' => '',
     ];
-    private   $filecache = [];
+
+    private $filecache = [];
 
     abstract public function export();
 
@@ -34,11 +38,9 @@ abstract class AbstractSchema extends ExchangeEntity
 
     public function __construct(VersionConfig $versionConfig, $name, $params = [])
     {
+        $this->versionConfig = $versionConfig;
         $this->name = $name;
-
-        $this->setVersionConfig($versionConfig);
-        $this->setRestartParams($params);
-
+        $this->params = $params;
         $this->initialize();
     }
 
@@ -70,23 +72,18 @@ abstract class AbstractSchema extends ExchangeEntity
 
     public function isModified()
     {
-        $algo = $this->getVersionConfig()->getVal('migration_hash_algo');
-
         $opt = strtolower('schema_' . $this->getName());
         $oldhash = Module::getDbOption($opt);
 
         $data = $this->loadSchemas($this->getMap());
-        $newhash = hash($algo, serialize($data));
-
+        $newhash = md5(serialize($data));
         return ($newhash != $oldhash);
     }
 
     public function setModified()
     {
-        $algo = $this->getVersionConfig()->getVal('migration_hash_algo');
-
         $data = $this->loadSchemas($this->getMap());
-        $newhash = hash($algo, serialize($data));
+        $newhash = md5(serialize($data));
 
         $opt = strtolower('schema_' . $this->getName());
         Module::setDbOption($opt, $newhash);
@@ -112,29 +109,26 @@ abstract class AbstractSchema extends ExchangeEntity
         }
     }
 
-    protected function getSchemaDir()
+    protected function getSchemaDir($relative = false)
     {
-        $dir = $this->getVersionConfig()->getVal('migration_dir');
-
-        return $dir . '.schema';
+        return $this->getVersionConfig()->getSiblingDir('schema', $relative, $this->getVersionConfig()->getName());
     }
 
-    protected function getSchemaSubDir($name)
+    protected function getSchemaSubDir($name, $relative = false)
     {
-        return $this->getSchemaDir() . DIRECTORY_SEPARATOR . $name;
+        $dir = $this->getSchemaDir() . $name;
+        return ($relative) ? Module::getRelativeDir($dir) : $dir;
     }
 
-    protected function getSchemaFile($name, $absolute = true)
+    protected function getSchemaFile($name, $relative = false)
     {
-        $root = $absolute ? $this->getSchemaDir() . DIRECTORY_SEPARATOR : '';
-
-        return $root . $name . '.json';
+        $file = $this->getSchemaDir() . $name . '.json';
+        return ($relative) ? Module::getRelativeDir($file) : $file;
     }
 
     /**
      * @param $name
      * @param $data
-     *
      * @throws Exception
      */
     protected function saveSchema($name, $data)
@@ -142,8 +136,7 @@ abstract class AbstractSchema extends ExchangeEntity
         $file = $this->getSchemaFile($name);
         Module::createDir(dirname($file));
 
-        file_put_contents(
-            $file,
+        file_put_contents($file,
             json_encode($data, JSON_UNESCAPED_UNICODE + JSON_PRETTY_PRINT)
         );
     }
@@ -157,38 +150,16 @@ abstract class AbstractSchema extends ExchangeEntity
         }
     }
 
-    public function outSchemaFiles()
+    public function getSchemaFiles()
     {
-        $files = [];
+        $result = [];
+
         $names = $this->getSchemas($this->getMap());
         foreach ($names as $name) {
-            $files[] = $this->getSchemaFile($name, false);
+            $result[] = $this->getSchemaFile($name, true);
         }
 
-        if (!empty($files)) {
-            $this->outNotice(
-                Locale::getMessage(
-                    'ERR_SCHEMA_CREATED',
-                    [
-                        '#NAME#' => $this->getTitle(),
-
-                    ]
-                )
-            );
-            foreach ($files as $file) {
-                $this->out($file);
-            }
-        } else {
-            $this->outWarning(
-                Locale::getMessage(
-                    'ERR_SCHEMA_EMPTY',
-                    [
-                        '#NAME#' => $this->getTitle(),
-
-                    ]
-                )
-            );
-        }
+        return $result;
     }
 
     protected function getSchemas($map)
@@ -227,6 +198,7 @@ abstract class AbstractSchema extends ExchangeEntity
         return array_merge($merge, $this->filecache[$name]);
     }
 
+
     private function loadSchemaFile($name)
     {
         $file = $this->getSchemaFile($name);
@@ -248,6 +220,7 @@ abstract class AbstractSchema extends ExchangeEntity
 
         return $json;
     }
+
 
     protected function loadSchemas($map, $merge = [])
     {
@@ -285,4 +258,18 @@ abstract class AbstractSchema extends ExchangeEntity
             );
         }
     }
+
+    protected function getVersionConfig()
+    {
+        return $this->versionConfig;
+    }
+
+    /**
+     * @return ExchangeManager
+     */
+    protected function getExchangeManager()
+    {
+        return new ExchangeManager($this);
+    }
+
 }

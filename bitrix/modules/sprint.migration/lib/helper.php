@@ -7,11 +7,28 @@ use Bitrix\Main\LoaderException;
 use CDBResult;
 use CMain;
 use ReflectionClass;
+use ReflectionException;
 use Sprint\Migration\Exceptions\HelperException;
 
 class Helper
 {
-    use OutTrait;
+    use OutTrait {
+        out as protected;
+        outIf as protected;
+        outProgress as protected;
+        outNotice as protected;
+        outNoticeIf as protected;
+        outInfo as protected;
+        outInfoIf as protected;
+        outSuccess as protected;
+        outSuccessIf as protected;
+        outWarning as protected;
+        outWarningIf as protected;
+        outError as protected;
+        outErrorIf as protected;
+        outDiff as protected;
+        outDiffIf as protected;
+    }
 
     /**
      * @var string
@@ -19,7 +36,8 @@ class Helper
      */
     public  $lastError = '';
     private $mode      = [
-        'test' => 0,
+        'test'      => 0,
+        'out_equal' => 0,
     ];
 
     /**
@@ -30,7 +48,8 @@ class Helper
     public function __construct()
     {
         if (!$this->isEnabled()) {
-            throw new HelperException(
+            $this->throwException(
+                __METHOD__,
                 Locale::getMessage(
                     'ERR_HELPER_DISABLED',
                     [
@@ -53,7 +72,7 @@ class Helper
     public function getMode($key = false)
     {
         if ($key) {
-            return $this->mode[$key] ?? 0;
+            return isset($this->mode[$key]) ? $this->mode[$key] : 0;
         } else {
             return $this->mode;
         }
@@ -100,27 +119,19 @@ class Helper
     }
 
     /**
-     *
      * @param        $method
      * @param        $msg
      * @param string ...$vars
      *
      * @throws HelperException
-     * @deprecated
      */
     protected function throwException($method, $msg, ...$vars)
     {
         $args = func_get_args();
         $method = array_shift($args);
+        $msg = call_user_func_array('sprintf', $args);
 
-        if ($msg instanceof \Throwable) {
-            $msg = $msg->getMessage();
-        } else {
-            $msg = call_user_func_array('sprintf', $args);
-            $msg = strip_tags($msg);
-        }
-
-        $msg = $this->getMethod($method) . ': ' . $msg;
+        $msg = $this->getMethod($method) . ': ' . strip_tags($msg);
 
         $this->lastError = $msg;
 
@@ -128,14 +139,17 @@ class Helper
     }
 
     /**
+     * @param $method
+     *
      * @throws HelperException
      */
-    protected function throwApplicationExceptionIfExists()
+    protected function throwApplicationExceptionIfExists($method)
     {
         /* @global $APPLICATION CMain */
         global $APPLICATION;
         if ($APPLICATION->GetException()) {
-            throw new HelperException(
+            $this->throwException(
+                $method,
                 $APPLICATION->GetException()->GetString()
             );
         }
@@ -143,7 +157,12 @@ class Helper
 
     protected function getHelperName()
     {
-        return (new ReflectionClass($this))->getShortName();
+        try {
+            $classInfo = new ReflectionClass($this);
+            return $classInfo->getShortName();
+        } catch (ReflectionException $e) {
+            return 'Helper';
+        }
     }
 
     protected function hasDiff($exists, $fields)
@@ -163,20 +182,18 @@ class Helper
     }
 
     /**
+     * @param       $method
      * @param       $fields
      * @param array $reqKeys
      *
      * @throws HelperException
      */
-    protected function checkRequiredKeys($fields, $reqKeys = [])
+    protected function checkRequiredKeys($method, $fields, $reqKeys = [])
     {
-        if (is_string($fields)) {
-            throw new HelperException('Old format for checkRequiredKeys');
-        }
-
         foreach ($reqKeys as $name) {
             if (empty($fields[$name])) {
-                throw new HelperException(
+                $this->throwException(
+                    $method,
                     Locale::getMessage(
                         'ERR_EMPTY_REQ_FIELD',
                         [
@@ -188,7 +205,14 @@ class Helper
         }
     }
 
-    protected function fetchAll(CDBResult $dbres, string $indexKey = '', string $valueKey = ''): array
+    /**
+     * @param CDBResult $dbres
+     * @param bool      $indexKey
+     * @param bool      $valueKey
+     *
+     * @return array
+     */
+    protected function fetchAll(CDBResult $dbres, $indexKey = false, $valueKey = false)
     {
         $res = [];
 
@@ -227,42 +251,5 @@ class Helper
         $path = explode('\\', $method);
         $short = array_pop($path);
         return $short;
-    }
-
-    protected function merge(array $item, array $default): array
-    {
-        return array_merge($default, $item);
-    }
-
-    protected function mergeCollection(array $collection, array $default): array
-    {
-        return array_map(function ($item) use ($default) {
-            return $this->merge($item, $default);
-        }, $collection);
-    }
-
-    protected function export(array $item, array $unsetDefault, array $unsetKeys): array
-    {
-        foreach ($unsetKeys as $key) {
-            if (array_key_exists($key, $item)) {
-                unset($item[$key]);
-            }
-        }
-
-        //value может быть null
-        foreach ($item as $key => $value) {
-            if (array_key_exists($key, $unsetDefault) && $unsetDefault[$key] === $value) {
-                unset($item[$key]);
-            }
-        }
-
-        return $item;
-    }
-
-    protected function exportCollection(array $collection, array $unsetDefault, array $unsetKeys): array
-    {
-        return array_map(function ($item) use ($unsetDefault, $unsetKeys) {
-            return $this->export($item, $unsetDefault, $unsetKeys);
-        }, $collection);
     }
 }

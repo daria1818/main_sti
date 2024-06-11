@@ -5,30 +5,28 @@ namespace Sprint\Migration;
 use Exception;
 use Sprint\Migration\Exceptions\RebuildException;
 use Sprint\Migration\Exceptions\RestartException;
-use Sprint\Migration\Traits\ExitMessageTrait;
 use Sprint\Migration\Traits\HelperManagerTrait;
 
 abstract class AbstractBuilder extends ExchangeEntity
 {
     use HelperManagerTrait;
-    use ExitMessageTrait;
-    use OutTrait;
 
     private $name;
-    private $info       = [
+    /** @var VersionConfig */
+    private $versionConfig;
+    private $info          = [
         'title'       => '',
         'description' => '',
-        'group'       => 'Tools',
+        'group'       => 'default',
     ];
-    private $fields     = [];
-    private $execStatus = '';
+    private $fields        = [];
+    private $execStatus    = '';
 
     public function __construct(VersionConfig $versionConfig, $name, $params = [])
     {
+        $this->versionConfig = $versionConfig;
         $this->name = $name;
-
-        $this->setVersionConfig($versionConfig);
-        $this->setRestartParams($params);
+        $this->params = $params;
 
         $this->addFieldHidden('builder_name', $this->getName());
     }
@@ -51,6 +49,11 @@ abstract class AbstractBuilder extends ExchangeEntity
         $this->initialize();
     }
 
+    public function getVersionConfig()
+    {
+        return $this->versionConfig;
+    }
+
     public function isEnabled()
     {
         try {
@@ -58,14 +61,6 @@ abstract class AbstractBuilder extends ExchangeEntity
         } catch (Exception $e) {
             return false;
         }
-    }
-
-    /**
-     * @return ExchangeManager
-     */
-    protected function getExchangeManager()
-    {
-        return new ExchangeManager($this);
     }
 
     protected function addField($code, $param = [])
@@ -122,7 +117,11 @@ abstract class AbstractBuilder extends ExchangeEntity
     protected function addFieldHidden($code, $val)
     {
         $this->params[$code] = $val;
-        $this->addField($code, ['type' => 'hidden']);
+        $this->addField(
+            $code, [
+                'type' => 'hidden',
+            ]
+        );
     }
 
     protected function getFieldValue($code, $default = '')
@@ -134,7 +133,7 @@ abstract class AbstractBuilder extends ExchangeEntity
         }
     }
 
-    protected function bindField($code, $val)
+    public function bindField($code, $val)
     {
         if (isset($this->fields[$code])) {
             $this->fields[$code]['bind'] = 1;
@@ -152,6 +151,7 @@ abstract class AbstractBuilder extends ExchangeEntity
         ob_start();
 
         if (is_file($file)) {
+            /** @noinspection PhpIncludeInspection */
             include $file;
         }
 
@@ -169,7 +169,8 @@ abstract class AbstractBuilder extends ExchangeEntity
 
     public function renderConsole()
     {
-        foreach ($this->getFields() as $code => $field) {
+        $fields = $this->getFields();
+        foreach ($fields as $code => $field) {
             if (empty($field['bind'])) {
                 $val = Out::input($field);
                 $this->bindField($code, $val);
@@ -201,7 +202,7 @@ abstract class AbstractBuilder extends ExchangeEntity
             return false;
         } catch (Exception $e) {
             $this->execStatus = 'error';
-            $this->outException($e);
+            $this->outError('%s: %s', Locale::getMessage('BUILDER_ERROR'), $e->getMessage());
             $this->params = [];
             return false;
         }
@@ -320,45 +321,11 @@ abstract class AbstractBuilder extends ExchangeEntity
         $this->addField($code, $param);
     }
 
-    protected function createSelect(
-        array $items,
-        string $idKey,
-        string $titleKey
-    ): array {
-        $select = [];
-        foreach ($items as $item) {
-            $itemId = $item[$idKey];
-            $select[$itemId] = [
-                'value' => $itemId,
-                'title' => $item[$titleKey],
-            ];
-        }
-        return $select;
-    }
-
-    protected function createSelectWithGroups(
-        array $items,
-        string $groupKey,
-        string $idKey,
-        string $titleKey
-    ): array {
-        $select = [];
-        foreach ($items as $item) {
-            $groupId = $item[$groupKey];
-
-            if (!isset($select[$groupId])) {
-                $select[$groupId] = [
-                    'title' => $groupId,
-                    'items' => [],
-                ];
-            }
-
-            $select[$groupId]['items'][] = [
-                'title' => $item[$titleKey],
-                'value' => $item[$idKey],
-            ];
-        }
-
-        return $select;
+    /**
+     * @return ExchangeManager
+     */
+    protected function getExchangeManager()
+    {
+        return new ExchangeManager($this);
     }
 }

@@ -3,7 +3,6 @@
 namespace Sprint\Migration;
 
 use CAdminMessage;
-use Throwable;
 
 class Out
 {
@@ -21,10 +20,22 @@ class Out
         'red'          => ["\x1b[0;31m", '<span style="color:#a00">'],
         'down'         => ["\x1b[0;31m", '<span style="color:#a00">'],
         'yellow'       => ["\x1b[1;33m", '<span style="color:#aa0">'],
-        'tab'          => ["", '<span style="display: inline-block; margin-left: 10px">'],
         'b'            => ["\x1b[1m", '<span style="font-weight:bold;color:#000">'],
     ];
     protected static $needEol = false;
+
+    public static function out($msg, ...$vars)
+    {
+        if (func_num_args() > 1) {
+            $params = func_get_args();
+            $msg = call_user_func_array('sprintf', $params);
+        }
+        if (self::canOutAsHtml()) {
+            self::outToHtml($msg);
+        } else {
+            self::outToConsole($msg);
+        }
+    }
 
     public static function outProgress($msg, $val, $total)
     {
@@ -45,7 +56,7 @@ class Out
 
             echo '<div class="sp-progress">' . (new CAdminMessage($mess))->Show() . '</div>';
         } elseif (self::canOutAsHtml()) {
-            $msg = self::prepareToHtml($msg, ['br' => true]);
+            $msg = self::prepareToHtml($msg);
             echo '<div class="sp-progress">' . "$msg $val/$total" . '</div>';
         } else {
             $msg = self::prepareToConsole($msg);
@@ -53,73 +64,34 @@ class Out
         }
     }
 
-    protected static function canOutProgressBar()
+    public static function outNotice($msg, ...$vars)
     {
-        return method_exists('\CAdminMessage', '_getProgressHtml') ? 1 : 0;
+        if (func_num_args() > 1) {
+            $params = func_get_args();
+            $msg = call_user_func_array('sprintf', $params);
+        }
+
+        $msg = '[green]' . $msg . '[/]';
+        if (self::canOutAsHtml()) {
+            self::outToHtml($msg);
+        } else {
+            self::outToConsole($msg);
+        }
     }
 
-    protected static function canOutAsHtml()
+    public static function outWarning($msg, ...$vars)
     {
-        return (php_sapi_name() == 'cli') ? 0 : 1;
-    }
-
-    protected static function prepareToHtml($msg, $options = [])
-    {
-        if ($options['br']) {
-            $msg = nl2br($msg);
+        if (func_num_args() > 1) {
+            $params = func_get_args();
+            $msg = call_user_func_array('sprintf', $params);
         }
 
-        $msg = str_replace('[t]', '&rarr;', $msg);
-
-        foreach (self::$colors as $key => $val) {
-            $msg = str_replace('[' . $key . ']', $val[1], $msg);
+        $msg = '[red]' . $msg . '[/]';
+        if (self::canOutAsHtml()) {
+            self::outToHtml($msg);
+        } else {
+            self::outToConsole($msg);
         }
-
-        if (!empty($options['tracker_task_url'])) {
-            $msg = self::makeTaskUrl($msg, $options['tracker_task_url']);
-        }
-
-        if (!empty($options['make_links'])) {
-            $msg = self::makeLinksHtml($msg);
-        }
-
-        return Locale::convertToWin1251IfNeed($msg);
-    }
-
-    protected static function makeTaskUrl($msg, $taskUrl = '')
-    {
-        if (false !== strpos($taskUrl, '$1')) {
-            $msg = preg_replace('/\#([a-z0-9_\-]*)/i', $taskUrl, $msg);
-        }
-
-        return $msg;
-    }
-
-    protected static function makeLinksHtml($msg)
-    {
-        $reg_exUrl = "/(http|https)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?/";
-        if (preg_match($reg_exUrl, $msg, $url)) {
-            $msg = preg_replace($reg_exUrl, '<a target="_blank" href="' . $url[0] . '">' . $url[0] . '</a>', $msg);
-        }
-
-        return $msg;
-    }
-
-    public static function prepareToConsole($msg, $options = [])
-    {
-        if (!empty($options['tracker_task_url'])) {
-            $msg = self::makeTaskUrl($msg, $options['tracker_task_url']);
-        }
-
-        if ($options['max_len']) {
-            $msg = self::truncateText($msg, $options['max_len']) . '[/]';
-        }
-
-        foreach (self::$colors as $key => $val) {
-            $msg = str_replace('[' . $key . ']', $val[0], $msg);
-        }
-
-        return Locale::convertToUtf8IfNeed($msg);
     }
 
     public static function outInfo($msg, ...$vars)
@@ -137,23 +109,43 @@ class Out
         }
     }
 
-    public static function outToHtml($msg, $options = ['br' => false])
+    public static function outError($msg, ...$vars)
     {
-        $class = $options['class'] ?? 'sp-out';
+        if (func_num_args() > 1) {
+            $params = func_get_args();
+            $msg = call_user_func_array('sprintf', $params);
+        }
 
-        $msg = $msg ? self::prepareToHtml($msg, $options) : '';
-
-        echo $msg ? '<div class="' . $class . '">' . $msg . '</div>' : '';
+        if (self::canOutAsAdminMessage()) {
+            echo (new CAdminMessage(
+                [
+                    "MESSAGE" => self::prepareToHtml($msg),
+                    'HTML'    => true,
+                    'TYPE'    => 'ERROR',
+                ]
+            ))->Show();
+        } else {
+            self::outWarning($msg);
+        }
     }
 
-    public static function outToConsole($msg, $options = [], $rightEol = PHP_EOL)
+    public static function outSuccess($msg, ...$vars)
     {
-        $msg = self::prepareToConsole($msg, $options);
-        if (self::$needEol) {
-            self::$needEol = false;
-            fwrite(STDOUT, PHP_EOL . $msg . $rightEol);
+        if (func_num_args() > 1) {
+            $params = func_get_args();
+            $msg = call_user_func_array('sprintf', $params);
+        }
+
+        if (self::canOutAsAdminMessage()) {
+            echo (new CAdminMessage(
+                [
+                    "MESSAGE" => self::prepareToHtml($msg),
+                    'HTML'    => true,
+                    'TYPE'    => 'OK',
+                ]
+            ))->Show();
         } else {
-            fwrite(STDOUT, $msg . $rightEol);
+            self::outNotice($msg);
         }
     }
 
@@ -211,6 +203,40 @@ class Out
         }
     }
 
+    public static function prepareToConsole($msg, $options = [])
+    {
+        foreach (self::$colors as $key => $val) {
+            $msg = str_replace('[' . $key . ']', $val[0], $msg);
+        }
+
+        if (isset($options['tracker_task_url'])) {
+            $msg = self::makeTaskUrl($msg, $options['tracker_task_url']);
+        }
+
+        $msg = Locale::convertToUtf8IfNeed($msg);
+        return $msg;
+    }
+
+    public static function prepareToHtml($msg, $options = [])
+    {
+        $msg = nl2br($msg);
+
+        $msg = str_replace('[t]', '&rarr;', $msg);
+
+        foreach (self::$colors as $key => $val) {
+            $msg = str_replace('[' . $key . ']', $val[1], $msg);
+        }
+
+        if (isset($options['tracker_task_url'])) {
+            $msg = self::makeTaskUrl($msg, $options['tracker_task_url']);
+        }
+
+        $msg = self::makeLinksHtml($msg);
+
+        $msg = Locale::convertToWin1251IfNeed($msg);
+        return $msg;
+    }
+
     public static function input($field)
     {
         if (self::canOutAsHtml()) {
@@ -236,30 +262,6 @@ class Out
         return $val;
     }
 
-    protected static function inputStructure($field)
-    {
-        foreach ($field['items'] as $group) {
-            self::outToConsole('---' . $group['title']);
-            foreach ($group['items'] as $item) {
-                self::outToConsole(' > ' . $item['value'] . ' (' . $item['title'] . ')');
-            }
-        }
-        self::outToConsole($field['title'] . ':', [], '');
-    }
-
-    protected static function inputSelect($field)
-    {
-        foreach ($field['select'] as $item) {
-            self::outToConsole(' > ' . $item['value'] . ' (' . $item['title'] . ')');
-        }
-        self::outToConsole($field['title'] . ':', [], '');
-    }
-
-    protected static function inputText($field)
-    {
-        self::outToConsole($field['title'] . ':', [], '');
-    }
-
     public static function outDiffIf($cond, $arr1, $arr2)
     {
         if ($cond) {
@@ -281,22 +283,80 @@ class Out
 
         foreach ($diff as $k => $v) {
             if (isset($diff1[$k]) && isset($diff2[$k])) {
-                self::out($k . ': [red]' . htmlspecialchars($diff2[$k]) . '[/] -> [green]' . htmlspecialchars($diff1[$k]) . '[/]');
+                self::out($k . ': [red]' . $diff2[$k] . '[/] -> [green]' . $diff1[$k] . '[/]');
             } elseif (isset($diff1[$k])) {
-                self::out($k . ': [green]' . htmlspecialchars($diff1[$k]) . '[/]');
+                self::out($k . ': [green]' . $diff1[$k] . '[/]');
             } else {
-                self::out($k . ': [red]' . htmlspecialchars($diff2[$k]) . '[/]');
+                self::out($k . ': [red]' . $diff2[$k] . '[/]');
             }
         }
     }
 
-    protected static function truncateText($strText, $intLen)
+    public static function outMessages($messages = [])
     {
-        if (mb_strlen($strText) > $intLen) {
-            return rtrim(mb_substr($strText, 0, $intLen), ".") . "...";
-        } else {
-            return $strText;
+        foreach ($messages as $val) {
+            if ($val['success']) {
+                self::outSuccess($val['message']);
+            } else {
+                self::outError($val['message']);
+            }
         }
+    }
+
+    protected static function outToHtml($msg)
+    {
+        $msg = self::prepareToHtml($msg);
+        echo '<div class="sp-out">' . $msg . '</div>';
+    }
+
+    protected static function outToConsole($msg, $rightEol = PHP_EOL)
+    {
+        $msg = self::prepareToConsole($msg);
+        if (self::$needEol) {
+            self::$needEol = false;
+            fwrite(STDOUT, PHP_EOL . $msg . $rightEol);
+        } else {
+            fwrite(STDOUT, $msg . $rightEol);
+        }
+    }
+
+    protected static function canOutAsAdminMessage()
+    {
+        return (self::canOutAsHtml() && class_exists('\CAdminMessage')) ? 1 : 0;
+    }
+
+    protected static function canOutProgressBar()
+    {
+        return method_exists('\CAdminMessage', '_getProgressHtml') ? 1 : 0;
+    }
+
+    protected static function canOutAsHtml()
+    {
+        return (php_sapi_name() == 'cli') ? 0 : 1;
+    }
+
+    protected static function inputText($field)
+    {
+        self::outToConsole($field['title'] . ':', '');
+    }
+
+    protected static function inputSelect($field)
+    {
+        foreach ($field['select'] as $item) {
+            self::outToConsole(' > ' . $item['value'] . ' (' . $item['title'] . ')');
+        }
+        self::outToConsole($field['title'] . ':', '');
+    }
+
+    protected static function inputStructure($field)
+    {
+        foreach ($field['items'] as $group) {
+            self::outToConsole('---' . $group['title']);
+            foreach ($group['items'] as $item) {
+                self::outToConsole(' > ' . $item['value'] . ' (' . $item['title'] . ')');
+            }
+        }
+        self::outToConsole($field['title'] . ':', '');
     }
 
     protected static function getArrayFlat($arr)
@@ -304,6 +364,11 @@ class Out
         $out = [];
         self::makeArrayFlatRecursive($out, '', $arr);
         return $out;
+    }
+
+    protected static function getArrayDiff($array1, $array2)
+    {
+        return self::makeArrayDiffRecursive($array1, $array2);
     }
 
     protected static function makeArrayFlatRecursive(array &$out, $key, array $in)
@@ -315,11 +380,6 @@ class Out
                 $out[$key . $k] = $v;
             }
         }
-    }
-
-    protected static function getArrayDiff($array1, $array2)
-    {
-        return self::makeArrayDiffRecursive($array1, $array2);
     }
 
     protected static function makeArrayDiffRecursive(array $array1, array $array2)
@@ -342,178 +402,22 @@ class Out
         return $diff;
     }
 
-    public static function out($msg, ...$vars)
+    protected static function makeTaskUrl($msg, $taskUrl = '')
     {
-        if (func_num_args() > 1) {
-            $params = func_get_args();
-            $msg = call_user_func_array('sprintf', $params);
+        if (false !== strpos($taskUrl, '$1')) {
+            $msg = preg_replace('/\#([a-z0-9_\-]*)/i', $taskUrl, $msg);
         }
-        if (self::canOutAsHtml()) {
-            self::outToHtml($msg);
-        } else {
-            self::outToConsole($msg);
-        }
+
+        return $msg;
     }
 
-    public static function outMessages($messages = [])
+    protected static function makeLinksHtml($msg)
     {
-        foreach ($messages as $val) {
-            if ($val['success']) {
-                self::outSuccess($val['message']);
-            } else {
-                self::outError($val['message']);
-            }
-        }
-    }
-
-    public static function outSuccess($msg, ...$vars)
-    {
-        if (func_num_args() > 1) {
-            $params = func_get_args();
-            $msg = call_user_func_array('sprintf', $params);
+        $reg_exUrl = "/(http|https)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?/";
+        if (preg_match($reg_exUrl, $msg, $url)) {
+            $msg = preg_replace($reg_exUrl, '<a target="_blank" href="' . $url[0] . '">' . $url[0] . '</a>', $msg);
         }
 
-        if (self::canOutAsAdminMessage()) {
-            echo (new CAdminMessage(
-                [
-                    "MESSAGE" => self::prepareToHtml($msg, ['br' => true]),
-                    'HTML'    => true,
-                    'TYPE'    => 'OK',
-                ]
-            ))->Show();
-        } else {
-            self::outNotice($msg);
-        }
-    }
-
-    protected static function canOutAsAdminMessage()
-    {
-        return (self::canOutAsHtml() && class_exists('\CAdminMessage')) ? 1 : 0;
-    }
-
-    public static function outNotice($msg, ...$vars)
-    {
-        if (func_num_args() > 1) {
-            $params = func_get_args();
-            $msg = call_user_func_array('sprintf', $params);
-        }
-
-        $msg = '[green]' . $msg . '[/]';
-        if (self::canOutAsHtml()) {
-            self::outToHtml($msg);
-        } else {
-            self::outToConsole($msg);
-        }
-    }
-
-    public static function outError($msg, ...$vars)
-    {
-        if (func_num_args() > 1) {
-            $params = func_get_args();
-            $msg = call_user_func_array('sprintf', $params);
-        }
-
-        if (self::canOutAsAdminMessage()) {
-            echo (new CAdminMessage(
-                [
-                    "MESSAGE" => self::prepareToHtml($msg, ['br' => true]),
-                    'HTML'    => true,
-                    'TYPE'    => 'ERROR',
-                ]
-            ))->Show();
-        } else {
-            self::outWarning($msg);
-        }
-    }
-
-    public static function outWarning($msg, ...$vars)
-    {
-        if (func_num_args() > 1) {
-            $params = func_get_args();
-            $msg = call_user_func_array('sprintf', $params);
-        }
-
-        $msg = '[red]' . $msg . '[/]';
-        if (self::canOutAsHtml()) {
-            self::outToHtml($msg);
-        } else {
-            self::outToConsole($msg);
-        }
-    }
-
-    public static function outException(?Throwable $exception)
-    {
-        if (!$exception) {
-            return;
-        }
-
-        $trace = $exception->getTrace();
-        $offset = self::startMigrationOffset($trace);
-
-        $file = $exception->getFile();
-        $line = $exception->getLine();
-
-        if ($offset >= 0) {
-            $trace = array_slice($trace, 0, $offset);
-            if (count($trace) > 1) {
-                $first = $trace[0];
-                $file = $first['file'];
-                $line = $first['line'];
-            }
-        }
-
-        self::outWarning(
-            "[%s] %s (%s) in %s:%d",
-            get_class($exception),
-            $exception->getMessage(),
-            $exception->getCode(),
-            $file,
-            $line
-
-        );
-        self::outExceptionTrace($trace);
-    }
-
-    protected static function startMigrationOffset(array $trace)
-    {
-        foreach ($trace as $index => $item) {
-            if ($item['class'] == VersionManager::class && $item['function'] == 'startMigration') {
-                return $index;
-            }
-        }
-        return -1;
-    }
-
-    protected static function outExceptionTrace(array $trace)
-    {
-        $isBrowser = self::canOutAsHtml();
-
-        foreach ($trace as $index => $err) {
-            $name = '';
-            if ($err['class'] && $err['function']) {
-                $name = '[b]' . $err['class'] . '[/]::' . $err['function'];
-            } elseif ($err['function']) {
-                $name = '[b]' . $err['function'] . '[/]';
-            }
-
-            $err['args'] = (array)($err['args'] ?? []);
-            $cntArgs = count($err['args']);
-
-            if ($cntArgs == 0) {
-                self::out('[b]#' . $index . '[/] ' . $name . '();');
-                continue;
-            }
-
-            self::out('[b]#' . $index . '[/] ' . $name . '(');
-            foreach ($err['args'] as $argi => $argval) {
-                $del = $argi < $cntArgs - 1 ? ', ' : '';
-
-                $argval = var_export($argval, 1);
-                $argval = $isBrowser ? htmlspecialchars($argval) : $argval;
-
-                self::out('[tab]' . $argval . $del . '[/]');
-            }
-            self::out(');');
-        }
+        return $msg;
     }
 }

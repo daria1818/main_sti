@@ -4,8 +4,6 @@ namespace Sprint\Migration\Builders;
 
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\SystemException;
-use Sprint\Migration\Exceptions\HelperException;
-use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RebuildException;
 use Sprint\Migration\Locale;
 use Sprint\Migration\Module;
@@ -21,15 +19,15 @@ class OptionBuilder extends VersionBuilder
     protected function initialize()
     {
         $this->setTitle(Locale::getMessage('BUILDER_OptionExport1'));
-        $this->setGroup('Main');
+        $this->setDescription(Locale::getMessage('BUILDER_OptionExport2'));
 
         $this->addVersionFields();
     }
 
     /**
+     * @throws ArgumentException
+     * @throws SystemException
      * @throws RebuildException
-     * @throws HelperException
-     * @throws MigrationException
      */
     protected function execute()
     {
@@ -43,11 +41,7 @@ class OptionBuilder extends VersionBuilder
                 'multiple'    => 1,
                 'value'       => [],
                 'width'       => 250,
-                'select'      => $this->createSelect(
-                    $helper->Option()->getModules(),
-                    'ID',
-                    'ID'
-                ),
+                'select'      => $this->getModules(),
             ]
         );
 
@@ -74,5 +68,22 @@ class OptionBuilder extends VersionBuilder
                 'items' => $items,
             ]
         );
+    }
+
+    protected function getModules()
+    {
+        $helper = $this->getHelperManager();
+
+        $items = $helper->Option()->getModules();
+
+        $result = [];
+        foreach ($items as $item) {
+            $result[] = [
+                'title' => $item['ID'],
+                'value' => $item['ID'],
+            ];
+        }
+
+        return $result;
     }
 }

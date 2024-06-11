@@ -5,89 +5,68 @@ namespace Sprint\Migration;
 use COption;
 use Exception;
 
-/**
- *
- * В этом классе у свойств не надо указывать тип
- *  ради совместимости с php < 7.4, чтобы админка
- *  могла корректно показать фразу PHP 7.3 не поддерживается
- */
 class Module
 {
-    const ID = 'sprint.migration';
-    /**
-     * @var string
-     */
     private static $version = '';
-    /**
-     * @var array
-     */
-    private static $defaultOptions = [
-        'show_schemas' => 'N',
-        'show_support' => 'N',
-    ];
 
     public static function getDbOption($name, $default = '')
     {
-        return COption::GetOptionString(Module::ID, $name, $default);
+        return COption::GetOptionString('sprint.migration', $name, $default);
     }
 
     public static function setDbOption($name, $value)
     {
-        if ($value != COption::GetOptionString(Module::ID, $name)) {
-            COption::SetOptionString(Module::ID, $name, $value);
+        if ($value != COption::GetOptionString('sprint.migration', $name, '')) {
+            COption::SetOptionString('sprint.migration', $name, $value);
         }
     }
 
     public static function removeDbOption($name)
     {
-        COption::RemoveOption(Module::ID, $name);
+        COption::RemoveOption('sprint.migration', $name);
     }
 
     public static function removeDbOptions()
     {
-        COption::RemoveOption(Module::ID);
+        COption::RemoveOption('sprint.migration');
     }
 
-    public static function checkDbOption(string $name, bool $checked)
-    {
-        self::setDbOption($name, $checked ? 'Y' : 'N');
-    }
-
-    public static function isDbOptionChecked(string $name)
-    {
-        return self::getDbOption($name, self::$defaultOptions[$name]) == 'Y';
-    }
-
-    public static function getDocRoot(): string
+    public static function getDocRoot()
     {
         return rtrim($_SERVER['DOCUMENT_ROOT'], DIRECTORY_SEPARATOR);
     }
 
-    public static function getPhpInterfaceDir($absolute = true): string
+    public static function getPhpInterfaceDir()
     {
-        $root = $absolute ? self::getDocRoot() : '';
-
         if (is_dir(self::getDocRoot() . '/local/php_interface')) {
-            return $root . '/local/php_interface';
+            return self::getDocRoot() . '/local/php_interface';
         } else {
-            return $root . '/bitrix/php_interface';
+            return self::getDocRoot() . '/bitrix/php_interface';
         }
     }
 
-    public static function getModuleDir($absolute = true): string
+    public static function getModuleDir()
     {
-        $root = $absolute ? self::getDocRoot() : '';
-
-        if (is_file(self::getDocRoot() . '/local/modules/' . Module::ID . '/include.php')) {
-            return $root . '/local/modules/' . Module::ID;
+        if (is_file(self::getDocRoot() . '/local/modules/sprint.migration/include.php')) {
+            return self::getDocRoot() . '/local/modules/sprint.migration';
         } else {
-            return $root . '/bitrix/modules/' . Module::ID;
+            return self::getDocRoot() . '/bitrix/modules/sprint.migration';
         }
+    }
+
+    public static function getRelativeDir($dir)
+    {
+        $docroot = Module::getDocRoot();
+        $docroot = str_replace('/', DIRECTORY_SEPARATOR, $docroot);
+        $dir = str_replace('/', DIRECTORY_SEPARATOR, $dir);
+        if (strpos($dir, $docroot) === 0) {
+            $dir = substr($dir, strlen($docroot));
+        }
+        return $dir;
     }
 
     /**
      * @param $dir
-     *
      * @throws Exception
      * @return mixed
      */
@@ -98,7 +77,7 @@ class Module
         }
 
         if (!is_dir($dir)) {
-            throw new Exception(
+            Throw new Exception(
                 Locale::getMessage(
                     'ERR_CANT_CREATE_DIRECTORY',
                     [
@@ -111,32 +90,13 @@ class Module
         return $dir;
     }
 
-    public static function deletePath($dir)
-    {
-        if (is_dir($dir)) {
-            $files = scandir($dir);
-            foreach ($files as $file) {
-                if ($file != "." && $file != "..") {
-                    self::deletePath("$dir/$file");
-                }
-            }
-            rmdir($dir);
-        } elseif (file_exists($dir)) {
-            unlink($dir);
-        }
-    }
-
-    public static function movePath(string $from, string $to)
-    {
-        rename($from, $to);
-    }
-
-    public static function getVersion(): string
+    public static function getVersion()
     {
         if (!self::$version) {
             $arModuleVersion = [];
+            /** @noinspection PhpIncludeInspection */
             include self::getModuleDir() . '/install/version.php';
-            self::$version = (string)($arModuleVersion['VERSION'] ?? '');
+            self::$version = isset($arModuleVersion['VERSION']) ? $arModuleVersion['VERSION'] : '';
         }
         return self::$version;
     }
@@ -147,7 +107,7 @@ class Module
     public static function checkHealth()
     {
         if (isset($GLOBALS['DBType']) && strtolower($GLOBALS['DBType']) == 'mssql') {
-            throw new Exception(
+            Throw new Exception(
                 Locale::getMessage(
                     'ERR_MSSQL_NOT_SUPPORTED'
                 )
@@ -155,15 +115,15 @@ class Module
         }
 
         if (!function_exists('json_encode')) {
-            throw new Exception(
+            Throw new Exception(
                 Locale::getMessage(
                     'ERR_JSON_NOT_SUPPORTED'
                 )
             );
         }
 
-        if (version_compare(PHP_VERSION, '7.4', '<')) {
-            throw new Exception(
+        if (version_compare(PHP_VERSION, '5.6', '<')) {
+            Throw new Exception(
                 Locale::getMessage(
                     'ERR_PHP_NOT_SUPPORTED',
                     [
@@ -174,11 +134,21 @@ class Module
         }
 
         if (
-            is_file($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/' . Module::ID . '/include.php')
-            && is_file($_SERVER['DOCUMENT_ROOT'] . '/local/modules/' . Module::ID . '/include.php')
+            is_file($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/sprint.migration/include.php') &&
+            is_file($_SERVER['DOCUMENT_ROOT'] . '/local/modules/sprint.migration/include.php')
         ) {
-            throw new Exception('module installed to bitrix and local folder');
+            Throw new Exception('module installed to bitrix and local folder');
         }
+    }
+
+    public static function getDefaultAdminLang()
+    {
+        return COption::GetOptionString('main', 'admin_lid');
+    }
+
+    public static function setDefaultAdminLang($lang)
+    {
+        COption::SetOptionString('main', 'admin_lid', $lang);
     }
 }
 

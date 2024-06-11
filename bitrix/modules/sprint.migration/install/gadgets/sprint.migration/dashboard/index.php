@@ -1,4 +1,4 @@
-<?php
+<?
 /**
  * @var $arGadgetParams array
  */
@@ -13,7 +13,7 @@ use Sprint\Migration\VersionManager;
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
     die();
 }
-global $APPLICATION;
+
 try {
 
     if (!Loader::includeModule('sprint.migration')) {
@@ -41,7 +41,7 @@ try {
         }
 
         $versionManager = new VersionManager(
-            new VersionConfig($config['name'])
+            $config['name']
         );
         $hasNewVersions = count($versionManager->getVersions([
             'status' => 'new',
@@ -66,7 +66,7 @@ try {
         if (!empty($arGadgetParams['CHECK_SCHEMAS'])) {
 
             $schemaManager = new SchemaManager(
-                new VersionConfig($config['name'])
+                $config['name']
             );
 
             $modifiedCnt = 0;
@@ -102,7 +102,7 @@ try {
     include __DIR__ . '/includes/style.php';
     include __DIR__ . '/includes/interface.php';
 
-} catch (Throwable $e) {
+} catch (Exception $e) {
     include __DIR__ . '/includes/style.php';
     include __DIR__ . '/includes/errors.php';
 }

@@ -198,7 +198,7 @@ if(!class_exists("CAsproNextReCaptcha"))
 			return false;
 		}
 
-		public function checkMask($mask_exc = ''){
+		public static function checkMask($mask_exc = ''){
 			if($mask_exc)
 			{
 				$request = Application::getInstance()->getContext()->getServer();

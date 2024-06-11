@@ -2,6 +2,7 @@
 
 namespace Sprint\Migration\Builders;
 
+use Sprint\Migration\Exceptions\ExchangeException;
 use Sprint\Migration\Exceptions\HelperException;
 use Sprint\Migration\Exceptions\MigrationException;
 use Sprint\Migration\Exceptions\RebuildException;
@@ -24,13 +25,13 @@ class MedialibElementsBuilder extends VersionBuilder
     {
         $this->setTitle(Locale::getMessage('BUILDER_MedialibElements1'));
         $this->setDescription(Locale::getMessage('BUILDER_MedialibElements2'));
-        $this->setGroup('Medialib');
-
         $this->addVersionFields();
     }
 
     /**
      * @throws RebuildException
+     * @throws ExchangeException
+     * @throws RestartException
      * @throws HelperException
      * @throws MigrationException
      */
@@ -65,4 +66,6 @@ class MedialibElementsBuilder extends VersionBuilder
             Module::getModuleDir() . '/templates/MedialibElementsExport.php'
         );
     }
+
+
 }

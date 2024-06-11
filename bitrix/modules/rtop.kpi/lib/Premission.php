@@ -9,7 +9,7 @@ Loc::loadMessages(__FILE__);
 
 class Premission
 {
-	public function get(){
+	public static function get(){
 		global $USER;
 		$ID = $USER->GetId();
 		$user = BalanceTable::getList(['filter' => ['USERID' => $ID], 'select' => ['ROLE']])->fetch();

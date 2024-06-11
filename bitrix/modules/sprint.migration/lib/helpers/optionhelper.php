@@ -14,9 +14,7 @@ class OptionHelper extends Helper
     public function isEnabled()
     {
         return (
-            class_exists('\Bitrix\Main\ModuleManager')
-            && class_exists('\Bitrix\Main\Entity\DataManager')
-            && class_exists('\Bitrix\Main\Config\Option')
+            class_exists('\Bitrix\Main\ModuleManager') && class_exists('\Bitrix\Main\Entity\DataManager') && class_exists('\Bitrix\Main\Config\Option')
         );
     }
 
@@ -36,7 +34,7 @@ class OptionHelper extends Helper
      */
     public function getOptions($filter = [])
     {
-        $this->checkRequiredKeys($filter, ['MODULE_ID']);
+        $this->checkRequiredKeys(__METHOD__, $filter, ['MODULE_ID']);
 
         try {
             $values = Option::getForModule($filter['MODULE_ID']);
@@ -60,11 +58,11 @@ class OptionHelper extends Helper
      * @param array $filter
      *
      * @throws HelperException
-     * @return array
+     * @return array|false
      */
     public function getOption($filter = [])
     {
-        $this->checkRequiredKeys($filter, ['MODULE_ID', 'NAME']);
+        $this->checkRequiredKeys(__METHOD__, $filter, ['MODULE_ID', 'NAME']);
 
         try {
             $value = Option::get($filter['MODULE_ID'], $filter['NAME']);
@@ -74,8 +72,9 @@ class OptionHelper extends Helper
                 'VALUE'     => $value,
             ]);
         } catch (Exception $e) {
-            throw new HelperException($e->getMessage(), $e->getCode(), $e);
         }
+
+        return false;
     }
 
     /**
@@ -86,7 +85,7 @@ class OptionHelper extends Helper
      */
     public function saveOption($fields)
     {
-        $this->checkRequiredKeys($fields, ['MODULE_ID', 'NAME']);
+        $this->checkRequiredKeys(__METHOD__, $fields, ['MODULE_ID', 'NAME']);
 
         $exists = $this->getOption([
             'MODULE_ID' => $fields['MODULE_ID'],
@@ -122,7 +121,19 @@ class OptionHelper extends Helper
             return $ok;
         }
 
-        return true;
+        $ok = true;
+        if ($this->getMode('out_equal')) {
+            $this->outNoticeIf(
+                $ok,
+                Locale::getMessage(
+                    'OPTION_EQUAL',
+                    [
+                        '#NAME#' => $fields['MODULE_ID'] . ':' . $fields['NAME'],
+                    ]
+                )
+            );
+        }
+        return $ok;
     }
 
     /**
@@ -133,7 +144,7 @@ class OptionHelper extends Helper
      */
     public function deleteOptions($filter = [])
     {
-        $this->checkRequiredKeys($filter, ['MODULE_ID']);
+        $this->checkRequiredKeys(__METHOD__, $filter, ['MODULE_ID']);
 
         $params = [];
 
