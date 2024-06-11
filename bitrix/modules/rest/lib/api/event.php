@@ -554,17 +554,6 @@ class Event extends \IRestService
 
 		$queryFilter['=PROCESS_ID'] = $processId;
 
-		if($connectorId == '588') {
-	        // Устанавливаем значения фильтра для соответствия записям от 1С
-	        $queryFilter['>ID'] = '462962';
-	        $queryFilter['=APP_ID'] = '2'; // Пример идентификатора приложения 1С
-	        $queryFilter['=CONNECTOR_ID'] = 'OneC'; // Пример идентификатора коннектора 1С
-	        $queryFilter['=PROCESS_ID'] = ''; // Пустой PROCESS_ID
-	        $queryFilter["=EVENT_NAME"] = "ONSALEORDERSAVED";
-	    }
-
-
-
 		$dbRes = EventOfflineTable::getList(array(
 			'select' => array(
 				'ID', 'TIMESTAMP_X', 'EVENT_NAME', 'EVENT_DATA', 'EVENT_ADDITIONAL', 'MESSAGE_ID'
@@ -582,9 +571,13 @@ class Event extends \IRestService
 			$ts = $event['TIMESTAMP_X'];
 
 			$event['TIMESTAMP_X'] = \CRestUtil::convertDateTime($ts->toString());
-			$event['EVENT_ADDITIONAL'] = array(
-				'user_id' => $event['EVENT_ADDITIONAL'][Auth::PARAM_LOCAL_USER],
-			);
+
+			if (isset($event['EVENT_ADDITIONAL'][Auth::PARAM_LOCAL_USER]))
+			{
+				$event['EVENT_ADDITIONAL'] = [
+					'user_id' => $event['EVENT_ADDITIONAL'][Auth::PARAM_LOCAL_USER],
+				];
+			}
 
 			$result[] = $event;
 		}
@@ -593,8 +586,7 @@ class Event extends \IRestService
 		{
 			EventOfflineTable::clearEvents($processId, $clientInfo['ID'], $connectorId);
 		}
-		self::logFilter($queryFilter);
-		self::logFilter($result);
+
 		return array(
 			'process_id' => $returnProcessId ? $processId : null,
 			'events' => $result
@@ -626,11 +618,7 @@ class Event extends \IRestService
 		}
 
 		$clientInfo = AppTable::getByClientId($server->getClientId());
-		if($connectorId == '588') {
-			$connectorId = 'OneC';
-			$clientInfo['ID'] = 2;
-			$processId = '';
-		}
+
 		if(isset($query['message_id']))
 		{
 			$listIds = false;
@@ -650,6 +638,7 @@ class Event extends \IRestService
 
 				$listIds[] = $messageId;
 			}
+
 			EventOfflineTable::clearEventsByMessageId($processId, $clientInfo['ID'], $connectorId, $listIds);
 		}
 		else
@@ -674,6 +663,7 @@ class Event extends \IRestService
 					$listIds[] = $id;
 				}
 			}
+
 			EventOfflineTable::clearEvents($processId, $clientInfo['ID'], $connectorId, $listIds);
 		}
 
@@ -711,12 +701,6 @@ class Event extends \IRestService
 		}
 
 		$clientInfo = AppTable::getByClientId($server->getClientId());
-		if($connectorId == '588') {
-			$connectorId = 'OneC';
-			$clientInfo['ID'] = 2;
-			$processId = '';
-		}
-
 		if(count($messageId) > 0)
 		{
 			EventOfflineTable::markError($processId, $clientInfo['ID'], $connectorId, $messageId);
@@ -724,12 +708,6 @@ class Event extends \IRestService
 
 		return true;
 	}
-
-	protected static function logFilter($filter) {
-        $logFile = $_SERVER['DOCUMENT_ROOT'] . '/rest_filter.log';
-        $logMessage = "Final filter: " . print_r($filter, true) . "\n";
-        file_put_contents($logFile, $logMessage, FILE_APPEND);
-    }
 
 	public static function eventOfflineList($query, $n, \CRestServer $server)
 	{
@@ -758,22 +736,29 @@ class Event extends \IRestService
 		$clientInfo = AppTable::getByClientId($server->getClientId());
 
 		$queryFilter['=APP_ID'] = $clientInfo['ID'];
-		$queryFilter['=CONNECTOR_ID'] = $connectorId;
+
+		$getEventQuery = EventOfflineTable::query();
+
+		if ($connectorId === '')
+		{
+			$getEventQuery->where('CONNECTOR_ID', '');
+		}
+		else
+		{
+			$queryFilter['=CONNECTOR_ID'] = $connectorId;
+		}
 
 		$navParams = static::getNavData($n, true);
 
-		$dbRes = EventOfflineTable::getList(array(
-			'select' => array(
-				'ID', 'TIMESTAMP_X', 'EVENT_NAME', 'EVENT_DATA', 'EVENT_ADDITIONAL', 'MESSAGE_ID', 'PROCESS_ID', 'ERROR'
-			),
-			'filter' => $queryFilter,
-			'limit' => $navParams['limit'],
-			'offset' => $navParams['offset'],
-			'count_total' => true,
-			'order' => $order,
-		));
+		$getEventQuery
+			->setSelect(['ID', 'TIMESTAMP_X', 'EVENT_NAME', 'EVENT_DATA', 'EVENT_ADDITIONAL', 'MESSAGE_ID', 'PROCESS_ID', 'ERROR'])
+			->setFilter($queryFilter)
+			->setOrder($order)
+			->setLimit($navParams['limit'])
+			->setOffset($navParams['offset']);
 
 		$result = array();
+		$dbRes = $getEventQuery->exec();
 
 		while($event = $dbRes->fetch())
 		{
@@ -781,15 +766,19 @@ class Event extends \IRestService
 			$ts = $event['TIMESTAMP_X'];
 
 			$event['TIMESTAMP_X'] = \CRestUtil::convertDateTime($ts->toString());
-			$event['EVENT_ADDITIONAL'] = array(
-				'user_id' => $event['EVENT_ADDITIONAL'][Auth::PARAM_LOCAL_USER],
-			);
+
+			if (isset($event['EVENT_ADDITIONAL'][Auth::PARAM_LOCAL_USER]))
+			{
+				$event['EVENT_ADDITIONAL'] = [
+					'user_id' => $event['EVENT_ADDITIONAL'][Auth::PARAM_LOCAL_USER],
+				];
+			}
 
 			$result[] = $event;
 		}
 
 		return static::setNavData($result, array(
-			"count" => $dbRes->getCount(),
+			"count" => $getEventQuery->countTotal(),
 			"offset" => $navParams['offset']
 		));
 	}

@@ -31,7 +31,8 @@ try
 			$storageController = new Bitrix\Disk\Bitrix24Disk\Legacy\StorageController();
 			$storageController
 				->setActionName($_REQUEST['action'])
-				->exec();
+				->exec()
+			;
 		}
 		else
 		{
@@ -64,12 +65,25 @@ catch (\Throwable $e)
 		$exceptionHandler->writeToLog($e);
 	}
 
-
-	/** @global \CMain $APPLICATION */
 	global $APPLICATION;
+	$application = Application::getInstance();
+	if (($APPLICATION instanceof \CMain) && $application->isInitialized())
+	{
+		$APPLICATION->RestartBuffer();
+		while (ob_end_clean());
 
-	$APPLICATION->RestartBuffer();
-	while(ob_end_clean());
-
-	Application::getInstance()->end(0, AjaxJson::createError($errorCollection));
+		Application::getInstance()->end(0, AjaxJson::createError($errorCollection));
+	}
+	if (!headers_sent())
+	{
+		header('Content-Type: application/json; charset=UTF-8');
+		echo json_encode([
+			'status' => 'error',
+			'errors' => [
+				[
+					'message' => 'Application can\'t start ',
+				],
+			],
+		]);
+	}
 }

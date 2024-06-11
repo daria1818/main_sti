@@ -6,7 +6,7 @@ use Bitrix\Socialservices\UserTable;
 
 IncludeModuleLangFile(__FILE__);
 
-require_once(dirname(__FILE__)."/descriptions.php");
+require_once(__DIR__."/descriptions.php");
 
 //manager to operate with services
 class CSocServAuthManager
@@ -56,7 +56,7 @@ class CSocServAuthManager
 		$arAuthServices = self::$arAuthServices;
 
 		//user settings: sorting, active
-		$arServices = unserialize(COption::GetOptionString("socialservices", "auth_services".$suffix, ""));
+		$arServices = unserialize(COption::GetOptionString("socialservices", "auth_services".$suffix, ""), ["allowed_classes" => false]);
 		if(is_array($arServices))
 		{
 			$i = 0;
@@ -103,14 +103,44 @@ class CSocServAuthManager
 		];
 	}
 
+	public function isActiveAuthService(string $code): bool
+	{
+		if (!isset(self::$arAuthServices[$code]))
+		{
+			return false;
+		}
+
+		$service = self::$arAuthServices[$code];
+		if (
+			isset($service["__active"])
+			&& $service["__active"] === true
+			&& empty($service["DISABLED"])
+		)
+		{
+			$serviceObject = new $service["CLASS"];
+			if (is_callable([$serviceObject, "CheckSettings"]))
+			{
+				if (!call_user_func_array([$serviceObject, "CheckSettings"], []))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
 	public function GetActiveAuthServices($arParams)
 	{
 		$aServ = array();
-		self::SetUniqueKey();
+		// self::SetUniqueKey();
 
 		foreach(self::$arAuthServices as $key=>$service)
 		{
-			if($service["__active"] === true && $service["DISABLED"] !== true)
+			$isDisabled = $service["DISABLED"] ?? null;
+			if($service["__active"] === true && $isDisabled !== true)
 			{
 				$cl = new $service["CLASS"];
 				if(is_callable(array($cl, "CheckSettings")))
@@ -261,10 +291,11 @@ class CSocServAuthManager
 		{
 			$service = self::$arAuthServices[$service_id];
 
+			$isDisabled = $service["DISABLED"] ?? null;
 			if(
 				(
 					$service["__active"] === true
-					&& $service["DISABLED"] !== true
+					&& $isDisabled !== true
 				)
 				|| (
 					$service_id == CSocServBitrix24Net::ID
@@ -343,7 +374,7 @@ class CSocServAuthManager
 			$checkKey = $arState['check_key'];
 		}
 
-		if($_SESSION["UNIQUE_KEY"] != '' && $checkKey != '' && ($checkKey === $_SESSION["UNIQUE_KEY"]))
+		if(!empty($_SESSION["UNIQUE_KEY"]) && $checkKey && ($checkKey === $_SESSION["UNIQUE_KEY"]))
 		{
 			if($bUnset)
 			{
@@ -470,9 +501,9 @@ class CSocServAuthManager
 		$arParams = array();
 		if((IsModuleInstalled('bitrix24') && defined('BX24_HOST_NAME')) && $userLogin != '')
 		{
-			if($arUserTwit = unserialize(base64_decode($userTwit)))
+			if($arUserTwit = unserialize(base64_decode($userTwit), ["allowed_classes" => false]))
 				$userTwit = $arUserTwit;
-			if($arSiteIdCheck = unserialize(base64_decode($arSiteId)))
+			if($arSiteIdCheck = unserialize(base64_decode($arSiteId), ["allowed_classes" => false]))
 				$arSiteId = $arSiteIdCheck;
 			$dbUser = CUser::GetByLogin($userLogin);
 			if($arUser = $dbUser->Fetch())
@@ -742,8 +773,7 @@ class CSocServAuthManager
 	public static function GetTwitMessages($lastTwitId = "1", $counter = 1)
 	{
 		$oAuthManager = new CSocServAuthManager();
-		$arActiveSocServ = $oAuthManager->GetActiveAuthServices(array());
-		if(!(isset($arActiveSocServ["Twitter"]) && isset($arActiveSocServ["Twitter"]["__active"])) || !function_exists("hash_hmac"))
+		if(!$oAuthManager->isActiveAuthService('Twitter') || !function_exists("hash_hmac"))
 			return false;
 		if(!CModule::IncludeModule("socialnetwork"))
 			return "CSocServAuthManager::GetTwitMessages(\"$lastTwitId\", $counter);";
@@ -800,8 +830,7 @@ class CSocServAuthManager
 	public static function SendSocialservicesMessages()
 	{
 		$oAuthManager = new CSocServAuthManager();
-		$arActiveSocServ = $oAuthManager->GetActiveAuthServices(array());
-		if(!(isset($arActiveSocServ["Twitter"]) && isset($arActiveSocServ["Twitter"]["__active"])) || !function_exists("hash_hmac"))
+		if(!$oAuthManager->isActiveAuthService('Twitter') || !function_exists("hash_hmac"))
 			return false;
 
 		$ttl = 86400;
@@ -1198,7 +1227,7 @@ class CSocServAuth
 						$socServArray = "a:0:{}";
 					}
 
-					$arSocServUser['SOCSERVARRAY'] = unserialize($socServArray);
+					$arSocServUser['SOCSERVARRAY'] = unserialize($socServArray, ["allowed_classes" => false]);
 
 					if(is_array($arSocServUser['SOCSERVARRAY']) && count($arSocServUser['SOCSERVARRAY']) > 0)
 					{
@@ -1237,7 +1266,7 @@ class CSocServAuth
 						$socServArray = "a:0:{}";
 					}
 
-					$arSocServUser['SOCSERVARRAY'] = unserialize($socServArray);
+					$arSocServUser['SOCSERVARRAY'] = unserialize($socServArray, ["allowed_classes" => false]);
 
 					if(is_array($arSocServUser['SOCSERVARRAY']) && count($arSocServUser['SOCSERVARRAY']) > 0)
 					{
@@ -1276,7 +1305,7 @@ class CSocServAuth
 	public static function OptionsSuffix()
 	{
 		//settings depend on current site
-		$arUseOnSites = unserialize(COption::GetOptionString("socialservices", "use_on_sites", ""));
+		$arUseOnSites = unserialize(COption::GetOptionString("socialservices", "use_on_sites", ""), ["allowed_classes" => false]);
 		return (isset($arUseOnSites[SITE_ID]) && $arUseOnSites[SITE_ID] === "Y"? '_bx_site_'.SITE_ID : '');
 	}
 
@@ -1467,11 +1496,7 @@ class CSocServAuth
 
 				if(!$USER_ID)
 				{
-					if
-					(
-						COption::GetOptionString("main", "new_user_registration", "N") == "Y"
-						&& COption::GetOptionString("socialservices", "allow_registration", "Y") == "Y"
-					)
+					if ($this->isAllowedRegisterNewUser())
 					{
 						$socservUserFields['PASSWORD'] = randString(30); //not necessary but...
 						$socservUserFields['LID'] = SITE_ID;
@@ -1480,7 +1505,6 @@ class CSocServAuth
 						if($def_group <> '')
 						{
 							$socservUserFields['GROUP_ID'] = explode(',', $def_group);
-
 						}
 
 
@@ -1578,19 +1602,29 @@ class CSocServAuth
 
 	public static function OnFindExternalUser($login)
 	{
-		global $DB;
+		$userRow = \Bitrix\Main\UserTable::getRow([
+			'select' => ['ID'],
+			'filter' => [
+				'=ACTIVE' => 'Y',
+				'=EXTERNAL_AUTH_ID' => 'socservices',
+				'=LOGIN' => $login,
+			],
+		]);
 
-		$res = $DB->Query("
-SELECT bsu.USER_ID
-FROM b_socialservices_user bsu
-LEFT JOIN b_user bu ON bsu.USER_ID=bu.ID
-WHERE bsu.LOGIN='".$DB->ForSql($login)."' AND bu.ACTIVE='Y'
-");
-		if(($user = $res->Fetch()))
+		if (isset($userRow['ID']))
 		{
-			return $user["USER_ID"];
+			return $userRow['ID'];
 		}
-		return 0;
+
+		$socialserviceRow = UserTable::getRow([
+			'select' => ['USER_ID'],
+			'filter' => [
+				'=USER.ACTIVE' => 'Y',
+				'=LOGIN' => $login,
+			],
+		]);
+
+		return $socialserviceRow['USER_ID'] ?? 0;
 	}
 
 	public function setAllowChangeOwner($value)
@@ -1624,6 +1658,12 @@ WHERE bsu.LOGIN='".$DB->ForSql($login)."' AND bu.ACTIVE='Y'
 
 		if (array_key_exists('REFRESH_TOKEN', $arFields))
 			$arFields['REFRESH_TOKEN'] = $cryptoField->encrypt($arFields['REFRESH_TOKEN']);
+	}
+
+	protected function isAllowedRegisterNewUser(): bool
+	{
+		return COption::GetOptionString("main", "new_user_registration", "N") === "Y"
+			&& COption::GetOptionString("socialservices", "allow_registration", "Y") === "Y";
 	}
 }
 

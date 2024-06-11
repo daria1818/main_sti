@@ -1,4 +1,4 @@
-<?
+<?php
 define("BX_SKIP_USER_LIMIT_CHECK", true);
 if (isset($_GET['alias']))
 {
@@ -9,7 +9,7 @@ if (isset($_GET['alias']))
 	if (
 		isset($_GET['widget_user_lang'])
 		&& preg_match("/^[a-z]{2,2}$/", $_GET['widget_user_lang'])
-		&& strlen($_GET['widget_user_lang']) == 2
+		&& mb_strlen($_GET['widget_user_lang']) == 2
 		&& @is_dir($widgetUserLangPath . $_GET['widget_user_lang'])
 	)
 	{
@@ -19,7 +19,7 @@ if (isset($_GET['alias']))
 	elseif (
 		isset($_COOKIE['WIDGET_USER_LANG'])
 		&& preg_match("/^[a-z]{2,2}$/", $_COOKIE['WIDGET_USER_LANG'])
-		&& strlen($_COOKIE['WIDGET_USER_LANG']) == 2
+		&& mb_strlen($_COOKIE['WIDGET_USER_LANG']) == 2
 		&& @is_dir($widgetUserLangPath . $_COOKIE['WIDGET_USER_LANG'])
 	)
 	{
@@ -32,6 +32,19 @@ if (isset($_GET['alias']))
 		define("BX_PULL_SKIP_INIT", true);
 	}
 	define("BX_PULL_COMMAND_PATH", "/desktop_app/pull.ajax.php");
+
+	if (isset($_GET['videoconf'], $_SERVER['HTTP_ACCEPT_LANGUAGE']) && strlen($_SERVER['HTTP_ACCEPT_LANGUAGE']) > 1)
+	{
+		$preferredLang = substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2);
+		if (
+			!defined("LANGUAGE_ID")
+			&& preg_match("/^[a-z]{2}$/", $preferredLang)
+			&& @is_dir($widgetUserLangPath . $preferredLang)
+		)
+		{
+			define("LANGUAGE_ID", $preferredLang);
+		}
+	}
 }
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");

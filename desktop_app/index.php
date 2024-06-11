@@ -35,13 +35,15 @@ if (isset($_GET['IFRAME']) == 'Y')
 {
 	$APPLICATION->IncludeComponent("bitrix:im.messenger", "iframe", Array(
 		"CONTEXT" => "FULLSCREEN",
+		"DESKTOP" => true,
 	), false, Array("HIDE_ICONS" => "Y"));
 }
-else if (!isset($_GET['BXD_API_VERSION']) && strpos($_SERVER['HTTP_USER_AGENT'], 'BitrixDesktop') === false)
+else if (!isset($_GET['BXD_API_VERSION']) && mb_strpos($_SERVER['HTTP_USER_AGENT'], 'BitrixDesktop') === false)
 {
 	$APPLICATION->IncludeComponent("bitrix:im.messenger", "fullscreen", Array(
 		"CONTEXT" => "FULLSCREEN",
 		"DESIGN" => "DESKTOP",
+		"DESKTOP" => true,
 	), false, Array("HIDE_ICONS" => "Y"));
 }
 else
@@ -57,7 +59,8 @@ else
 	</script>
 	<?
 	$APPLICATION->IncludeComponent("bitrix:im.messenger", "", Array(
-		"CONTEXT" => "DESKTOP"
+		"CONTEXT" => "DESKTOP",
+		"DESKTOP" => true,
 	), false, Array("HIDE_ICONS" => "Y"));
 
 	if (IsModuleInstalled('ui'))
@@ -88,7 +91,16 @@ else
 
 	if (CModule::IncludeModule('timeman'))
 	{
-		CJSCore::init('im_timecontrol');
+		\Bitrix\Main\UI\Extension::load('im_timecontrol');
+
+		if (class_exists('\Bitrix\Timeman\Monitor\Config'))
+		{
+			\Bitrix\Main\UI\Extension::load('timeman.monitor');
+
+			?><script type="text/javascript">
+			BX.Timeman.Monitor.init(<?=\Bitrix\Timeman\Monitor\Config::json()?>);
+			</script><?
+		}
 	}
 }
 
