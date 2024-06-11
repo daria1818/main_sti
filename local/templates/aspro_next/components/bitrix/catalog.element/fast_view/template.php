@@ -618,7 +618,7 @@ setViewedProduct(<?=$arResult['ID']?>, <?=CUtil::PhpToJSObject($arViewedData, fa
 											</td>
 											<td class="char_value">
 												<span itemprop="value">
-													<?if(count($arProp["DISPLAY_VALUE"]) > 1):?>
+													<?if(is_array($arProp["DISPLAY_VALUE"])):?>
 														<?=implode(', ', $arProp["DISPLAY_VALUE"]);?>
 													<?else:?>
 														<?=$arProp["DISPLAY_VALUE"];?>

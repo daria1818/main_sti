@@ -150,7 +150,7 @@
 <?endif;?>
 
 <?// show link sale?>
-<?$bShowSales =  (count($arResult['DISPLAY_PROPERTIES']['LINK_SALE']['VALUE'])>0);?>
+<?$bShowSales =  (is_array($arResult['DISPLAY_PROPERTIES']['LINK_SALE']['VALUE']) && count($arResult['DISPLAY_PROPERTIES']['LINK_SALE']['VALUE'])>0);?>
 <?if($bShowSales):?>
 	<?$GLOBALS['arrSaleFilter'] = array('ID' => $arResult['DISPLAY_PROPERTIES']['LINK_SALE']['VALUE']); ?>
 	<div class="stockblock">

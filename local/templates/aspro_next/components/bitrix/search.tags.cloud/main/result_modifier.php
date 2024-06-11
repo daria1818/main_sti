@@ -22,4 +22,7 @@ if (is_array($arResult['SEARCH']))
 	{
 		unset($arResult['SEARCH']);
 	}
-}?>
+}
+if(!is_array($arResult['SEARCH']))
+	$arResult['SEARCH'] = [];
+?>
