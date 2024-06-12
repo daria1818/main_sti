@@ -555,6 +555,15 @@ class Event extends \IRestService
 
 		$queryFilter['=PROCESS_ID'] = $processId;
 
+		if($connectorId == '588') {
+	        // Устанавливаем значения фильтра для соответствия записям от 1С
+	        $queryFilter['>ID'] = '462962';
+	        $queryFilter['=APP_ID'] = '2'; // Пример идентификатора приложения 1С
+	        $queryFilter['=CONNECTOR_ID'] = 'OneC'; // Пример идентификатора коннектора 1С
+	        $queryFilter['=PROCESS_ID'] = ''; // Пустой PROCESS_ID
+	        $queryFilter["=EVENT_NAME"] = "ONSALEORDERSAVED";
+	    }
+
 		$dbRes = EventOfflineTable::getList(array(
 			'select' => array(
 				'ID', 'TIMESTAMP_X', 'EVENT_NAME', 'EVENT_DATA', 'EVENT_ADDITIONAL', 'MESSAGE_ID'
@@ -587,6 +596,8 @@ class Event extends \IRestService
 		{
 			EventOfflineTable::clearEvents($processId, $clientInfo['ID'], $connectorId);
 		}
+		self::logFilter($queryFilter);
+		self::logFilter($result);
 
 		return array(
 			'process_id' => $returnProcessId ? $processId : null,
@@ -619,6 +630,11 @@ class Event extends \IRestService
 		}
 
 		$clientInfo = AppTable::getByClientId($server->getClientId());
+		if($connectorId == '588') {
+			$connectorId = 'OneC';
+			$clientInfo['ID'] = 2;
+			$processId = '';
+		}
 
 		if (isset($query['message_id']))
 		{
@@ -702,6 +718,12 @@ class Event extends \IRestService
 		}
 
 		$clientInfo = AppTable::getByClientId($server->getClientId());
+		if($connectorId == '588') {
+			$connectorId = 'OneC';
+			$clientInfo['ID'] = 2;
+			$processId = '';
+		}
+
 		if(count($messageId) > 0)
 		{
 			EventOfflineTable::markError($processId, $clientInfo['ID'], $connectorId, $messageId);
@@ -709,6 +731,13 @@ class Event extends \IRestService
 
 		return true;
 	}
+
+	protected static function logFilter($filter)
+	{
+        $logFile = $_SERVER['DOCUMENT_ROOT'] . '/rest_filter.log';
+        $logMessage = "Final filter: " . print_r($filter, true) . "\n";
+        file_put_contents($logFile, $logMessage, FILE_APPEND);
+    }
 
 	public static function eventOfflineList($query, $n, \CRestServer $server)
 	{

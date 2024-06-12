@@ -525,7 +525,10 @@ if(!$arPost['CLASS'])
 			}
 
 			$arAddToBasketData = CNext::GetAddToBasketArray($arItem, $arItem["TOTAL_COUNT"], $arPost["PARAMS"]["DEFAULT_COUNT"], $arPost["PARAMS"]["BASKET_URL"], false, array(), 'small read_more1', $arPost["PARAMS"]);
-			$arAddToBasketData["HTML"] = str_replace('data-item', 'data-props="'.implode(';', $arPost["PARAMS"]['OFFERS_CART_PROPERTIES']).'" data-item', $arAddToBasketData["HTML"]);
+			if(is_array($arPost["PARAMS"]['OFFERS_CART_PROPERTIES']))
+				$arAddToBasketData["HTML"] = str_replace('data-item', 'data-props="'.implode(';', $arPost["PARAMS"]['OFFERS_CART_PROPERTIES']).'" data-item', $arAddToBasketData["HTML"]);
+			else
+				$arAddToBasketData["HTML"] = str_replace('data-item', 'data-props="'.$arPost["PARAMS"]['OFFERS_CART_PROPERTIES'].'" data-item', $arAddToBasketData["HTML"]);
 
 			$arItems["ITEMS"][$key]["MAX_QUANTITY"] = $arItem["TOTAL_COUNT"];
 			$arItems["ITEMS"][$key]["STEP_QUANTITY"] = $arItem["CATALOG_MEASURE_RATIO"];

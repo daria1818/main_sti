@@ -4777,6 +4777,11 @@ class CIBlockCMLImport
 	function SetProductPrice($PRODUCT_ID, $arPrices, $arDiscounts = false)
 	{
 		$arDBPrices = array();
+		$arGroups = array();
+		$propertyAutoPrice = 1426;
+		$basePriceId = 3;
+		$autoPriceId = 11;
+
 		$iterator = Catalog\Model\Price::getList(array(
 			'select' => array(
 				'ID', 'PRODUCT_ID', 'CATALOG_GROUP_ID',
@@ -4787,12 +4792,15 @@ class CIBlockCMLImport
 		while ($row = $iterator->fetch())
 		{
 			$arDBPrices[$row["CATALOG_GROUP_ID"].":".$row["QUANTITY_FROM"].":".$row["QUANTITY_TO"]] = $row["ID"];
+			$arGroups[$row["ID"]] = $row["CATALOG_GROUP_ID"];
 		}
 
 		$arToDelete = $arDBPrices;
 
 		if(!is_array($arPrices))
 			$arPrices = array();
+
+		$arAutoPrice = [];
 
 		foreach($arPrices as $price)
 		{
@@ -4830,6 +4838,12 @@ class CIBlockCMLImport
 					$arPrice["QUANTITY_TO"] = null;
 
 				$id = $arPrice["CATALOG_GROUP_ID"].":".$arPrice["QUANTITY_FROM"].":".$arPrice["QUANTITY_TO"];
+
+				if($arPrice['CATALOG_GROUP_ID'] == $basePriceId && isset($arAutoPrice))
+				{
+					$arAutoPrice = $arPrice;
+				}
+
 				if(isset($arDBPrices[$id]))
 				{
 					$priceResult = Catalog\Model\Price::update($arDBPrices[$id], $arPrice);
@@ -4865,6 +4879,12 @@ class CIBlockCMLImport
 						$arPrice["QUANTITY_TO"] = null;
 
 					$id = $arPrice["CATALOG_GROUP_ID"].":".$arPrice["QUANTITY_FROM"].":".$arPrice["QUANTITY_TO"];
+
+					if($arPrice['CATALOG_GROUP_ID'] == $basePriceId && isset($arAutoPrice))
+					{
+						$arAutoPrice = $arPrice;
+					}
+
 					if(isset($arDBPrices[$id]))
 					{
 						$priceResult = Catalog\Model\Price::update($arDBPrices[$id], $arPrice);
@@ -4880,7 +4900,32 @@ class CIBlockCMLImport
 
 		foreach($arToDelete as $id)
 		{
+			if($arGroups[$id] == $autoPriceId)
+				continue;
 			$priceResult = Catalog\Model\Price::delete($id);
+		}
+
+		if(isset($arAutoPrice))
+		{
+			$arAutoPrice['CATALOG_GROUP_ID'] = $autoPriceId;
+			$id = $arAutoPrice["CATALOG_GROUP_ID"].":".$arAutoPrice["QUANTITY_FROM"].":".$arAutoPrice["QUANTITY_TO"];
+
+			if(isset($arDBPrices[$id]))
+			{
+				$autoPrice = \Bitrix\Iblock\ElementPropertyTable::getList([
+					'filter' => [
+						'=IBLOCK_ELEMENT_ID' => $PRODUCT_ID, 
+						'=IBLOCK_PROPERTY_ID' => $propertyAutoPrice
+					],
+					'select' => ['ID']
+				])->fetch();
+				if(empty($autoPrice))
+					$priceResult = Catalog\Model\Price::update($arDBPrices[$id], $arAutoPrice);
+			}
+			else
+			{
+				$priceResult = Catalog\Model\Price::add($arAutoPrice);
+			}
 		}
 	}
 
