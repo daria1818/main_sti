@@ -270,7 +270,6 @@ else
 	$arResult['CATALOG_TYPE'] = 0;
 	$arResult['OFFERS'] = array();
 }
-
 /* ADDITIONAL GALLERY */
 if($arParams['USE_ADDITIONAL_GALLERY'] === 'Y'){
 	$arResult['ADDITIONAL_GALLERY'] = $arElementAdditionalGallery = $arOffersAdditionalGallery = array();

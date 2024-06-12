@@ -3,7 +3,7 @@ $arPropsForGetListForOferL["SELECT"] = array("email", "UF_GET_COIN_BOT", "UF_LOY
 $rsUsers = CUser::GetList(($by=""), ($order=""), $arFilter, $arPropsForGetListForOferL);
 if ($rsUsers->SelectedRowsCount()>0) {
 	while($rsUsersa = $rsUsers->Fetch()) {
-		if($rsUsersa["UF_GET_COIN_BOT"] == '1'){
+		if($rsUsersa["UF_GET_COIN_BOT"] == '1' && !empty(trim($rsUsersa["UF_DATE_GET_COIN"]))){
 		$change_time = abs(date('d.m.Y') - $rsUsersa["UF_DATE_GET_COIN"]);
 		if($change_time == 1){
 

@@ -22,7 +22,8 @@ if($arItems){
 				<a class="dark_link" title="Бренды" href="<?=$APPLICATION->GetCurPageParam('', $arDeleteParams)?>"> Бренды</a>
 			</div>
 				<div class="items"><?
-				$distinct = array_count_values($arrItems);
+				if(is_array($arrItems))
+					$distinct = array_count_values($arrItems);
 				foreach ($arrItems2 as $key => $value) {
 					if(!empty($key)){
 					?>

@@ -35,7 +35,7 @@ class CSeoMetaEvents
         );
     }
 
-    public function OnBuildGlobalMenuHandler(&$arGlobalMenu, &$arModuleMenu){
+    public static function OnBuildGlobalMenuHandler(&$arGlobalMenu, &$arModuleMenu){
         \Sotbit\Seometa\Helper\Menu::getAdminMenu($arGlobalMenu, $arModuleMenu);
     }
 

@@ -9,6 +9,7 @@ use Api\Classes\Entity\OrderTable;
 use Bitrix\Main\Application;
 use Pwd\Entity\CatalogTable;
 use Pwd\Tools\Logger;
+use Bitrix\Main\Config\Option;
 
 Loc::loadMessages(__FILE__);
 

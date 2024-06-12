@@ -173,7 +173,6 @@ $arResult["strMainID"] = $this->GetEditAreaId($arResult['ID']);
 $arItemIDs = CNext::GetItemsIDs($arResult, "Y");
 $totalCount = CNext::GetTotalCount($arResult, $arParams);
 ?>
-<pre style="display:none"><?print_r($arItemIDs)?></pre>
 <?
 $arQuantityData = CNext::GetQuantityArray($totalCount, $arItemIDs["ALL_ITEM_IDS"], "Y");
 $templateData['ID_OFFER_GROUP'] = $arItemIDs['ALL_ITEM_IDS']['OFFER_GROUP'];

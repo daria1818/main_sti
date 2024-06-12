@@ -207,6 +207,8 @@
 		"VIEW_BLOCK_TYPE" => $arParams["VIEW_BLOCK_TYPE"],
 		"FILTER_NAME" => $arParams["FILTER_NAME"], // !need to filter similar goods
 		"USE_BIG_DATA" => $arParams['USE_BIG_DATA'],
+		"ADD_TO_BASKET_ACTION" => $arParams["DETAIL_ADD_TO_BASKET_ACTION"],
+		"ADD_TO_BASKET_ACTION_PRIMARY" => $arParams["DETAIL_ADD_TO_BASKET_ACTION_PRIMARY"]
 	),
 	$component
 );?>
