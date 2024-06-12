@@ -144,6 +144,14 @@ $arUrlRewrite=array (
     'PATH' => '/site_wh/pub/payment_slip.php',
     'SORT' => 100,
   ),
+  248 => 
+  array (
+    'CONDITION' => '#^/video([\\.\\-0-9a-zA-Z]+)(/?)([^/]*)#',
+    'RULE' => 'alias=$1&videoconf',
+    'ID' => NULL,
+    'PATH' => '/desktop_app/router.php',
+    'SORT' => 100,
+  ),
   47 => 
   array (
     'CONDITION' => '#^/bitrix/exchange/([a-zA-Z_-]+)/.*#',

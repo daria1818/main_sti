@@ -285,7 +285,7 @@ class DellinHandler extends \Bitrix\Sale\Delivery\Services\Base
 
             $shipmentCost = $order->getDeliveryPrice();
             $shipmentName = $shipment->getDeliveryName();
-            $personName = $props->getPayerName()->getValue();
+            $personName = $props->getPayerName() ? $props->getPayerName()->getValue() : '';
 //            $personPhone = $props->getItemByOrderPropertyCode('PHONE')->getValue();
 //            $zip = $props->getItemByOrderPropertyCode('ZIP')->getValue();
 //            $personAddress = $props->getItemByOrderPropertyCode('ADDRESS')->getValue();

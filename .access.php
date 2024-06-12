@@ -1,4 +1,7 @@
 <?
+$PERM["video"]["*"]="R";
+$PERM["online"]["*"]="R";
+$PERM["desktop_app"]["*"]="R";
 $PERM["dev"]["*"]="D";
 $PERM["sale"]["*"]="R";
 $PERM["projects"]["*"]="D";
@@ -12,8 +15,6 @@ $PERM["personal"]["8"]="W";
 $PERM["news"]["8"]="W";
 $PERM["about"]["8"]="W";
 $PERM["index.php"]["8"]="W";
-$PERM["desktop_app"]["*"]="D";
-$PERM["online"]["*"]="R";
 $PERM["pub"]["5"]="T_8";
 $PERM["upload"]["5"]="T_8";
 $PERM["/"]["*"]="R";

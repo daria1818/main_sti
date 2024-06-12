@@ -9,7 +9,7 @@ use \Pwd\Entity\CatalogTable;
 
 class Iblock
 {
-    public function OnAfterIBlockElementUpdateAdd(&$arFields)
+    public static function OnAfterIBlockElementUpdateAdd(&$arFields)
     {
         if (
             !$arFields["RESULT"] ||

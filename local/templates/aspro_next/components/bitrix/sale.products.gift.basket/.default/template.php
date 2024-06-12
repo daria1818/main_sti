@@ -753,10 +753,10 @@ if (!empty($arResult['ITEMS'])){
 		);
 	}
 
+	$customParams = [];//$arResult['ORIGINAL_PARAMETERS'];
 	$signer = new \Bitrix\Main\Security\Sign\Signer;
 	$signedTemplate = $signer->sign($templateName, 'sale.products.gift.basket');
 	$signedParams = $signer->sign(base64_encode(serialize($arResult['ORIGINAL_PARAMETERS'])), 'sale.products.gift.basket');
-	$customParams = $arResult['ORIGINAL_PARAMETERS'];
 	?>
 </div>
 <script>

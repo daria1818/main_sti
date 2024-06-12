@@ -472,7 +472,7 @@ class DellinBlockAdmin
             $name = $configParams['CONFIG']['YURI']['NAME'];
             $yuriAddress = $configParams['CONFIG']['YURI']['ADDRESS'];
             $personName = $configParams['CONFIG']['PERSON']['NAME'];
-            $personPhone = $configParams['CONFIG']['PERSON']['PHONE'];
+            $personPhone = preg_replace("%[^0-9]%", "", $configParams['CONFIG']['PERSON']['PHONE']);
             $personEmail = $configParams['CONFIG']['PERSON']['EMAIL'];
 
             //preset Settings for Request

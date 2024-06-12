@@ -6,20 +6,13 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 
 \Bitrix\Main\Page\Asset::getInstance()->setJsToBody(false);
 
-if (!\Bitrix\Main\Application::getInstance()->isUtfMode())
-{
-	$GLOBALS["APPLICATION"]->RestartBuffer();
-	CHTTP::SetStatus("404 Not Found");
-	return;
-}
-
 if (!CModule::IncludeModule('im'))
 	return;
 
 if (intval($USER->GetID()) <= 0 || \Bitrix\Im\User::getInstance()->isConnector())
 {
 	?>
-<script type="text/javascript">
+<script>
 	if (typeof(BXDesktopSystem) != 'undefined')
 		BXDesktopSystem.Login({});
 	else
