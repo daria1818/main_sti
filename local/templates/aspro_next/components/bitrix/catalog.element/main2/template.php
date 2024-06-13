@@ -1546,7 +1546,7 @@ if ($arResult['CATALOG'] && $actualItem['CAN_BUY'] && $arParams['USE_PREDICTION'
                           </td>
                           <td class="char_value">
                             <span itemprop="value">
-                              <? if (count($arProp["DISPLAY_VALUE"]) > 1) : ?>
+                              <? if (is_array($arProp["DISPLAY_VALUE"]) && count($arProp["DISPLAY_VALUE"]) > 1) : ?>
                                 <?= implode(', ', $arProp["DISPLAY_VALUE"]); ?>
                               <? else : ?>
                                 <?= $arProp["DISPLAY_VALUE"]; ?>

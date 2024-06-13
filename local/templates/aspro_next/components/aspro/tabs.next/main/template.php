@@ -6,10 +6,6 @@
 
 $this->setFrameMode(true);
 
-echo '<pre id="sasasf" style="display:none">';
-print_r($arResult);
-echo "</pre>";
-
 	$class_block="s_".$this->randString();
 	$arTab=array();
 	$col=4;

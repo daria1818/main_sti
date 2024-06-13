@@ -329,6 +329,7 @@ if($isAjaxFilter == "Y")
 					"bitrix:catalog.section",
 					$listElementsTemplate,
 					Array(
+						"COMPATIBLE_MODE" => "Y",
 						"USE_REGION" => ($arRegion ? "Y" : "N"),
 						"STORES" => $arParams['STORES'],
 						"SHOW_UNABLE_SKU_PROPS"=>$arParams["SHOW_UNABLE_SKU_PROPS"],

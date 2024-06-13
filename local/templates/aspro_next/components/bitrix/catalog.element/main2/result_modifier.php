@@ -1179,7 +1179,7 @@ if(is_array($arParams["SECTION_TIZER"]) && $arParams["SECTION_TIZER"]){
 if(!empty($arResult['DISPLAY_PROPERTIES']))
 {
 	$arVideo = array();
-	if(strlen($arResult["DISPLAY_PROPERTIES"]["VIDEO"]["VALUE"])){
+	if(!empty($arResult["DISPLAY_PROPERTIES"]["VIDEO"]["VALUE"])){
 		$arVideo[] = $arResult["DISPLAY_PROPERTIES"]["VIDEO"]["~VALUE"];
 	}
 	if(isset($arResult["DISPLAY_PROPERTIES"]["VIDEO_YOUTUBE"]["VALUE"])){
