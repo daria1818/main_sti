@@ -1,23 +1,22 @@
-<?
+<?php
+
 namespace Bitrix\Crm\Order\Builder;
 
+use Bitrix\Crm\Order\BasketItem;
+use Bitrix\Crm\Order\ContactCompanyEntity;
+use Bitrix\Crm\Order\Matcher;
+use Bitrix\Crm\Order\Order;
+use Bitrix\Crm\Order\PersonType;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Error;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ObjectException;
-use Bitrix\Main\SystemException;
 use Bitrix\Main\Web\Json;
 use Bitrix\Sale\Helpers\Order\Builder\BuildingException;
-use Bitrix\Sale\TradingPlatform;
 use Bitrix\Sale\Helpers\Order\Builder\OrderBuilder;
 use Bitrix\Sale\Helpers\Order\Builder\OrderBuilderNew;
 use Bitrix\Sale\Helpers\Order\Builder\SettingsContainer;
-use Bitrix\Crm\Order\Order;
-use Bitrix\Crm\Order\BasketItem;
-use Bitrix\Crm\Order\ContactCompanyEntity;
-use Bitrix\Crm\Order\Matcher;
-use Bitrix\Crm\Order\PersonType;
 
 if (!Loader::includeModule('sale'))
 {
@@ -55,7 +54,8 @@ class OrderBuilderCrm extends OrderBuilder
 			$fields['SITE_ID'] = SITE_ID;
 		}
 
-		if (!$fields['PERSON_TYPE_ID']) {
+		if (empty($fields['PERSON_TYPE_ID']))
+		{
 			if (!empty($fields['CLIENT']['COMPANY_ID']))
 			{
 				$fields['PERSON_TYPE_ID'] = PersonType::getCompanyPersonTypeId();
@@ -92,6 +92,8 @@ class OrderBuilderCrm extends OrderBuilder
 			->setRelatedProperties()
 			->setDiscounts() //?
 			->finalActions();
+
+		return $this;
 	}
 
 	/**
@@ -100,7 +102,7 @@ class OrderBuilderCrm extends OrderBuilder
 	 */
 	public function buildBasket()
 	{
-		if(is_array($this->formData['PRODUCT']) && !empty($this->formData['PRODUCT']))
+		if(isset($this->formData['PRODUCT']) && is_array($this->formData['PRODUCT']) && !empty($this->formData['PRODUCT']))
 		{
 			foreach($this->formData['PRODUCT'] as $k => $p)
 			{
@@ -116,13 +118,6 @@ class OrderBuilderCrm extends OrderBuilder
 						{
 							$fields = array_intersect_key($p, array_flip(BasketItem::getAllFields()));
 							$fields = array_merge($fieldsValues, $fields);
-							$currency = $fields['CURRENCY'] ?? $this->order->getCurrency();
-							$fields['PRICE'] = $this->unFormatPrice((string)$fields['PRICE'], $currency);
-							$fields['QUANTITY'] = str_replace(
-								[' ', chr(194).chr(160), chr(160), ','],
-								['', '', '', '.'],
-								$fields['QUANTITY']
-							);
 							$fields['OFFER_ID'] = $fields['PRODUCT_ID'];
 							$this->formData['PRODUCT'][$k] = $fields;
 						}
@@ -145,23 +140,6 @@ class OrderBuilderCrm extends OrderBuilder
 		}
 
 		return parent::buildBasket();
-	}
-
-	protected function unFormatPrice(string $formattedPrice, string $currency): float
-	{
-		if(!Loader::includeModule('currency'))
-		{
-			throw new SystemException('Can\'t include module "currency"');
-		}
-
-		$formattedPrice = str_replace(
-			[chr(194).chr(160), chr(160)],
-			'&nbsp;',
-			$formattedPrice
-		);
-
-		$result = \CCurrencyLang::getUnFormattedValue($formattedPrice, $currency);
-		return (float)str_replace(' ', '', $result);
 	}
 
 	/**
@@ -192,7 +170,7 @@ class OrderBuilderCrm extends OrderBuilder
 		return parent::setFields();
 	}
 
-	protected function prepareDateFields(array $fields, array $dateFields)
+	protected function prepareDateFields(array $fields, array $dateFields, bool $enableTime = false)
 	{
 		foreach($dateFields as $dateFieldName)
 		{
@@ -200,7 +178,10 @@ class OrderBuilderCrm extends OrderBuilder
 			{
 				try
 				{
-					$fields[$dateFieldName] = new \Bitrix\Main\Type\Date($fields[$dateFieldName]);
+					$fields[$dateFieldName] = $enableTime
+						? new \Bitrix\Main\Type\DateTime($fields[$dateFieldName])
+						: new \Bitrix\Main\Type\Date($fields[$dateFieldName])
+					;
 				}
 				catch (ObjectException $exception)
 				{
@@ -222,18 +203,41 @@ class OrderBuilderCrm extends OrderBuilder
 		return $fields;
 	}
 
+	private function fillPaymentsByBasketBuilder(): void
+	{
+		$basketFormData = $this->getBasketBuilder()->getFormData();
+
+		if (isset($this->formData['PRODUCT'], $basketFormData['PRODUCT']))
+		{
+			$this->formData['PRODUCT'] = $basketFormData['PRODUCT'];
+		}
+
+		if (isset($this->formData['PAYMENT'], $basketFormData['PAYMENT']))
+		{
+			foreach ($basketFormData['PAYMENT'] as $index => $payment)
+			{
+				if (isset($this->formData['PAYMENT'][$index], $payment['PRODUCT']))
+				{
+					$this->formData['PAYMENT'][$index]['PRODUCT'] = $payment['PRODUCT'];
+				}
+			}
+		}
+	}
+
 	public function buildPayments()
 	{
+		$this->fillPaymentsByBasketBuilder();
+
 		$dateTypeFields = [
 			'DATE_PAID', 'DATE_PAY_BEFORE', 'DATE_BILL',
 			'PAY_RETURN_DATE', 'PAY_VOUCHER_DATE'
 		];
 
-		if (is_array($this->formData["PAYMENT"]))
+		if (isset($this->formData["PAYMENT"]) && is_array($this->formData["PAYMENT"]))
 		{
 			foreach($this->formData["PAYMENT"] as $idx => $data)
 			{
-				if(is_array($data['fields']))
+				if(isset($data['fields']) && is_array($data['fields']))
 				{
 					$this->formData["PAYMENT"][$idx] = $data['fields'];
 				}
@@ -248,20 +252,52 @@ class OrderBuilderCrm extends OrderBuilder
 		return parent::buildPayments();
 	}
 
+	/**
+	 * Filling form data fields `PRODUCT` and `SHIPMENT` by form data of basket builder.
+	 *
+	 * @return void
+	 */
+	private function fillShipmentsByBasketBuilder(): void
+	{
+		$basketFormData = $this->getBasketBuilder()->getFormData();
+
+		if (isset($this->formData['PRODUCT'], $basketFormData['PRODUCT']))
+		{
+			$this->formData['PRODUCT'] = $basketFormData['PRODUCT'];
+		}
+
+		if (isset($this->formData['SHIPMENT'], $basketFormData['SHIPMENT']))
+		{
+			foreach ($basketFormData['SHIPMENT'] as $index => $shipment)
+			{
+				if (isset($this->formData['SHIPMENT'][$index], $shipment['PRODUCT']))
+				{
+					$this->formData['SHIPMENT'][$index]['PRODUCT'] = $shipment['PRODUCT'];
+				}
+			}
+		}
+	}
+
 	public function buildShipments()
 	{
+		if ($this->getSettingsContainer()->getItemValue('fillShipmentsByBasketBuilder'))
+		{
+			$this->fillShipmentsByBasketBuilder();
+		}
+
 		$dateTypeFields = [
 			'DELIVERY_DOC_DATE', 'DATE_DEDUCTED', 'DATE_MARKED',
 			'DATE_CANCELED', 'DATE_RESPONSIBLE_ID'
 		];
 
-		if(is_array($this->formData["SHIPMENT"]))
+		if(isset($this->formData["SHIPMENT"]) && is_array($this->formData["SHIPMENT"]))
 		{
 			foreach($this->formData["SHIPMENT"] as $idx => $data)
 			{
 				$this->formData["SHIPMENT"][$idx] = $this->prepareDateFields(
 					$this->formData["SHIPMENT"][$idx],
-					$dateTypeFields
+					$dateTypeFields,
+					true
 				);
 			}
 		}
@@ -295,11 +331,11 @@ class OrderBuilderCrm extends OrderBuilder
 
 	protected function setContactCompanyCollection()
 	{
-		$client = $this->formData['CLIENT'];
+		$client = $this->formData['CLIENT'] ?? [];
 		$clientCollection = $this->order->getContactCompanyCollection();
 		$clientCollection->clearCollection();
 
-		if((int)($client['COMPANY_ID']) > 0)
+		if ((int)($client['COMPANY_ID'] ?? 0) > 0)
 		{
 			/** @var \Bitrix\Crm\Order\Company $company */
 			$company = $clientCollection->createCompany();
@@ -309,11 +345,11 @@ class OrderBuilderCrm extends OrderBuilder
 			]);
 		}
 
-		if(!empty($client['CONTACT_IDS']) && is_array($client['CONTACT_IDS']))
+		if (!empty($client['CONTACT_IDS']) && is_array($client['CONTACT_IDS']))
 		{
 			$contactIds = array_unique($client['CONTACT_IDS']);
 			$firstKey = key($contactIds);
-			foreach($contactIds as $key => $itemId)
+			foreach ($contactIds as $key => $itemId)
 			{
 				if ($itemId > 0)
 				{
@@ -327,11 +363,12 @@ class OrderBuilderCrm extends OrderBuilder
 		}
 
 		$requisites = [];
-		if ((int)($this->formData['REQUISITE_ID']) > 0)
+		if (isset($this->formData['REQUISITE_ID']) && (int)($this->formData['REQUISITE_ID']) > 0)
 		{
 			$requisites['REQUISITE_ID'] = (int)($this->formData['REQUISITE_ID']);
 		}
-		if ((int)($this->formData['BANK_DETAIL_ID'])> 0)
+
+		if (isset($this->formData['BANK_DETAIL_ID']) && (int)($this->formData['BANK_DETAIL_ID'])> 0)
 		{
 			$requisites['BANK_DETAIL_ID'] = (int)($this->formData['BANK_DETAIL_ID']);
 		}
@@ -350,7 +387,7 @@ class OrderBuilderCrm extends OrderBuilder
 		{
 			$this->formData['TRADE_BINDINGS'] = [
 				[
-					'TRADING_PLATFORM_ID' => (int)$this->formData['TRADING_PLATFORM']
+					'TRADING_PLATFORM_ID' => (int)($this->formData['TRADING_PLATFORM'] ?? 0)
 				]
 			];
 
@@ -395,6 +432,7 @@ class OrderBuilderCrm extends OrderBuilder
 	{
 		$clientProperties = Matcher\FieldMatcher::getPropertyValues($entity->getField('ENTITY_TYPE_ID'), (int)$entity->getField('ENTITY_ID'));
 		$propertyCollection = $this->order->getPropertyCollection();
+
 		/**
 		 * @var  \Bitrix\Crm\Order\PropertyValue $property
 		 */
