@@ -143,6 +143,17 @@ log_*
 /bitrix/modules/salescenter/lib/builder/*
 !/bitrix/modules/salescenter/lib/builder/orderbuilder.php
 
+!/bitrix/modules/crm
+/bitrix/modules/crm/*
+!/bitrix/modules/crm/lib
+/bitrix/modules/crm/lib/*
+!/bitrix/modules/crm/lib/kanban.php
+!/bitrix/modules/crm/lib/order
+/bitrix/modules/crm/lib/order/*
+!/bitrix/modules/crm/lib/order/builder
+/bitrix/modules/crm/lib/order/builder/*
+!/bitrix/modules/crm/lib/order/builder/orderbuildercrm.php
+
 !/bitrix/modules/main
 /bitrix/modules/main/*
 !/bitrix/modules/main/bx_root.php

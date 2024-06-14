@@ -39,7 +39,9 @@ $ratio_repost =  empty(Option::get("rubyroid.bonusloyalty", 'ratio_repost')) ? 1
 foreach ($arParseUsers as $ParseUser) {
   $PARSE_VK_ID = explode('vk.com/',$ParseUser[1])[1]; 
   if (array_key_exists($PARSE_VK_ID, $arBXUsers)){
-    
+    settype($ParseUser[2], "integer");
+    settype($ParseUser[3], "integer");
+    settype($ParseUser[4], "integer");
     $SelectBXuser = $arBXUsers[$PARSE_VK_ID];
     $user_coin = ($ParseUser[2]*$ratio_repost) + ($ParseUser[3]*$ratio_coment);
     $user_likes = $ParseUser[4] - $SelectBXuser['UF_PREV_VK_LIKE'];

@@ -622,7 +622,7 @@ class DellinBlockAdmin
         $cityName = $locationData['CITY_NAME_ORIG'];
         $price = $order->getPrice();
         $shipmentCost = $order->getDeliveryPrice();
-        $personName = $props->getPayerName()->getValue();
+        $personName = $props->getPayerName() ? $props->getPayerName()->getValue() : '';
 //        $personPhone = $props->getItemByOrderPropertyCode('PHONE')->getValue();
 //        $personAddress = $props->getItemByOrderPropertyCode('ADDRESS')->getValue();
 //        $terminal_id = $props->getItemByOrderPropertyCode('TERMINAL_ID')->getValue();
