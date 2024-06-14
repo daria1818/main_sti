@@ -1363,6 +1363,13 @@ abstract class Kanban
 		$specialReqKeys = $this->getSpecialReqKeys();
 		$result = [];
 
+		$arSite = [];
+		$rsSites = \CSite::GetList($by="sort", $order="desc", []);
+		while ($result = $rsSites->Fetch())
+		{
+			$arSite[$result['ID']] = $result;
+		}
+
 		$lastActivityInfo = $this->getEntity()->prepareMultipleItemsLastActivity($rows);
 		$pingSettingsInfo = $this->getEntity()->prepareMultipleItemsPingSettings($this->entity->getTypeId());
 
@@ -1383,6 +1390,11 @@ abstract class Kanban
 			if (isset($row['COMPANY_ID']) && $row['COMPANY_ID'] > 0)
 			{
 				$row['CONTACT_TYPE'] = 'CRM_COMPANY';
+			}
+
+			if(isset($row['LID']) && !empty($row['LID']))
+			{
+				$row['LID'] = $arSite[$row['LID']]['NAME'];
 			}
 
 			//additional fields
