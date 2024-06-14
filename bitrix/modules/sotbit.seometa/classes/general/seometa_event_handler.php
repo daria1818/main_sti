@@ -111,7 +111,7 @@ class CSeoMetaEvents
         if(!$context->getRequest()->getQueryList()->isEmpty() && method_exists($context->getRequest()->getQueryList(), 'getValues')) {
             $queryValues = $context->getRequest()->getQueryList()->getValues();
             foreach ($queryValues as $key => $queryValue) {
-                $queryValues[mb_strtoupper($key)] = mb_strtoupper($queryValue);
+                $queryValues[mb_strtoupper($key)] = is_array($queryValue) ? array_change_key_case($queryValue, CASE_UPPER) : mb_strtoupper($queryValue);
                 unset($queryValues[$key]);
             }
 
@@ -223,7 +223,7 @@ class CSeoMetaEvents
     /*
     * It is necessary to include processing of outdated events in settings of an e-commerce shop
     */
-    function OrderAdd($ID, $arFields)
+    public static function OrderAdd($ID, $arFields)
     {
         global $APPLICATION;
         $cookie = $APPLICATION->get_cookie("sotbit_seometa_statistic");
@@ -263,7 +263,7 @@ class CSeoMetaEvents
         $DB->Query("DELETE FROM b_search_content WHERE ITEM_ID LIKE 'seometa%'");
     }
 
-    public function OnAfterIndexAddHandler($ID, $arFields)
+    public static function OnAfterIndexAddHandler($ID, $arFields)
     {
         if($arFields['MODULE_ID'] == 'sotbit.seometa')
         {

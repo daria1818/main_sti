@@ -22,7 +22,7 @@ class rtop_kpi extends CModule
     var $MODULE_DESCRIPTION;
     var $MODULE_GROUP_RIGHTS = "Y";
 
-    function rtop_kpi()
+    public function __construct()
     {
         $arModuleVersion = array();
         include(dirname(__FILE__)."/version.php");

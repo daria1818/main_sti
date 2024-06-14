@@ -21,7 +21,7 @@ class rubyroid_bonusloyalty extends CModule
     var $MODULE_DESCRIPTION;
     var $MODULE_GROUP_RIGHTS = "Y";
 
-    function rubyroid_bonusloyalty()
+    public function __construct()
     {
         $arModuleVersion = array();
         include(dirname(__FILE__)."/version.php");

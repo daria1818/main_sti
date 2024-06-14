@@ -21,7 +21,7 @@ class dellindev_shipment extends CModule
     public $messages = [];
 
 
-    function dellindev_shipment()
+    public function __construct()
     {
         $arModuleVersion = array();
 
