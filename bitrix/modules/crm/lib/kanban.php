@@ -1365,9 +1365,9 @@ abstract class Kanban
 
 		$arSite = [];
 		$rsSites = \CSite::GetList($by="sort", $order="desc", []);
-		while ($result = $rsSites->Fetch())
+		while ($site = $rsSites->Fetch())
 		{
-			$arSite[$result['ID']] = $result;
+			$arSite[$site['ID']] = $site;
 		}
 
 		$lastActivityInfo = $this->getEntity()->prepareMultipleItemsLastActivity($rows);
