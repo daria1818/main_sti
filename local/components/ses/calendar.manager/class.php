@@ -364,6 +364,7 @@ class CalendarComponent extends \CBitrixComponent
             $startDate = new DateTime($startDateFormatted, "d.m.Y H:i:s");
             $endDate = new DateTime($endDateFormatted, "d.m.Y H:i:s");
             $dateFilt = array($startDate->format("d.m.Y H:i:s"), $endDate->format("d.m.Y H:i:s"));
+            $filters["!UF_TYPE"] = 244;
 
         }
 

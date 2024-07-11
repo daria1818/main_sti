@@ -1,12 +1,12 @@
 <?
 $aMenuLinks = Array(
-	Array(
-		"Новости", 
-		"/company/news/", 
-		Array(), 
-		Array(), 
-		"" 
-	),
+	// Array(
+	// 	"Новости", 
+	// 	"/company/news/", 
+	// 	Array(), 
+	// 	Array(), 
+	// 	"" 
+	// ),
 	Array(
 		"Контакты", 
 		"/contacts/", 

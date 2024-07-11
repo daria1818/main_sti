@@ -1,7 +1,5 @@
 <?
-global $USER;
 $aMenuLinks = Array(
-
 	Array(
 		"Главная", 
 		"/", 
@@ -13,7 +11,7 @@ $aMenuLinks = Array(
 		"Каталог", 
 		"/catalog/", 
 		Array(), 
-		Array("NOT_VISIBLE"=>"Y", "CLASS"=>"wide_menu catalog", "menu_item_class" => "wide_menu", "IS_CATALOG" => 1), 
+		Array("NOT_VISIBLE"=>"Y", "CLASS"=>"wide_menu catalog", "menu_item_class"=>"wide_menu", "IS_CATALOG"=>"1"), 
 		"" 
 	),
 	Array(
@@ -24,8 +22,8 @@ $aMenuLinks = Array(
 		"" 
 	),
 	Array(
-		"Акции", 
-		"/sale/", 
+		"Распродажа", 
+		"/sale_products/", 
 		Array(), 
 		Array(), 
 		"" 
@@ -43,21 +41,13 @@ $aMenuLinks = Array(
 		Array(), 
 		Array(), 
 		"" 
-	),/* 
+	),
 	Array(
-		"Контакты", 
-		"/contacts/", 
+		"GBT", 
+		"/gbt/", 
 		Array(), 
 		Array(), 
 		"" 
 	)
-	 */
-	Array(
-        "GBT", 
-        "/gbt/sda/", 
-        Array(), 
-        Array(), 
-        '$USER->IsAuthorized()'
-    ),
 );
 ?>

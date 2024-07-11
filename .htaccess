@@ -1,32 +1,35 @@
 Options -Indexes
 ErrorDocument 404 /404.php
 
-<IfModule mod_php5.c>
+<IfModule mod_php8.c>
 	php_flag allow_call_time_pass_reference 1
 	php_flag session.use_trans_sid off
 
 	#php_value display_errors 1
-
+	php_value max_input_vars 11000
 	php_value mbstring.internal_encoding UTF-8
 </IfModule>
 
+Redirect 301 /bitrix/catalog_export/export_yFE.xml /bitrix/catalog_export/export_yfe.xml
+
 <IfModule mod_rewrite.c>
-	Options +FollowSymLinks
-	RewriteEngine On
+    Options +FollowSymLinks
+    RewriteEngine On
+
 
 	RewriteCond %{HTTP_HOST} ^www\.(.*)$
 	RewriteRule ^(.*)$ https://%1/$1 [L,R=301]
-	
 
-	RewriteCond %{REQUEST_URI} [A-Z]
-	RewriteRule (.*) https://%{HTTP_HOST}/${lc:$1} [R=301,L]
-	
-	RewriteCond %{REQUEST_URI} ^/novorossiisk/(.*)$ 
+
+#	RewriteCond %{REQUEST_URI} [A-Z]
+#	RewriteRule (.*) https://%{HTTP_HOST}/${lc:$1} [R=301,L]
+
+	RewriteCond %{REQUEST_URI} ^/novorossiisk/(.*)$
 	RewriteRule ^(.*)$ /%1 [R=301,L]
 
-	RewriteCond %{REQUEST_URI} ^/stavropol/(.*)$ 
+	RewriteCond %{REQUEST_URI} ^/stavropol/(.*)$
 	RewriteRule ^(.*)$ /%1 [R=301,L]
-	
+
 	RewriteCond %{QUERY_STRING} ^num=(\d+)$
 	RewriteRule ^(.*)$ /$1? [R=301,L]
 
@@ -52,7 +55,7 @@ ErrorDocument 404 /404.php
 	RewriteRule .* /%1 [R=301,L]
 
 
-	
+
 	RewriteCond %{REQUEST_URI} ^(.*/[^/\.]+)$
 	RewriteCond %{REQUEST_URI} !^/bitrix/
 	RewriteRule ^(.*)$ http://%{HTTP_HOST}/$1/ [R=301,L]
@@ -69,7 +72,7 @@ ErrorDocument 404 /404.php
 
 	Redirect 301 /products/opalescence-whitening-toothpaste-133-g-90979/ /products/opalescence-whitening-toothpaste-133-g/
 
-	Redirect 301 /products/consepsis-indispense/ /products/consepsis-scrub-indispense/ 
+	Redirect 301 /products/consepsis-indispense/ /products/consepsis-scrub-indispense/
 
 	Redirect 301 /catalog/code_127/ /catalog/laboratoriya/
 
@@ -379,6 +382,10 @@ ErrorDocument 404 /404.php
      Redirect 301 /products/permaseal-4-1-2-ml-postbonding/permaseal-4-1-2-ml-postbonding/ /products/permaseal-4-1-2-ml-postbonding/
     Redirect 301 /products/opalescense-endo-refill-shprits/ /products/opalescence-endo-refill-shprits/
 	Redirect 301 /catalog/magazin_dlya_zubnyh_tekhnikov/keramicheskie_massy/heraceram_zirkonia/mamelon_i_vtorichnye_deniny/ /catalog/magazin_dlya_zubnyh_tekhnikov/keramicheskie_massy/heraceram_zirkonia/mamelon_i_vtorichnye_dentiny/
+
+#RewriteCond %{REQUEST_URI} ^/bitrix/catalog_export/export_yFE.xml$ [NC]
+#RewriteRule ^(.*)$ /bitrix/catalog_export/export_yfe.xml [R=301,L]
+
 </IfModule>
 
 <IfModule mod_rewrite.c>
@@ -398,7 +405,7 @@ ErrorDocument 404 /404.php
 
 <IfModule mod_headers.c>
   	Header append Vary Accept env=REDIRECT_accept
-	<FilesMatch "redirect.php$"> 
+	<FilesMatch "redirect.php$">
 		Order Deny,Allow
 		Deny from all
 	</FilesMatch>
@@ -413,3 +420,16 @@ ErrorDocument 404 /404.php
 	ExpiresByType image/jpeg "access plus 3 day"
 	ExpiresByType image/gif "access plus 3 day"
 </IfModule>
+
+
+Redirect 301 /products/navitips-30-ga-17mm-20sht-endodonticheskie-igly/ /products/navitips-29-g-17mm-20sht-endodonticheskie-igly/?oid=26210990
+Redirect 301 /products/navitips-30-ga-21mm-20sht-endodonticheskie-igly/ /products/navitips-29g-21mm-20sht-endodonticheskie-igly/?oid=26210991
+Redirect 301 /products/navitips-30-ga-25-mm-20sht-endodonticheskie-igly/ /products/navitips-29g-25mm-20sht-endodonticheskie-igly/?oid=26210992
+Redirect 301 /products/navitips-30-ga-27-mm-20sht-endodonticheskie-igly/ /products/navitips-29g-27mm-20sht-endodonticheskie-igly/?oid=26210993
+Redirect 301 /products/opalescence-endo-refill-shprits/ /products/opalescense_endo_refill_vnutrikoronkovoe_otbelivanie_2_1_2_ml/?oid=26210916
+Redirect 301 /products/opalescense-endo-kit-nabor/ /products/opalescense_endo_kit_vnutrikoronkovoe_otbelivanie_2_shpr_kh1_2_ml_20_nasadok/?oid=26210931
+#Redirect 301 /bitrix/catalog_export/export_yFE.xml /bitrix/catalog_export/export_yfe.xml
+
+
+
+

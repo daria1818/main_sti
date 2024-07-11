@@ -2,6 +2,8 @@
 
 namespace Bitrix\Crm;
 
+use Bitrix\Crm\Activity\ToDo\CalendarSettings\CalendarSettingsProvider;
+use Bitrix\Crm\Activity\ToDo\ColorSettings\ColorSettingsProvider;
 use Bitrix\Crm\Color\PhaseColorScheme;
 use Bitrix\Crm\Filter\FieldsTransform\UserBasedField;
 use Bitrix\Crm\Format\PersonNameFormatter;
@@ -1363,15 +1365,16 @@ abstract class Kanban
 		$specialReqKeys = $this->getSpecialReqKeys();
 		$result = [];
 
-		$arSite = [];
-		$rsSites = \CSite::GetList($by="sort", $order="desc", []);
-		while ($site = $rsSites->Fetch())
-		{
-			$arSite[$site['ID']] = $site;
-		}
-
 		$lastActivityInfo = $this->getEntity()->prepareMultipleItemsLastActivity($rows);
 		$pingSettingsInfo = $this->getEntity()->prepareMultipleItemsPingSettings($this->entity->getTypeId());
+		$calendarSettings = (new CalendarSettingsProvider())->fetchForJsComponent();
+
+		$useTodoEditorV2 = \Bitrix\Crm\Settings\Crm::isTimelineToDoUseV2Enabled();
+		$colorSettings = (
+			$useTodoEditorV2
+				? (new ColorSettingsProvider())->fetchForJsComponent()
+				: null
+		);
 
 		$activeAutomationDebugEntityIds = \CCrmBizProcHelper::getActiveDebugEntityIds($this->entity->getTypeId());
 
@@ -1390,11 +1393,6 @@ abstract class Kanban
 			if (isset($row['COMPANY_ID']) && $row['COMPANY_ID'] > 0)
 			{
 				$row['CONTACT_TYPE'] = 'CRM_COMPANY';
-			}
-
-			if(isset($row['LID']) && !empty($row['LID']))
-			{
-				$row['LID'] = $arSite[$row['LID']]['NAME'];
 			}
 
 			//additional fields
@@ -1523,6 +1521,9 @@ abstract class Kanban
 				'sort' => $this->getEntity()->prepareItemSort($rows[$rowId]),
 				'lastActivity' => $lastActivityInfo[$row['ID']] ?? null,
 				'pingSettings' => isset($row['CATEGORY_ID']) ? $pingSettingsInfo[$row['CATEGORY_ID']] : null,
+				'colorSettings' => $colorSettings,
+				'calendarSettings' => $calendarSettings,
+				'useTodoEditorV2' => $useTodoEditorV2,
 				'draggable' => (bool)($row['DRAGGABLE'] ?? true),
 			];
 			$result[$rowId] = array_merge($result[$rowId], $this->prepareAdditionalFields($row));

@@ -635,6 +635,7 @@ if (is_array($arElements) && !empty($arElements))
 				
 				<?$GLOBALS[$arParams['FILTER_NAME']] += (array)$GLOBALS[$arParams['FILTER_NAME2']];?>
 				<?$GLOBALS[$arParams['FILTER_NAME']] += (array)$GLOBALS["arrFilter"];?>
+				<?//=$listElementsTemplate?>
 				<?$APPLICATION->IncludeComponent(
 					"bitrix:catalog.section",
 					$listElementsTemplate,
@@ -734,6 +735,7 @@ if (is_array($arElements) && !empty($arElements))
 						"GALLERY_ITEM_SHOW" => $arParams["GALLERY_ITEM_SHOW"],
 						"MAX_GALLERY_ITEMS" => $arParams["MAX_GALLERY_ITEMS"],
 						"ADD_DETAIL_TO_GALLERY_IN_LIST" => $arParams["ADD_DETAIL_TO_GALLERY_IN_LIST"],
+						"COMPATIBLE_MODE" => "Y"
 					),
 					$arResult["THEME_COMPONENT"]
 				);?>

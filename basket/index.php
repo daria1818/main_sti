@@ -119,7 +119,7 @@ if (htmlspecialcharsEx($_REQUEST["SCODER_AJAX"] == "Y"))
 	die();
 ?>
 </div>
-<aktiv-fortune id="519"></aktiv-fortune>
+<!-- <aktiv-fortune id="519"></aktiv-fortune> -->
 <script type="text/javascript">
    BX.ready(function(){
          BX.addCustomEvent('onAjaxSuccess', function(e,dd){

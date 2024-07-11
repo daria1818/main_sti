@@ -9,7 +9,7 @@ $aMenuLinks = Array(
 	),
 	Array(
 		"Курсы", 
-		"/gbt/sda/courses/", 
+		"/gbt/courses/", 
 		Array(), 
 		Array(), 
 		"" 

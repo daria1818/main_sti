@@ -5059,6 +5059,7 @@ class CNext{
 	}
 
 	public static function GetAddToBasketArray(&$arItem, $totalCount = 0, $defaultCount = 1, $basketUrl = '', $bDetail = false, $arItemIDs = array(), $class_btn = "small", $arParams=array()){
+		
 		static $arAddToBasketOptions, $bUserAuthorized;
 		if($arAddToBasketOptions === NULL){
 			$arAddToBasketOptions = array(
@@ -5109,6 +5110,7 @@ class CNext{
 		$addProp=($arParams["ADD_PROPERTIES_TO_BASKET"] ? $arParams["ADD_PROPERTIES_TO_BASKET"] : "" );
 		$emptyProp=$arItem["EMPTY_PROPS_JS"];
 		if($arItem["OFFERS"]){
+
 			global $arTheme;
 			$type_sku = is_array($arTheme) ? (isset($arTheme["TYPE_SKU"]["VALUE"]) ? $arTheme["TYPE_SKU"]["VALUE"] : $arTheme["TYPE_SKU"]) : 'TYPE_1';
 			if(!$bDetail && $arItem["OFFERS_MORE"] != "Y" && $type_sku != "TYPE_2"){

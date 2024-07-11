@@ -9,13 +9,18 @@ if (SITE_TEMPLATE_ID !== "bitrix24")
 	return;
 }
 
+use Bitrix\Intranet\Binding\Marketplace;
+use Bitrix\Intranet\Site\Sections\AutomationSection;
 use \Bitrix\Landing\Rights;
-
+use Bitrix\Main\Loader;
+use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\ModuleManager;
+use Bitrix\Catalog\Access\AccessController;
+use Bitrix\Catalog\Access\ActionDictionary;
+use Bitrix\Intranet\Settings\Tools\ToolsManager;
 global $APPLICATION;
 
 IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/intranet/public/.top.menu_ext.php");
-
-$bLandingIncluded = \Bitrix\Main\Loader::includeModule("landing");
 
 if (!function_exists("getLeftMenuItemLink"))
 {
@@ -23,7 +28,7 @@ if (!function_exists("getLeftMenuItemLink"))
 	{
 		$settings = CUserOptions::GetOption("UI", $sectionId);
 		return
-			is_array($settings) && isset($settings["firstPageLink"]) && strlen($settings["firstPageLink"]) ?
+			is_array($settings) && isset($settings["firstPageLink"]) && mb_strlen($settings["firstPageLink"]) ?
 				$settings["firstPageLink"] :
 				$defaultLink;
 	}
@@ -45,27 +50,32 @@ if (defined("BX_COMP_MANAGED_CACHE"))
 	global $CACHE_MANAGER;
 	$CACHE_MANAGER->registerTag("bitrix24_left_menu");
 	$CACHE_MANAGER->registerTag("crm_change_role");
-	$CACHE_MANAGER->registerTag("USER_CARD_".intval($userId / TAGGED_user_card_size));
+	$CACHE_MANAGER->registerTag("USER_NAME_".$userId);
 }
 
 global $USER;
 
+$isNewLiveFeedCounterAvailable = (
+	Loader::includeModule('socialnetwork')
+	&& \Bitrix\Socialnetwork\Space\Service::isAvailable()
+	&& \Bitrix\Socialnetwork\Internals\LiveFeed\Counter\CounterController::isEnabled((int)$userId)
+);
+
 $arMenuB24 = array(
 	array(
-		GetMessage("TOP_MENU_LIVE_FEED"),
+		GetMessage("TOP_MENU_LIVE_FEED3"),
 		file_exists($_SERVER["DOCUMENT_ROOT"].SITE_DIR."stream/") ? SITE_DIR."stream/" : SITE_DIR,
 		array(),
 		array(
 			"name" => "live_feed",
-			"counter_id" => "live-feed",
+			"counter_id" => $isNewLiveFeedCounterAvailable ? 'sonet_total' : 'live-feed',
 			"menu_item_id" => "menu_live_feed",
-			"my_tools_section" => true,
 		),
 		""
 	)
 );
 
-if ($GLOBALS["USER"]->IsAuthorized() && CModule::IncludeModule("socialnetwork"))
+if ($GLOBALS["USER"]->IsAuthorized() && Loader::includeModule("socialnetwork"))
 {
 	$arUserActiveFeatures = CSocNetFeatures::GetActiveFeatures(SONET_ENTITY_USER, $GLOBALS["USER"]->GetID());
 	$arSocNetFeaturesSettings = CSocNetAllowed::GetAllowedFeatures();
@@ -84,11 +94,11 @@ if ($GLOBALS["USER"]->IsAuthorized() && CModule::IncludeModule("socialnetwork"))
 
 	if ($allowedFeatures["tasks"])
 	{
-		$arMenuB24[] = array(
+		$arMenuB24[] = [
 			GetMessage("TOP_MENU_TASKS"),
-			SITE_DIR."company/personal/user/".$userId."/tasks/",
-			array(),
-			array(
+			SITE_DIR . "tasks/menu/",
+			[],
+			[
 				"name" => "tasks",
 				"counter_id" => "tasks_total",
 				"menu_item_id" => "menu_tasks",
@@ -96,12 +106,11 @@ if ($GLOBALS["USER"]->IsAuthorized() && CModule::IncludeModule("socialnetwork"))
 					"tasks_panel_menu",
 					SITE_DIR."company/personal/user/".$userId."/tasks/"
 				),
-				"sub_link" => SITE_DIR."company/personal/user/".$userId."/tasks/task/edit/0/",
+				"sub_link" => SITE_DIR."company/personal/user/".$userId."/tasks/task/edit/0/?ta_sec=left_menu&ta_el=create_button",
 				"top_menu_id" => "tasks_panel_menu",
-				"my_tools_section" => true,
-			),
+			],
 			"CBXFeatures::IsFeatureEnabled('Tasks')"
-		);
+		];
 	}
 
 	if (
@@ -125,7 +134,6 @@ if ($GLOBALS["USER"]->IsAuthorized() && CModule::IncludeModule("socialnetwork"))
 				"menu_item_id" => "menu_calendar",
 				"counter_id" => "calendar",
 				"top_menu_id" => "top_menu_id_calendar",
-				"my_tools_section" => true,
 				"sub_link" => SITE_DIR."company/personal/user/".$userId."/calendar/?EVENT_ID=NEW",
 			),
 			""
@@ -133,7 +141,7 @@ if ($GLOBALS["USER"]->IsAuthorized() && CModule::IncludeModule("socialnetwork"))
 	}
 
 	if (
-		\Bitrix\Main\Loader::includeModule("disk")
+		Loader::includeModule("disk")
 		&& (
 			$allowedFeatures["files"]
 			&& CBXFeatures::IsFeatureEnabled('PersonalFiles')
@@ -164,194 +172,208 @@ if ($GLOBALS["USER"]->IsAuthorized() && CModule::IncludeModule("socialnetwork"))
 				),
 				"menu_item_id" => "menu_files",
 				"top_menu_id" => "top_menu_id_docs",
-				"my_tools_section" => true,
 			),
 			""
 		);
-	}
-
-
-	if ($allowedFeatures["photo"])
-	{
-		$arMenuB24[] = array(
-			GetMessage("TOP_MENU_PHOTO"),
-			SITE_DIR."company/personal/user/".$userId."/photo/",
-			array(),
-			array(
-				"menu_item_id" => "menu_photo",
-				"my_tools_section" => true,
-				"hidden" => true
-			),
-			"CBXFeatures::IsFeatureEnabled('PersonalPhoto')"
-		);
-	}
-
-	if ($allowedFeatures["blog"])
-	{
-		$arMenuB24[] = array(
-			GetMessage("TOP_MENU_BLOG"),
-			SITE_DIR."company/personal/user/".$userId."/blog/",
-			array(),
-			array(
-				"menu_item_id" => "menu_blog",
-				"my_tools_section" => true,
-				"hidden" => true
-			),
-			""
-		);
+		if ($diskEnabled === "Y" && \Bitrix\Main\Config\Option::get('disk', 'documents_enabled', 'N') === 'Y')
+		{
+			$arMenuB24[] = array(
+				GetMessage("TOP_MENU_DISK_DOCUMENTS"),
+				SITE_DIR."company/personal/user/".$userId."/disk/documents/",
+				[],
+				array(
+					"menu_item_id" => "menu_documents",
+				),
+				""
+			);
+		}
 	}
 }
 
-if (CModule::IncludeModule("crm") && CCrmPerms::IsAccessEnabled())
+if (Loader::includeModule("crm") && CCrmPerms::IsAccessEnabled())
 {
-	$arMenuB24[] = array(
+	$counterId = CCrmSaleHelper::isWithOrdersMode() ? 'crm_all' : 'crm_all_no_orders';
+	$arMenuB24[] = [
 		GetMessage("TOP_MENU_CRM"),
 		SITE_DIR."crm/menu/",
-		array(SITE_DIR."crm/"),
-		array(
+		[
+			SITE_DIR."crm/",
+			ModuleManager::isModuleInstalled('bitrix24') ? "/contact_center/" : SITE_DIR . "services/contact_center/",
+			SITE_DIR . 'bi/dashboard/',
+		],
+		[
 			"real_link" => \Bitrix\Crm\Settings\EntityViewSettings::getDefaultPageUrl(),
-			"counter_id" => "crm_all",
+			"counter_id" => $counterId,
 			"menu_item_id" => "menu_crm_favorite",
 			"top_menu_id" => "crm_control_panel_menu"
-		),
+		],
 		""
-	);
+	];
 }
-
-if (CModule::IncludeModule("crm") && \Bitrix\Crm\Tracking\Manager::isAccessible())
+else
 {
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_CRM_TRACKING"),
-		SITE_DIR."crm/tracking/",
-		array(),
-		array(
-			"menu_item_id" => "menu_crm_tracking",
-		),
-		""
-	);
-}
-
-if (\Bitrix\Main\Loader::includeModule('report') && \Bitrix\Report\VisualConstructor\Helper\Analytic::isEnable())
-{
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_CRM_ANALYTICS"),
-		SITE_DIR."report/analytics/",
-		array(),
-		array(
+	$arMenuB24[] = [
+		GetMessage("TOP_MENU_CONTACT_CENTER"),
+		SITE_DIR . "services/contact_center/",
+		[],
+		[
 			"real_link" => getLeftMenuItemLink(
-				"top_menu_id_analytics",
-				SITE_DIR."report/analytics/"
+				"top_menu_id_contact_center",
+				SITE_DIR . "services/contact_center/"
 			),
-			"menu_item_id"=>"menu_analytics",
-			"top_menu_id" => "top_menu_id_analytics",
-			"is_beta" => true
-		)
-	);
+			"menu_item_id" => "menu_contact_center",
+			"top_menu_id" => "top_menu_id_contact_center",
+		],
+		"",
+	];
 }
 
-if (CModule::IncludeModule("crm") && CCrmSaleHelper::isShopAccess())
+if (
+	Loader::includeModule('catalog')
+	&& AccessController::getCurrent()->check(ActionDictionary::ACTION_CATALOG_READ)
+	&& AccessController::getCurrent()->check(ActionDictionary::ACTION_INVENTORY_MANAGEMENT_ACCESS)
+)
 {
-	if(\Bitrix\Main\Loader::includeModule('salescenter') && \Bitrix\SalesCenter\Driver::getInstance()->isEnabled())
+	$arMenuB24[] = [
+		GetMessage("MENU_STORE_ACCOUNTING_SECTION"),
+		SITE_DIR . 'shop/documents/inventory/',
+		[
+			SITE_DIR . 'shop/documents/',
+			SITE_DIR . 'shop/documents-catalog/',
+			SITE_DIR . 'shop/documents-stores/',
+		],
+		[
+			'menu_item_id' => 'menu_crm_store',
+		],
+		''
+	];
+}
+
+if (ToolsManager::getInstance()->checkAvailabilityByMenuId('menu_shop'))
+{
+	$landingAvailable = Loader::includeModule('landing') && Rights::hasAdditionalRight(Rights::ADDITIONAL_RIGHTS['menu24']);
+
+	if (Loader::includeModule("crm") && CCrmSaleHelper::isShopAccess())
 	{
-		$arMenuB24[] = array(
-			GetMessage("MENU_SALESCENTER_SECTION"),
-			"/saleshub/",
-			array(),
-			array(
-				"real_link" => getLeftMenuItemLink(
-					"top_menu_id_saleshub",
-					"/saleshub/"
-				),
-				"menu_item_id" => "menu-sale-center",
-				"top_menu_id" => "top_menu_id_saleshub",
-				"is_beta" => true,
+		$includeCounter = CCrmSaleHelper::isWithOrdersMode();
+		$parameters = [
+			'real_link' => getLeftMenuItemLink(
+				'store',
+				$landingAvailable ? SITE_DIR . 'sites/' : SITE_DIR . 'shop/orders/menu/'
 			),
-			""
-		);
-	}
+			'menu_item_id' => 'menu_shop',
+			'top_menu_id' => 'store',
+		];
+		if ($includeCounter)
+		{
+			$parameters['counter_id'] = 'shop_all';
+		}
 
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_SHOP"),
-		SITE_DIR."shop/menu/",
-		array(SITE_DIR."shop/"),
-		array(
-			"real_link" => getLeftMenuItemLink(
-				"store",
-				SITE_DIR."shop/orders/menu/"
-			),
-			"counter_id" => "shop_all",
-			"menu_item_id" => "menu_shop",
-			"top_menu_id" => "store",
-			"is_beta" => true
-		),
-		""
-	);
+		$arMenuB24[] = [
+			GetMessage("TOP_MENU_SITES_AND_STORES"),
+			SITE_DIR . "shop/menu/",
+			[
+				SITE_DIR . "shop/",
+				SITE_DIR . "sites/",
+			],
+			$parameters,
+			"",
+		];
+	}
+	else if ($landingAvailable)
+	{
+		$arMenuB24[] = [
+			GetMessage("TOP_MENU_SITES"),
+			SITE_DIR . "sites/",
+			[],
+			[
+				"menu_item_id" => "menu_sites",
+			],
+			""
+		];
+	}
 }
 
-if (CModule::IncludeModule("sender") && \Bitrix\Sender\Security\Access::current()->canViewAnything())
+if (Loader::includeModule("sender") && \Bitrix\Sender\Security\Access::current()->canViewAnything())
 {
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_MARKETING"),
+	$arMenuB24[] = [
+		GetMessage("TOP_MENU_MARKETING2"),
 		SITE_DIR."marketing/",
-		array(),
-		array(
+		[],
+		[
 			"real_link" => getLeftMenuItemLink(
 				"top_menu_id_marketing",
 				SITE_DIR."marketing/"
 			),
 			"menu_item_id" => "menu_marketing",
-		),
+			'top_menu_id' => 'top_menu_id_marketing',
+		],
 		""
-	);
+	];
 }
 
-if ($bLandingIncluded)
+if (CModule::IncludeModule('im'))
 {
-	if (Rights::hasAdditionalRight(Rights::ADDITIONAL_RIGHTS["menu24"]))
-	{
-		$arMenuB24[] = array(
-			GetMessage("TOP_MENU_SITES"),
-			SITE_DIR."sites/",
-			array(),
-			array(
-				"menu_item_id" => "menu_sites",
-				"my_tools_section" => true
-			),
-			""
-		);
-	}
-	if (Rights::hasAdditionalRight(Rights::ADDITIONAL_RIGHTS["menu24"], "knowledge"))
-	{
-		$arMenuB24[] = array(
-			GetMessage("TOP_MENU_KNOWLEDGE"),
-			SITE_DIR."kb/",
-			array(),
-			array(
-				"menu_item_id" => "menu_knowledge",
-				"my_tools_section" => true,
-				"is_beta" => true,
-			),
-			""
-		);
-	}
+	$arMenuB24[] = [
+		GetMessage('TOP_MENU_IM_MESSENGER_NEW'),
+		SITE_DIR . 'online/',
+		[],
+		[
+			'counter_id' => 'im-message',
+			'menu_item_id' => 'menu_im_messenger',
+			'can_be_first_item' => false,
+		],
+		'CBXFeatures::IsFeatureEnabled("WebMessenger")',
+	];
 }
 
-if (CModule::IncludeModule("im"))
+if (
+	Loader::includeModule('sign')
+	&& method_exists(\Bitrix\Sign\Config\Storage::class, 'isB2eAvailable')
+	&& \Bitrix\Sign\Config\Storage::instance()->isB2eAvailable()
+)
 {
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_IM_MESSENGER"),
-		SITE_DIR."online/",
-		array(),
-		array(
-			"counter_id" => "im-message",
-			"menu_item_id" => "menu_im_messenger",
-			"my_tools_section" => true,
-		),
-		"CBXFeatures::IsFeatureEnabled('WebMessenger')"
-	);
+	$counterId = '';
+	$signContainer = \Bitrix\Sign\Service\Container::instance();
+	if (method_exists($signContainer, 'getB2eUserToSignDocumentCounterService'))
+	{
+		$counterService = $signContainer->getB2eUserToSignDocumentCounterService();
+		if (method_exists($counterService, 'getCounterId'))
+		{
+			$counterId = $counterService->getCounterId();
+		}
+	}
+
+	$arMenuB24[] = [
+		Loc::getMessage('TOP_MENU_SIGN_B2E'),
+		SITE_DIR . 'sign/b2e/',
+		[],
+		[
+			'counter_id' => $counterId,
+			'menu_item_id' => 'menu_sign_b2e',
+			'my_tools_section' => true,
+			'can_be_first_item' => true,
+		],
+		''
+	];
 }
 
-if (CModule::IncludeModule("intranet") && CIntranetUtils::IsExternalMailAvailable())
+if (Loader::includeModule('sign') && \Bitrix\Sign\Config\Storage::instance()->isAvailable())
+{
+	$arMenuB24[] = [
+		Loc::getMessage('TOP_MENU_SIGN_MSGVER_1'),
+		SITE_DIR . 'sign/',
+		[],
+		[
+			'menu_item_id' => 'menu_sign',
+			'my_tools_section' => true,
+			'can_be_first_item' => true,
+		],
+		''
+	];
+}
+
+if (Loader::includeModule("intranet") && CIntranetUtils::IsExternalMailAvailable())
 {
 	$warningLink = $mailLink = \Bitrix\Main\Config\Option::get('intranet', 'path_mail_client', SITE_DIR . 'mail/');
 
@@ -364,111 +386,115 @@ if (CModule::IncludeModule("intranet") && CIntranetUtils::IsExternalMailAvailabl
 			"warning_link" => $warningLink,
 			"warning_title" => GetMessage("MENU_MAIL_CHANGE_SETTINGS"),
 			"menu_item_id" => "menu_external_mail",
-			"my_tools_section" => true,
 		),
 		""
 	);
 }
 
-if (CModule::IncludeModule("socialnetwork"))
+if (Loader::includeModule("socialnetwork"))
 {
-	$canCreateGroup =
-		CSocNetUser::IsCurrentUserModuleAdmin() ||
-		$GLOBALS["APPLICATION"]->GetGroupRight("socialnetwork", false, "Y", "Y", array(SITE_ID, false)) >= "K"
-	;
+	$canCreateGroup = \Bitrix\Socialnetwork\Helper\Workgroup::canCreate();
 
 	$groupPath = SITE_DIR."workgroups/";
-	$arMenuB24[] = array(
+	$arMenuB24[] = [
 		GetMessage("TOP_MENU_GROUPS"),
-		$groupPath."/menu/",
-		array(SITE_DIR."workgroups/"),
-		array(
+		$groupPath,
+		[],
+		[
 			"real_link" => getLeftMenuItemLink(
 				"sonetgroups_panel_menu",
 				$groupPath
 			),
 			"menu_item_id"=>"menu_all_groups",
-			"top_menu_id" => "sonetgroups_panel_menu"
-		) + ($canCreateGroup ? array("sub_link" => SITE_DIR."company/personal/user/".$userId."/groups/create/") : array()),
+			"top_menu_id" => "sonetgroups_panel_menu",
+			// todo oh 'counter_id' => 'workgroups',
+		] + ($canCreateGroup ? ["sub_link" => SITE_DIR."company/personal/user/".$userId."/groups/create/"] : []),
 		"CBXFeatures::IsFeatureEnabled('Workgroups')"
-	);
+	];
+
+	$isSpacesAvailable = \Bitrix\Socialnetwork\Space\Service::isAvailable(true);
+	if ($isSpacesAvailable)
+	{
+		// todo add index.php and remove workgroups item from menu
+		$arMenuB24[] = [
+			GetMessage('TOP_MENU_SPACES'),
+			'/spaces/',
+			[],
+			[
+				'menu_item_id' => 'menu_all_spaces',
+				'counter_id' => 'spaces',
+			],
+			''
+		];
+	}
 }
 
-if(\Bitrix\Main\Loader::includeModule('rpa') && \Bitrix\Rpa\Driver::getInstance()->isEnabled())
+$aboutSectionExists = file_exists($_SERVER['DOCUMENT_ROOT'] . SITE_DIR . 'about/');
+
+$arMenuB24[] = [
+	$aboutSectionExists ? Loc::getMessage('TOP_MENU_COMPANY') : Loc::getMessage('TOP_MENU_COMPANY_SECTION'),
+	SITE_DIR . 'company/',
+	[
+		'/timeman/',
+		'/kb/',
+		'/conference/',
+	],
+	[
+		'real_link' => getLeftMenuItemLink(
+			'top_menu_id_company',
+			SITE_DIR . 'company/vis_structure.php'
+		),
+		'menu_item_id' => 'menu_company',
+		'top_menu_id' => 'top_menu_id_company',
+		'class' => 'menu-company',
+	],
+];
+
+if ($aboutSectionExists)
 {
 	$arMenuB24[] = [
-		\Bitrix\Main\Localization\Loc::getMessage("MENU_RPA_SECTION"),
-		"/rpa/",
-		[],
+		Loc::getMessage('TOP_MENU_ABOUT'),
+		SITE_DIR . 'about/',
+		[SITE_DIR . 'about/'],
 		[
-			"real_link" => getLeftMenuItemLink(
-				"top_menu_id_rpa",
-				"/rpa/"
+			'real_link' => getLeftMenuItemLink(
+				'top_menu_id_about',
+				SITE_DIR . 'about/'
 			),
-			"counter_id" => "rpa_tasks",
-			"menu_item_id" => "menu_rpa",
-			"top_menu_id" => "top_menu_id_rpa",
-			"is_beta" => true,
+			'menu_item_id' => 'menu_about_sect',
+			'top_menu_id' => 'top_menu_id_about',
 		],
-		""
+		'',
 	];
 }
 
-if (\Bitrix\Main\ModuleManager::isModuleInstalled("bizproc"))
+if (Loader::includeModule('intranet') && AutomationSection::isAvailable())
 {
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_BIZPROC"),
-		SITE_DIR."bizproc/",
-		array(
-			SITE_DIR."company/personal/bizproc/",
-			SITE_DIR."company/personal/processes/",
-		),
-		array(
-			"real_link" => getLeftMenuItemLink(
-				"top_menu_id_bizproc",
-				SITE_DIR."company/personal/bizproc/"
-			),
-			"counter_id" => "bp_tasks",
-			"menu_item_id" => "menu_bizproc_sect",
-			"top_menu_id" => "top_menu_id_bizproc",
-			"my_tools_section" => true,
-		),
-		"CBXFeatures::IsFeatureEnabled('BizProc')"
+	$automationItem = AutomationSection::getRootMenuItem();
+	$automationItem[3]['real_link'] = getLeftMenuItemLink(
+		"top_menu_id_automation",
+		!empty($automationItem[3]['first_item_url']) ? $automationItem[3]['first_item_url'] : $automationItem[1]
 	);
+
+	$arMenuB24[] = $automationItem;
 }
 
-
-
-$arMenuB24[] = array(
-	GetMessage("TOP_MENU_COMPANY"),
-	SITE_DIR."company/",
-	array(),
-	array(
-		"real_link" => getLeftMenuItemLink(
-			"top_menu_id_company",
-			SITE_DIR."company/vis_structure.php"
-		),
-		"menu_item_id"=>"menu_company",
-		"top_menu_id" => "top_menu_id_company"
-	)
-);
-
-if (file_exists($_SERVER["DOCUMENT_ROOT"].SITE_DIR."timeman/"))
+if ($aboutSectionExists)
 {
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_TIMEMAN"),
-		SITE_DIR."timeman/",
-		array(),
-		array(
-			"real_link" => getLeftMenuItemLink(
-				"top_menu_id_timeman",
-				SITE_DIR."timeman/"
+	$arMenuB24[] = [
+		Loc::getMessage('TOP_MENU_ABOUT'),
+		SITE_DIR . 'about/',
+		[],
+		[
+			'real_link' => getLeftMenuItemLink(
+				'top_menu_id_about',
+				SITE_DIR . 'about/'
 			),
-			"menu_item_id"=>"menu_timeman_sect",
-			"top_menu_id" => "top_menu_id_timeman"
-		),
-		"CBXFeatures::IsFeatureEnabled('StaffAbsence') || CBXFeatures::IsFeatureEnabled('timeman') || CBXFeatures::IsFeatureEnabled('Meeting')"
-	);
+			'menu_item_id' => 'menu_about_sect',
+			'top_menu_id' => 'top_menu_id_about',
+		],
+		'',
+	];
 }
 
 //merge with static items from top.menu
@@ -502,32 +528,14 @@ $arMenuB24[] = array(
 	""
 );
 
-if (file_exists($_SERVER["DOCUMENT_ROOT"].SITE_DIR."about/"))
-{
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_ABOUT"),
-		SITE_DIR."about/",
-		array(SITE_DIR."about/"),
-		array(
-			"real_link"    => getLeftMenuItemLink(
-				"top_menu_id_about",
-				SITE_DIR."about/"
-			),
-			"menu_item_id" => "menu_about_sect",
-			"top_menu_id"  => "top_menu_id_about"
-		),
-		""
-	);
-}
-
 $arMenuB24[] = array(
-	GetMessage("TOP_MENU_MARKETPLACE"),
-	SITE_DIR."marketplace/",
-	array(SITE_DIR."marketplace/"),
+	GetMessage("TOP_MENU_MARKETPLACE_3"),
+	SITE_DIR.Marketplace::getBoxMainDirectory(),
+	array(SITE_DIR.Marketplace::getBoxMainDirectory()),
 	array(
 		"real_link" => getLeftMenuItemLink(
 			"top_menu_id_marketplace",
-			SITE_DIR."marketplace/"
+			SITE_DIR.Marketplace::getBoxMainDirectory()
 		),
 		"menu_item_id"=>"menu_marketplace_sect",
 		"top_menu_id" => "top_menu_id_marketplace"
@@ -535,90 +543,29 @@ $arMenuB24[] = array(
 	"IsModuleInstalled('rest')"
 );
 
-if (LANGUAGE_ID === "ru")
-{
-	$arMenuB24[] = [
-		GetMessage("TOP_MENU_AI"),
-		SITE_DIR."ai/",
-		[],
-		[
-			"menu_item_id"=>"menu_ai",
-		],
-		""
-	];
-}
-
-if (file_exists($_SERVER["DOCUMENT_ROOT"].SITE_DIR."onec/") && in_array(LANGUAGE_ID, array('ru', 'kz', 'by', 'ua')))
-{
-	$arMenuB24[] = array(
-		GetMessage("TOP_MENU_ONEC"),
-		SITE_DIR . "onec/",
-		array(SITE_DIR . "onec/"),
-		array(
-			"real_link" => getLeftMenuItemLink(
-				"top_menu_id_onec",
-				SITE_DIR . "onec/"
-			),
-			"menu_item_id" => "menu_onec_sect",
-			"top_menu_id" => "top_menu_id_onec"
-		),
-		"IsModuleInstalled('crm')"
-	);
-}
-
-$arMenuB24[] = array(
-	GetMessage("TOP_MENU_CONTACT_CENTER"),
-	SITE_DIR . "services/contact_center/",
-	array(),
-	array(
+$arMenuB24[] = [
+	GetMessage("TOP_MENU_DEVOPS"),
+	SITE_DIR . "devops/",
+	[SITE_DIR . "devops/"],
+	[
 		"real_link" => getLeftMenuItemLink(
-			"top_menu_id_contact_center",
-			SITE_DIR . "services/contact_center/"
+			"top_menu_id_devops",
+			SITE_DIR . "devops/"
 		),
-		"menu_item_id"=>"menu_contact_center",
-		"top_menu_id" => "top_menu_id_contact_center"
-	),
-	""
-);
-
-/*$arMenuB24[] = array(
-	GetMessage('TOP_MENU_OPENLINES'),
-	SITE_DIR."services/openlines/",
-	array(SITE_DIR."services/openlines/"),
-	array(
-		"real_link" => getLeftMenuItemLink(
-			"top_menu_id_openlines",
-			SITE_DIR."services/openlines/"
-		),
-		"menu_item_id"=>"menu_openlines",
-		"top_menu_id" => "top_menu_id_openlines"
-	),
-	'CModule::IncludeModule("imopenlines") && \Bitrix\ImOpenlines\Security\Helper::isMainMenuEnabled()'
-);*/
-
-$arMenuB24[] = array(
-	GetMessage("TOP_MENU_TELEPHONY"),
-	SITE_DIR."telephony/",
-	array(SITE_DIR."telephony/"),
-	array(
-		"real_link" => getLeftMenuItemLink(
-			"top_menu_id_telephony",
-			SITE_DIR."telephony/"
-		),
-		"menu_item_id" => "menu_telephony",
-		"top_menu_id" => "top_menu_id_telephony"
-	),
-	'CModule::IncludeModule("voximplant") && Bitrix\Voximplant\Security\Helper::isMainMenuEnabled()'
-);
+		"menu_item_id" => "menu_devops_sect",
+		"top_menu_id" => "top_menu_id_devops",
+	],
+	"IsModuleInstalled('rest')",
+];
 
 $arMenuB24[] = Array(
 	GetMessage("TOP_MENU_CONFIGS"),
-	SITE_DIR."configs/",
-	Array(SITE_DIR."configs/"),
+	SITE_DIR."configs/?analyticContext=left_menu_main",
+	Array(SITE_DIR."configs/?analyticContext=left_menu_main"),
 	Array(
 		"real_link" => getLeftMenuItemLink(
 			"top_menu_id_configs",
-			SITE_DIR."configs/"
+			SITE_DIR."configs/?analyticContext=left_menu_main"
 		),
 		"menu_item_id" => "menu_configs_sect",
 		"top_menu_id" => "top_menu_id_configs"
@@ -626,7 +573,10 @@ $arMenuB24[] = Array(
 	'$USER->IsAdmin()'
 );
 
-$rsSite = CSite::GetList($by = "sort", $order = "asc", $arFilter = array("ACTIVE" => "Y"));
+$manager = \Bitrix\Main\DI\ServiceLocator::getInstance()->get('intranet.customSection.manager');
+$manager->appendSuperLeftMenuSections($arMenuB24);
+
+$rsSite = CSite::GetList("sort", "asc", $arFilter = array("ACTIVE" => "Y"));
 $exSiteId = COption::GetOptionString("extranet", "extranet_site");
 while ($site = $rsSite->Fetch())
 {

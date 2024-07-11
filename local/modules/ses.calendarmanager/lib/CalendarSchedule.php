@@ -208,7 +208,7 @@ class CalendarSchedule
         } else {
             return [
                 'success' => false,
-                'error' => "Запись для обновления не найдена."
+                'exception' => "Запись для обновления не найдена."
             ];
         }
     }
@@ -252,6 +252,7 @@ class CalendarSchedule
                 return [
                     'success' => false,
                     'error' => "Ошибка добавления новой записи: " . implode('; ', $addResult->getErrorMessages())
+                    // 'error' => "Ошибка добавления новой записи: " . implode(',',$lecturerId)
                 ];
             }
         } else {

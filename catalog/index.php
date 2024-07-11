@@ -161,8 +161,8 @@ $APPLICATION->IncludeComponent(
 		"SHOW_SECTION_LIST_PICTURES" => "Y",
 		"PAGE_ELEMENT_COUNT" => "20",
 		"LINE_ELEMENT_COUNT" => "4",
-		"ELEMENT_SORT_FIELD" => "sort",
-		"ELEMENT_SORT_ORDER" => "asc",
+		"ELEMENT_SORT_FIELD" => "shows",
+		"ELEMENT_SORT_ORDER" => "desc",
 		"ELEMENT_SORT_FIELD2" => "sort",
 		"ELEMENT_SORT_ORDER2" => "asc",
 		"LIST_PROPERTY_CODE" => array(

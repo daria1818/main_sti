@@ -229,7 +229,7 @@ class CalendarUsers
             'filter' => ['=UF_USER_ID' => $userId]
         ])->fetch();
 
-        return $UFuserID;
+        return $UFuserID["ID"];
     }
 
     /**

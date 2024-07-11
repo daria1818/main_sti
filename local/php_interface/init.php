@@ -1,11 +1,11 @@
 <?
-
 use Bitrix\Main\Loader;
 use Bitrix\Main\Config\Option;
 use Pwd\Tools\Logger;
 use Rubyroid\Loyality\RBTransactions;
 
 use function Sentry\init;
+
 
 require_once __DIR__ . '/include/constants.php';
 require_once($_SERVER["DOCUMENT_ROOT"] . "/local/php_interface/api/include.php");
@@ -15,6 +15,9 @@ require_once($_SERVER["DOCUMENT_ROOT"] . "/debug/vendor/autoload.php");
 require_once __DIR__ . '/debug.php';
 require_once __DIR__ . '/core_overrides.php';
 
+include_once __DIR__ . '/../webnn/autoload.php';
+
+//\Classes\Debug::write($_SERVER['HTTP_REFERER']);
 //echo $PATH = __DIR__ .'/logs/';
 Logger::$PATH = __DIR__ .'/logs/';
 
@@ -451,7 +454,7 @@ if (!function_exists('domovoyOnAfterUserUpdateCheck')):
     }
 endif;
 
-// AddEventHandler('main', 'OnEpilog', '_Check404Error', 1);  
+// AddEventHandler('main', 'OnEpilog', '_Check404Error', 1);
 // function _Check404Error(){
 //    if(defined('ERROR_404') && ERROR_404=='Y' || CHTTP::GetLastStatus() == "404 Not Found"){
 //       GLOBAL $APPLICATION;
@@ -461,4 +464,5 @@ endif;
 //       require_once $_SERVER['DOCUMENT_ROOT'].SITE_TEMPLATE_PATH.'/footer.php';
 //    }
 // }
+
 

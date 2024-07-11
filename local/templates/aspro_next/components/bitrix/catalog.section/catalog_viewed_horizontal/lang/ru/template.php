@@ -37,5 +37,5 @@
 	$MESS["TITLE_QUANTITY_BLOCK"] = "Остаток";
 	$MESS["CATALOG_ECONOMY"] = "Экономия";
 	$MESS["SHOW_RATING"] = "Отображать рейтинг";
-	$MESS["TITLE_BLOCK_NAME"] = "Ранее вы смотрели";
+	$MESS["TITLE_BLOCK_NAME"] = "Вы недавно смотрели, но не положили в корзину";
 ?>

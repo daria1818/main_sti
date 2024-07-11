@@ -382,6 +382,7 @@
 							"bitrix:catalog.section",
 							$listElementsTemplate,
 							Array(
+								"LINKED_ITEMS" => true,
 								"USE_REGION" => ($arRegion ? "Y" : "N"),
 								"STORES" => $arParams['STORES'],
 								"SHOW_UNABLE_SKU_PROPS"=>$arParams["SHOW_UNABLE_SKU_PROPS"],

@@ -5069,6 +5069,7 @@ class CNext{
 	}
 
 	public static function GetAddToBasketArray(&$arItem, $totalCount = 0, $defaultCount = 1, $basketUrl = '', $bDetail = false, $arItemIDs = array(), $class_btn = "small", $arParams=array()){
+
 		static $arAddToBasketOptions, $bUserAuthorized;
 		if($arAddToBasketOptions === NULL){
 			$arAddToBasketOptions = array(
@@ -5213,6 +5214,7 @@ class CNext{
 				}
 			}
 			else{
+				
 				// no price or price <= 0
 				if($bDetail && $arItem["FRONT_CATALOG"] == "Y"){
 					$buttonACTION = 'MORE';

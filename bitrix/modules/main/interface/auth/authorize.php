@@ -23,7 +23,7 @@ if(
 
 		<div class="login-popup-field">
 			<div class="login-popup-field-title"><?=GetMessage("AUTH_LOGIN")?></div>
-			<div class="login-input-wrap 1">
+			<div class="login-input-wrap">
 				<input type="text" class="login-input" onfocus="BX.addClass(this.parentNode, 'login-input-active')" onblur="BX.removeClass(this.parentNode, 'login-input-active')" name="USER_LOGIN" value="<?echo htmlspecialcharsbx($last_login)?>" tabindex="1">
 				<div class="login-inp-border"></div>
 			</div>
@@ -92,6 +92,6 @@ endif;
 
 	</div>
 </div>
-<script type="text/javascript">
+<script>
 BX.adminLogin.registerForm(new BX.authFormAuthorize('authorize', {url: '<?echo CUtil::JSEscape($authUrl."?login=yes".(($s=DeleteParam(array("logout", "login"))) == ""? "":"&".$s));?>'}));
 </script>

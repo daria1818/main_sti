@@ -12,6 +12,7 @@ use Bitrix\Main\Entity;
 use Bitrix\Main\Type\DateTime;
 use SES\CalendarManager\CalendarSchedule;
 use SES\CalendarManager\CalendarUsers;
+use SES\CalendarManager\Geo\CityTable;
 use Bitrix\Calendar\Internals\EventTable;
 use Bitrix\Crm\CompanyTable;
 use Bitrix\Crm\ContactTable;
@@ -221,10 +222,17 @@ public function getEventsByLectorAndDate($lectorId = '', $startDate, $endDate, $
                         $schedule = new CalendarSchedule();
                         $formattedDate = $courseDate->format('Y-m-d');
                         $updateResult = $schedule->updateSchedule($data['UF_LECTOR'], $formattedDate, 'D');
-                        if (!$updateResult['success']) {
+                        if (!$updateResult['success'] && !$updateResult['exception']) {
                             \CCalendar::DeleteEvent($calendarEventResult['event_id']);
                             throw new SystemException($updateResult['error']);
-                        } else {
+                        } else if($updateResult['exception']){
+                            return [
+                                'success' => true,
+                                'id' => $result->getId(),
+                                'calendar_event_id' => $calendarEventResult['event_id'],
+                                'swap_schedule' => false
+                            ];
+                        }else {
                             return [
                                 'success' => true,
                                 'id' => $result->getId(),
@@ -262,7 +270,22 @@ public function getEventsByLectorAndDate($lectorId = '', $startDate, $endDate, $
             }
 
             $CM = new CalendarUsers();
-            $bx_ID_lector = $CM->getUserIDviaModuleID($data['UF_LECTOR']);
+            $userAr = $CM->getCurUserModuleAr($data['UF_LECTOR']);
+            $bx_ID_lector = $userAr;
+
+            $cityQuery = CityTable::getList([
+                'filter' => ['ID' => $data['UF_CITY']],
+                'select' => ['ID', 'NAME', 'REGION_ID', 'REGION_NAME' => 'REGION.NAME'],
+            ]);
+
+            if ($city = $cityQuery->fetch()) {
+                $cityData = [
+                    'ID' => $city['ID'],
+                    'NAME' => $city['NAME'],
+                    'REGION_ID' => $city['REGION_ID'],
+                    'REGION_NAME' => $city['REGION_NAME'],
+                ];
+            }
 
             $dateFromTsUtc = $courseDate->getTimestamp();
             $dateToTsUtc = $courseDateEnd->getTimestamp();
@@ -270,7 +293,7 @@ public function getEventsByLectorAndDate($lectorId = '', $startDate, $endDate, $
                 'CAL_TYPE' => 'company_calendar',
                 'OWNER_ID' => 0,
                 'CREATED_BY' => $userId,
-                'NAME' => $data['UF_NAME'],
+                'NAME' => $data['UF_NAME'] . ' / ' . $userAr['UF_LAST_NAME'] . ' ' . $userAr['UF_FIRST_NAME'] . ' / ' . $cityData['NAME'],
                 'DESCRIPTION' => $data['UF_DESCRIPTION'],
                 'DATE_FROM' => $courseDate,
                 'DATE_TO' => $courseDateEnd,
@@ -321,7 +344,22 @@ public function getEventsByLectorAndDate($lectorId = '', $startDate, $endDate, $
                 throw new ArgumentException("Некорректная дата или время: " . $e->getMessage());
             }
             $CM = new CalendarUsers();
-            $bx_ID_lector = $CM->getUserIDviaModuleID($data['UF_LECTOR']);
+            $userAr = $CM->getCurUserModuleAr($data['UF_LECTOR']);
+            $bx_ID_lector = $userAr;
+
+            $cityQuery = CityTable::getList([
+                'filter' => ['ID' => $data['UF_CITY']],
+                'select' => ['ID', 'NAME', 'REGION_ID', 'REGION_NAME' => 'REGION.NAME'],
+            ]);
+
+            if ($city = $cityQuery->fetch()) {
+                $cityData = [
+                    'ID' => $city['ID'],
+                    'NAME' => $city['NAME'],
+                    'REGION_ID' => $city['REGION_ID'],
+                    'REGION_NAME' => $city['REGION_NAME'],
+                ];
+            }
             // Convert date and time to Unix timestamps
             $dateFromTsUtc = $courseDate->getTimestamp();
             $dateToTsUtc = $courseDateEnd->getTimestamp();
@@ -329,7 +367,7 @@ public function getEventsByLectorAndDate($lectorId = '', $startDate, $endDate, $
                 'ID' => $eventId,
                 'CAL_TYPE' => 'company_calendar',
                 'OWNER_ID' => 0,
-                'NAME' => $data['UF_NAME'],
+                'NAME' => $data['UF_NAME'] . ' / ' . $userAr['UF_LAST_NAME'] . ' ' . $userAr['UF_FIRST_NAME'] . ' / ' . $cityData['NAME'],
                 'DESCRIPTION' => $data['UF_DESCRIPTION'],
                 'DATE_FROM' => $courseDate,
                 'DATE_TO' => $courseDateEnd,
@@ -449,6 +487,7 @@ public function getEventsByLectorAndDate($lectorId = '', $startDate, $endDate, $
                 'TITLE' => $data['clinic'],
                 'ASSIGNED_BY_ID' => 5754,
                 'CREATED_BY_ID' => 1,
+                'MODIFY_BY_ID' => 1,
                 'DATE_CREATE' => new \Bitrix\Main\Type\DateTime(),
             ];
             $companyResult = \Bitrix\Crm\CompanyTable::add($companyFields);
@@ -499,6 +538,7 @@ public function getEventsByLectorAndDate($lectorId = '', $startDate, $endDate, $
                 'COMPANY_ID' => $companyId,
                 'ASSIGNED_BY_ID' => 5754,
                 'CREATED_BY_ID' => 1,
+                'MODIFY_BY_ID' => 1,
                 'DATE_CREATE' => new \Bitrix\Main\Type\DateTime(),
             ];
             $contactResult = \Bitrix\Crm\ContactTable::add($contactFields);
@@ -552,6 +592,10 @@ public function getEventsByLectorAndDate($lectorId = '', $startDate, $endDate, $
             'CREATED_BY_ID' => 1,
             'MODIFY_BY_ID' => 1,
             'DATE_CREATE' => new \Bitrix\Main\Type\DateTime(),
+            'CATEGORY_ID' => 5,
+            'IS_NEW' => "Y",
+            'IS_RECURRING' => "N",
+            'STAGE_ID' => "C5:NEW",
         ];
         $dealResult = \Bitrix\Crm\DealTable::add($dealFields);
 

@@ -371,7 +371,7 @@ class GS {
 		return $ivBytes.$hmac.$raw;
 	}
 
-	public function mkData($arParts = array()){
+	public static function mkData($arParts = array()){
 		$arData = array(
 			'copy' => self::getCopy(),
 			'module' => self::getModuleId(),

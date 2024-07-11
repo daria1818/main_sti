@@ -1,9 +1,15 @@
 <?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();?>
+
+<?php
+	$navChain = CIBlockSection::GetNavChain($arParams["IBLOCK_ID"], $arResult['ORIGINAL_PARAMETERS']['SECTION_ID']);
+	$parentSection = $navChain->GetNext();
+?>
+
 <?$this->setFrameMode(true);?>
 <?use \Bitrix\Main\Localization\Loc,
 	\Bitrix\Main\Web\Json;?>
 <?if( count( $arResult["ITEMS"] ) >= 1 ){?>
-	
+
 	<?if(($arParams["AJAX_REQUEST"]=="N") || !isset($arParams["AJAX_REQUEST"])){?>
 		<?if(isset($arParams["TITLE"]) && $arParams["TITLE"]):?>
 			<hr/>
@@ -111,7 +117,7 @@
 					$elementName = ((isset($arItem['IPROPERTY_VALUES']['ELEMENT_PAGE_TITLE']) && $arItem['IPROPERTY_VALUES']['ELEMENT_PAGE_TITLE']) ? $arItem['IPROPERTY_VALUES']['ELEMENT_PAGE_TITLE'] : $arItem['NAME']);
 
 					$bUseSkuProps = ($arItem["OFFERS"] && !empty($arItem['OFFERS_PROP']));
-					
+
 
 					if(!$arItem["OFFERS"] || $arParams['TYPE_SKU'] !== 'TYPE_1'){
 						if($arParams["SHOW_MEASURE"] == "Y" && $arItem["CATALOG_MEASURE"]){
@@ -131,7 +137,7 @@
 							//$arQuantityData = CNext::GetQuantityArray($totalCount, $arItemIDs["ALL_ITEM_IDS"], "N", $arItem["PRODUCT"]["TYPE"]);
 							$arQuantityData = CNext::GetQuantityArray($totalCount, array('ID' => $currentSKUID), "N", $arItem["PRODUCT"]["TYPE"], (($arItem['CATALOG_TYPE'] == CCatalogProduct::TYPE_SET || !$arResult['STORES_COUNT']) ? false : true));
 
-							
+
 							$arItem["DETAIL_PAGE_URL"] = $arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]["DETAIL_PAGE_URL"];
 							if($arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]["PREVIEW_PICTURE"])
 								$arItem["PREVIEW_PICTURE"] = $arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]["PREVIEW_PICTURE"];
@@ -160,7 +166,7 @@
 							$arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]['IBLOCK_ID'] = $arParams['IBLOCK_ID'];//fix add props to basket
 							$arAddToBasketData = CNext::GetAddToBasketArray($arItem["OFFERS"][$arItem["OFFERS_SELECTED"]], $totalCount, $arParams["DEFAULT_COUNT"], $arParams["BASKET_URL"], false, $arItemIDs["ALL_ITEM_IDS"], 'small', $arParams);
 							$arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]['IBLOCK_ID'] = $offerIblockID;
-						}						
+						}
 					}
 
 					?>
@@ -190,7 +196,7 @@
 													<span title="<?=GetMessage('CATALOG_WISH_OUT')?>" class="wish_item in added <?=$arParams["TYPE_SKU"];?>" style="display: none;" data-item="<?=$currentSKUID;?>" data-iblock="<?=$currentSKUIBlock?>"><i></i></span>
 												</div>
 											<?endif;?>
-										<?endif;?>										
+										<?endif;?>
 										<?if($arParams["DISPLAY_COMPARE"] == "Y"):?>
 											<?if(!$arItem["OFFERS"] || ($arParams["TYPE_SKU"] !== 'TYPE_1' || ($arParams["TYPE_SKU"] == 'TYPE_1' && !$arItem["OFFERS_PROP"]))):?>
 												<div class="compare_item_button">
@@ -286,8 +292,18 @@
 											<?//$frame->end();?>
 										</div>
 									<?endif;?>
-									<div class="sa_block" data-stores='<?=Json::encode($arParams["STORES"])?>'>
-										<?=$arQuantityData["HTML"];?>
+									<div class="sa_block" style="font-size: 12px;" data-stores='<?=Json::encode($arParams["STORES"])?>'>
+										<?php
+											if($parentSection['ID'] === '7788' || $parentSection['ID'] === '8374') {
+												$string = '<div class="item-stock"><span class="icon stock stock_range_2"></span><span class="value"><span class="">Достаточно</span></span></div>';
+												$attachment = 'Доступно '.$totalCount.' шт.';
+												$quantityCount = preg_replace('#(<span class="">Достаточно</span>)#isU', $attachment, $string);
+												$style = 'display: none';
+											}
+										?>
+										<?= $quantityCount.' <div style="'.$style.'">'.$arQuantityData["HTML"].'</div>' ?>
+
+
 										<div class="article_block" <?if(isset($arItem['ARTICLE']) && $arItem['ARTICLE']['VALUE']):?>data-name="<?=$arItem['ARTICLE']['NAME'];?>" data-value="<?=$arItem['ARTICLE']['VALUE'];?>"<?endif;?>>
 											<?if(isset($arItem['ARTICLE']) && $arItem['ARTICLE']['VALUE']){?>
 												<div ><?=$arItem['ARTICLE']['NAME'];?>: <?=$arItem['ARTICLE']['VALUE'];?></div>

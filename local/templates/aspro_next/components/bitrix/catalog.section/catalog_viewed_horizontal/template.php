@@ -2,7 +2,7 @@
 <?$this->setFrameMode(true);?>
 <?if( count( $arResult["ITEMS"] ) >= 1 ){?>
 	<div class="viewed_block horizontal">
-		<h3 class="title_block sm"><?=($arParams["TITLE_BLOCK"] ? $arParams["TITLE_BLOCK"] : GetMessage("TITLE_BLOCK_NAME"))?></h3>
+		<h3 class="title_block sm"><?= GetMessage("TITLE_BLOCK_NAME") ?></h3>
 		<div class="outer_wrap flexslider shadow items border custom_flex top_right" data-plugin-options='{"animation": "slide", "directionNav": true, "itemMargin":10, "controlNav" :false, "animationLoop": true, "slideshow": false, "counts": [5,4,3,2,1]}'>
 			<ul class="rows_block slides">
 				<?foreach($arResult["ITEMS"] as $arItem){

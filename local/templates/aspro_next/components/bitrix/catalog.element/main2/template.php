@@ -175,6 +175,14 @@ $totalCount = CNext::GetTotalCount($arResult, $arParams);
 ?>
 <?
 $arQuantityData = CNext::GetQuantityArray($totalCount, $arItemIDs["ALL_ITEM_IDS"], "Y");
+
+
+
+// print_r($totalCount);
+//echo '<pre>';
+//print_r($arResult['IBLOCK_SECTION_ID']);
+//echo '<pre>';
+
 $templateData['ID_OFFER_GROUP'] = $arItemIDs['ALL_ITEM_IDS']['OFFER_GROUP'];
 
 $arParams["BASKET_ITEMS"] = ($arParams["BASKET_ITEMS"] ? $arParams["BASKET_ITEMS"] : array());
@@ -907,7 +915,10 @@ if (!$showProps && $arResult['OFFERS']) {
       <? } ?>
       <div class="middle_info main_item_wrapper">
         <? $frame = $this->createFrame()->begin(); ?>
-        <div class="prices_block">
+
+
+
+		  <div class="prices_block">
           <div class="cost prices clearfix">
             <? $arUserGroups = $USER->GetUserGroupArray(); ?>
             <? $min_price_id = 0;
@@ -972,6 +983,9 @@ if (!$showProps && $arResult['OFFERS']) {
               </div>
             <? } ?>
           </div>
+
+
+
           <? if ($arParams["SHOW_DISCOUNT_TIME"] == "Y") { ?>
             <? $arUserGroups = $USER->GetUserGroupArray(); ?>
             <? if ($arParams['SHOW_DISCOUNT_TIME_EACH_SKU'] != 'Y' || ($arParams['SHOW_DISCOUNT_TIME_EACH_SKU'] == 'Y' && (!$arResult['OFFERS'] || ($arResult['OFFERS'] && $arParams['TYPE_SKU'] != 'TYPE_1')))) : ?>
@@ -983,15 +997,22 @@ if (!$showProps && $arResult['OFFERS']) {
                     <span class="countdown values"><span class="item"></span><span class="item"></span><span class="item"></span><span class="item"></span></span>
                   </div>
                   <? if ($arQuantityData["HTML"]) : ?>
+
                     <div class="quantity_block">
                       <div class="title"><?= GetMessage("TITLE_QUANTITY_BLOCK"); ?></div>
                       <div class="values">
                         <span class="item">
                           <span class="value" <?= ((count($arResult["OFFERS"]) > 0 && $arParams["TYPE_SKU"] == 'TYPE_1' && $arResult["OFFERS_PROP"]) ? 'style="opacity:0;"' : '') ?>><?= $totalCount; ?></span>
-                          <span class="text"><?= GetMessage("TITLE_QUANTITY"); ?></span>
+
+							<span class="text"><?= GetMessage("TITLE_QUANTITY"); ?></span>
+							<?php
+
+							?>
+
                         </span>
                       </div>
                     </div>
+
                   <? endif; ?>
                 </div>
               <? } ?>
@@ -1021,25 +1042,58 @@ if (!$showProps && $arResult['OFFERS']) {
                 <? if ($arQuantityData["HTML"]) : ?>
                   <div class="quantity_block">
                     <div class="title"><?= GetMessage("TITLE_QUANTITY_BLOCK"); ?></div>
-                    <div class="values">
-                      <span class="item">
-                        <span class="value"><?= $totalCount; ?></span>
-                        <span class="text"><?= GetMessage("TITLE_QUANTITY"); ?></span>
-                      </span>
-                    </div>
+
                   </div>
                 <? endif; ?>
               </div>
             <? endif; ?>
           <? } ?>
+
+			<?php
+					$navChain = CIBlockSection::GetNavChain($arParams["IBLOCK_ID"], $arResult["IBLOCK_SECTION_ID"]);
+					$parentSection = $navChain->GetNext();
+				   if($parentSection['ID'] === '7788' || $parentSection['ID'] === '8374') {
+					   $string = '<div class="item-stock"><span class="icon stock stock_range_2"></span><span class="value"><span class="">Достаточно</span></span></div>';
+					   $attachment = 'Доступно '.$totalCount.' шт.';
+					   $quantityCount = preg_replace('#(<span class="">Достаточно</span>)#isU', $attachment, $string);
+					   $style = 'display: none';
+				   }
+
+			?>
+
+
           <div class="quantity_block_wrapper">
             <? if ($useStores) { ?>
-              <div class="p_block">
               <? } ?>
-              <?= $arQuantityData["HTML"]; ?>
+
+				<?php
+					echo $quantityCount.' <div style="'.$style.'">'.$arQuantityData["HTML"].'</div>';
+				?>
+
+
               <? if ($useStores) { ?>
               </div>
+
+
             <? } ?>
+			  <script>
+				  document.addEventListener('DOMContentLoaded', function() {
+					  let link = document.querySelector('.breadcrumbs > .bx-breadcrumb-item > [href="/catalog/courses/"], .breadcrumbs > .bx-breadcrumb-item > [href="/catalog/magazin_dlya_zubnyh_tekhnikov/"]');
+					  if(link) {
+						  stockArr.forEach(item => {
+							  let stockArr = document.querySelectorAll('.catalog_block .item-stock[data-id]')
+							  stockArr.forEach(item => {
+								  item.style.display = 'block';
+							  })
+						  })
+					  } else {
+						  let stockArr = document.querySelectorAll('.catalog_block .item-stock[data-id]')
+						  stockArr.forEach(item => {
+						  	item.style.display = 'block';
+						  })
+					  }
+				  })
+			  </script>
             <? if ($arParams["SHOW_CHEAPER_FORM"] == "Y") : ?>
               <div class="cheaper_form">
                 <span class="animate-load" data-event="jqm" data-param-form_id="CHEAPER" data-name="cheaper" data-autoload-product_name="<?= CNext::formatJsName($arResult["NAME"]); ?>" data-autoload-product_id="<?= $arResult["ID"]; ?>"><?= ($arParams["CHEAPER_FORM_NAME"] ? $arParams["CHEAPER_FORM_NAME"] : GetMessage("CHEAPER")); ?></span>
@@ -1047,6 +1101,14 @@ if (!$showProps && $arResult['OFFERS']) {
             <? endif; ?>
           </div>
         </div>
+
+
+
+
+
+
+
+
 
         <div class="buy_block">
           <? if ($arResult["OFFERS"] && $showCustomOffer) { ?>
@@ -1172,6 +1234,9 @@ if (!$showProps && $arResult['OFFERS']) {
         <? endif; ?>
         <? $frame->end(); ?>
       </div>
+
+
+
       <div class="stock_wrapper" style="display:none;"></div>
       <div class="element_detail_text wrap_md">
         <div class="price_txt">

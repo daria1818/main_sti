@@ -455,6 +455,7 @@ if ($USER->IsAdmin()){
 						"ADD_DETAIL_TO_GALLERY_IN_LIST" => $arTheme["GALLERY_ITEM_SHOW"]["DEPENDENT_PARAMS"]["ADD_DETAIL_TO_GALLERY_IN_LIST"]["VALUE"],
 						"IBINHERIT_TEMPLATES" => $arSeoItem ? $arIBInheritTemplates : array(),
 						"REVIEWS_VIEW" => $arTheme["REVIEWS_VIEW"]["VALUE"] == "EXTENDED",
+						"COMPATIBLE_MODE" => "Y"
 					), $component, array("HIDE_ICONS" => $isAjax)
 				);?>
 			<?if($isAjax !== 'Y'){?>

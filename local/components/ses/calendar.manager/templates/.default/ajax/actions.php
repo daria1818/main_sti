@@ -166,6 +166,8 @@ class AjaxRequestHandler {
                 break;
 
             case 'days_week':
+                // $str = print_r($lecturerId,true);
+                // $this->sendJsonResponse(['status' => 'error', 'message' =>$str]);
                 $this->handleDaysWeekPattern($lecturerId, $dates, $CalendarSchedule);
                 break;
 
