@@ -166,7 +166,6 @@ if (!empty($arResult['ITEMS'])){
 	}
 }
 ?>
-
 <div class="sale-products-gift bx-<?=$arParams['TEMPLATE_THEME']?>" data-entity="<?=$containerName?>">
 	<?
 
@@ -331,11 +330,7 @@ if (!empty($arResult['ITEMS'])){
 						<div class="col-xs-12 product-item-small-card">
 							<div class="row">
 								<?
-								foreach ($rowItems as $item)
-								{
-									$arGiftID[] = $item["ID"];
-									//customCreateGiftIds
-								}
+								$arGiftOrderPriceID = [];
 								$userId = Main\Engine\CurrentUser::get()->getId();
 								$giftManager = \Bitrix\Sale\Discount\Gift\Manager::getInstance()->setUserId($userId);
 
@@ -343,11 +338,20 @@ if (!empty($arResult['ITEMS'])){
 
 								foreach ($collections as $position) {
 									foreach ($position as $GIFT_ID => $product) {?>
+										<?foreach ($arParams["FULL_DISCOUNT_LIST"][$GIFT_ID]['CONDITIONS']['CHILDREN'] as $children) {
+											if($children['CLASS_ID'] == 'OrderPriceValue') {
+												$arGiftOrderPriceID = $product;?>
+												<div id="custom__orderPriceValue" data-gift-id="<?=$GIFT_ID?>" style="display: none;"></div>
+											<?}?>
+										<?}?>
 										<div class="col-xs-12" row-gift-id="<?=$GIFT_ID?>">
 											<?
 											foreach ($rowItems as $item){
 												if(in_array($item["ID"],$product)){?>
 													<div class="col-xs-6 col-md-3 bonus-item">
+														<?if(in_array($item["ID"],$arGiftOrderPriceID)){
+															$item['JS_giftPriceOrder'] = true;
+														}?>
 														<?$APPLICATION->IncludeComponent(
 															'bitrix:catalog.item',
 															'',

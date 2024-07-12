@@ -155,7 +155,8 @@ if (isset($arResult['ITEM']))
 					'ITEM_MEASURE_RATIOS' => $item['ITEM_MEASURE_RATIOS'],
 					'ITEM_MEASURE_RATIO_SELECTED' => $item['ITEM_MEASURE_RATIO_SELECTED'],
 					'MORE_PHOTO' => $item['MORE_PHOTO'],
-					'MORE_PHOTO_COUNT' => $item['MORE_PHOTO_COUNT']
+					'MORE_PHOTO_COUNT' => $item['MORE_PHOTO_COUNT'],
+					'DISABLE_GIFT' => isset($item['JS_giftPriceOrder']) && $item['JS_giftPriceOrder']
 				),
 				'BASKET' => array(
 					'ADD_PROPS' => $arParams['ADD_PROPERTIES_TO_BASKET'] === 'Y',
@@ -247,7 +248,8 @@ if (isset($arResult['ITEM']))
 					'NAME' => $productTitle,
 					'DETAIL_PAGE_URL' => $item['DETAIL_PAGE_URL'],
 					'MORE_PHOTO' => $item['MORE_PHOTO'],
-					'MORE_PHOTO_COUNT' => $item['MORE_PHOTO_COUNT']
+					'MORE_PHOTO_COUNT' => $item['MORE_PHOTO_COUNT'],
+					'DISABLE_GIFT' => isset($item['JS_giftPriceOrder']) && $item['JS_giftPriceOrder']
 				),
 				'OFFERS' => array(),
 				'OFFER_SELECTED' => 0,

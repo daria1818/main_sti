@@ -10,11 +10,12 @@ $APPLICATION->SetTitle("Корзина");
 </script>
 <?
 global $USER;
-	if ($USER->IsAdmin()){
-		$template = "custom-cart_v2_dev";
-	}else{
-		$template = "custom-cart_v2";
-	}
+	// if ($USER->IsAdmin()){
+	// 	$template = "custom-cart_v2_dev";
+	// }else{
+	// 	$template = "custom-cart_v2";
+	// }
+	$template = "custom-cart_v2";
 if (htmlspecialcharsEx($_REQUEST["SCODER_AJAX"] == "Y"))
 	$GLOBALS['APPLICATION']->RestartBuffer();
 ?>

@@ -48,6 +48,7 @@ Loader::registerAutoLoadClasses($module = null, [
     'RtopTypeEventTable' => '/local/php_interface/api/classes/RtopTypeEvent.php',
     'RtopSaleActionGift' => '/local/php_interface/api/classes/RtopSaleActionGift.php',
     'RtopSaleFreeDelivery' => '/local/php_interface/api/classes/RtopSaleFreeDelivery.php',
+    'RtopSaleOrderPrice' => '/local/php_interface/api/classes/RtopSaleOrderPrice.php',
 	'Logger' => '/local/php_interface/classes/Logger.php',
     'Debug' => '/local/php_interface/classes/Debug.php',
 ]);
@@ -57,6 +58,11 @@ $eventManager->addEventHandlerCompatible(
     "sale",
     "OnCondSaleControlBuildList",
     ["RtopSaleFreeDelivery", "GetControlDescr"]
+);
+$eventManager->addEventHandlerCompatible(
+    "sale",
+    "OnCondSaleControlBuildList",
+    ["RtopSaleOrderPrice", "GetControlDescr"]
 );
 
 if (!function_exists("pre")) {
