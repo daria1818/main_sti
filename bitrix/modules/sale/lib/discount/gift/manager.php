@@ -252,6 +252,7 @@ final class Manager
 
 		$sortDiscount = self::customSortDiscount("top",$discounts);
 		$GiftData = array();
+		$elements = [];
 
 		foreach($sortDiscount as $POS => $position)
 		{
@@ -264,13 +265,59 @@ final class Manager
 					if(count($el["GiftValue"]) > 1){
 						foreach ($el["GiftValue"] as $value) {
 							$GiftData[$POS][$discount['ID']][] = $value;
+							$elements[] = $value;
 						}
 					}else{
 						$GiftData[$POS][$discount['ID']][] = $el["GiftValue"][0];
+						$elements[] = $el["GiftValue"][0];
 					}
 				}
 
 	        }
+		}
+		$cmlLink = \Bitrix\Iblock\PropertyTable::getList(['filter' => ['CODE' => 'CML2_LINK'], 'select' => ['ID']])->fetch();
+		$elementList = \Bitrix\Iblock\ElementTable::getList([
+			'filter' => [
+				'ID' => $elements,
+				'WF_PARENT_ELEMENT_ID' => false
+			],
+			'runtime' => [
+				new \Bitrix\Main\Entity\ReferenceField(
+					'PARENT', 
+					\Bitrix\Iblock\ElementPropertyTable::class,
+					\Bitrix\Main\ORM\Query\Join::on('this.ID', 'ref.IBLOCK_ELEMENT_ID')->where('ref.IBLOCK_PROPERTY_ID', $cmlLink['ID'])
+				),
+				new \Bitrix\Main\Entity\ReferenceField(
+					'PARENT_INFO', 
+					\Bitrix\Iblock\ElementTable::class,
+					\Bitrix\Main\ORM\Query\Join::on('this.PARENT.VALUE', 'ref.ID')
+				),
+			],
+			'select' => ['ID', 'ACTIVE', 'PARENT_ID' => 'PARENT.VALUE', 'PARENT_ACTIVE' => 'PARENT_INFO.ACTIVE']
+		])->fetchAll();
+		$arElement = [];
+		foreach($elementList ?: [] as $element)
+		{
+			$arElement[$element['ID']] = $element;
+		}
+
+		foreach($GiftData as $POS => $discounts)
+		{
+			foreach($discounts as $ID => $discount)
+			{
+				foreach($discount as $k => $item)
+				{
+					if(!isset($arElement[$item]) || $arElement[$item]['ACTIVE'] == 'N' || (!empty($arElement[$item]['PARENT_ID']) && $arElement[$item]['PARENT_ACTIVE'] == 'N'))
+					{
+						unset($GiftData[$POS][$ID][$k]);
+						continue;
+					}
+					if(!empty($arElement[$item]['PARENT_ID']))
+						$GiftData[$POS][$ID][$k] = $arElement[$item]['PARENT_ID'];
+				}
+				if(empty($GiftData[$POS][$ID]))
+					unset($GiftData[$POS][$ID]);
+			}
 		}
 		//$filePath = $_SERVER["DOCUMENT_ROOT"]."/ses_log_jeiorjioashdf/customGetGiftIds.log";
 		// if($file = fopen($filePath, 'a')){

@@ -202,7 +202,7 @@
 			}
 
 			if (BX('custom__orderPriceValue') && BX.Sale.BasketComponent.giftPriceOrder) {
-				BX('custom__orderPriceValue').innerText = 'Добавьте в заказ еще товаров на ' + BX.Sale.BasketComponent.giftPriceOrder.value + ' рублей, чтобы получить подарок';
+				BX('custom__orderPriceValue').innerText = 'Добавьте в заказ еще товаров на ' + BX.Sale.BasketComponent.giftPriceOrder.value + ' рублей, чтобы получить подарок:';
 				BX('custom__orderPriceValue').style.display = !!BX.Sale.BasketComponent.giftPriceOrder.display ? 'block' : 'none';
 			}
 		},

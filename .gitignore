@@ -21,6 +21,8 @@
 sitemap*.xml
 *.css
 *.js
+!/local/templates/aspro_next/components/bitrix/catalog.item/.default/script.js
+!/local/templates/aspro_next/components/bitrix/sale.products.gift.basket/.default/script.js
 *.ico
 fonts
 images

@@ -335,7 +335,6 @@ if (!empty($arResult['ITEMS'])){
 								$giftManager = \Bitrix\Sale\Discount\Gift\Manager::getInstance()->setUserId($userId);
 
 								$collections = $giftManager->customGetGiftIds($arParams["FULL_DISCOUNT_LIST"]);
-
 								foreach ($collections as $position) {
 									foreach ($position as $GIFT_ID => $product) {?>
 										<?foreach ($arParams["FULL_DISCOUNT_LIST"][$GIFT_ID]['CONDITIONS']['CHILDREN'] as $children) {
