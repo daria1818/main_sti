@@ -1,6 +1,0 @@
-<?
-$sSectionName = "webnn";
-$arDirProperties = Array(
-
-);
-?>

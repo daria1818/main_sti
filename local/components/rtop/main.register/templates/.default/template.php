@@ -53,15 +53,14 @@ if (count($arResult["ERRORS"]) > 0):
 	ShowError(implode("<br />", $arResult["ERRORS"]));
 
 elseif($arResult["USE_EMAIL_CONFIRMATION"] === "Y"):
-?>
-<?
-echo "<pre>";
-print_r($arResult["ERRORS"]);
-echo "</pre>";
-?>
-<p><?echo GetMessage("REGISTER_EMAIL_WILL_BE_SENT")?></p>
+	?>
+	<p><?echo GetMessage("REGISTER_EMAIL_WILL_BE_SENT")?></p>
 <?endif?>
-
+<?
+	foreach ($arResult["SUCCESS"] as $key => $success){
+		echo "<p style='color:green'>". $success . "</p>";
+	}
+?>
 <?if($arResult["SHOW_SMS_FIELD"] == true):?>
 
 <form method="post" action="<?=POST_FORM_ACTION_URI?>" name="regform">
@@ -273,7 +272,11 @@ $pass = bin2hex($passw_gen);
 						array("HIDE_ICONS"=>"Y")
 					);
 				?><?
-	}?></td>
+	}?>
+	<?
+
+	?>
+	</td>
 		</tr>
 	<?endif?>
 <?endforeach?>

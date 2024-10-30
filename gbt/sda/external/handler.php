@@ -6,6 +6,7 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
 use Bitrix\Main\Type\DateTime;
 use SES\CalendarManager\CalendarCourse;
+// use SES\CalendarManager\CalendarUsers;
 use Bitrix\Crm\CompanyTable;
 use Bitrix\Crm\ContactTable;
 use Bitrix\Crm\FieldMultiTable;
@@ -40,14 +41,19 @@ try {
     logError('Ошибка подключения модуля: ' . $e->getMessage());
     returnJson(['success' => false, 'message' => 'Ошибка подключения модуля: ' . $e->getMessage()]);
 }
+$userBXId = 5754;
 
 // Получаем данные из POST-запроса
 $request = Application::getInstance()->getContext()->getRequest();
 $surname = htmlspecialchars($request->getPost('surname'));
 $name = htmlspecialchars($request->getPost('name'));
+$second_name = htmlspecialchars($request->getPost('second_name'));
 $phone = htmlspecialchars($request->getPost('phone'));
 $email = htmlspecialchars($request->getPost('email'));
 $clinic = htmlspecialchars($request->getPost('clinic'));
+$fullCityName = htmlspecialchars($request->getPost('full_city_name'));
+$date = htmlspecialchars($request->getPost('date'));
+$courseType = htmlspecialchars($request->getPost('course_type'));
 
 // Валидация данных
 if (empty($surname) || empty($name) || empty($phone) || empty($email) || empty($clinic)) {
@@ -64,6 +70,9 @@ if (empty($formHash)) {
 
 $calendarCourse = new CalendarCourse();
 $course = $calendarCourse->getCourseByLink($formHash,'external');
+
+// $calendarUsers = new CalendarUsers();
+// $arCourseLector = $calendarUsers->getCurUserModuleAr($course["UF_LECTOR"]);
 
 if (!$course) {
     logError('Course not found for form_hash: ' . $formHash);
@@ -97,6 +106,8 @@ $companyId = null;
 if ($contactExists) {
     $contactId = $contactExists['ID'];
     $companyId = $contactExists['COMPANY_ID'];
+
+    Logger::writeLog($contactId, '/logs/', 'gbt1');
 } else {
     // Проверка существования компании
     $companyExists = CompanyTable::getList([
@@ -106,14 +117,18 @@ if ($contactExists) {
 
     if ($companyExists) {
         $companyId = $companyExists['ID'];
+        Logger::writeLog($companyId, '/logs/', 'gbt2');
     } else {
+
+        Logger::writeLog($userBXId, '/logs/', 'gbt3');
         // Создание компании в CRM
         $formattedDate = new DateTime();
         $companyFields = [
             'TITLE' => $clinic,
-            'ASSIGNED_BY_ID' => 5754,
+            'ASSIGNED_BY_ID' => $userBXId ,
             'CREATED_BY_ID' => 1,
             'DATE_CREATE' => $formattedDate,
+            'MODIFY_BY_ID' => $userBXId,
         ];
         $companyResult = CompanyTable::add($companyFields);
 
@@ -154,13 +169,17 @@ if ($contactExists) {
     }
 
     // Создание контакта в CRM
+    $event = $courseType . ', ' . $name . ' ' . $surname . ', ' . $date . ', ' . $fullCityName;
     $contactFields = [
         'NAME' => $name,
         'LAST_NAME' => $surname,
+        'SECOND_NAME' => $second_name,
         'COMPANY_ID' => $companyId,
         'ASSIGNED_BY_ID' => 5754,
         'CREATED_BY_ID' => 1,
         'DATE_CREATE' => new DateTime(),
+        'MODIFY_BY_ID' => $userBXId,
+        'UF_CRM_1616125505615' => $event
     ];
     $contactResult = ContactTable::add($contactFields);
 
@@ -170,6 +189,8 @@ if ($contactExists) {
     }
 
     $contactId = $contactResult->getId();
+
+    Logger::writeLog($contactId, '/logs/', 'gbt');
 
     // Добавление телефона и email для контакта
     $multiFields = [

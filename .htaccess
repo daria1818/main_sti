@@ -16,6 +16,8 @@ Redirect 301 /bitrix/catalog_export/export_yFE.xml /bitrix/catalog_export/export
     Options +FollowSymLinks
     RewriteEngine On
 
+	RewriteCond %{REQUEST_URI} ^/catalog/dev_courses/([0-9]+)/?$
+	RewriteRule ^catalog/dev_courses/([0-9]+)/?$ /catalog/dev_courses/detail.php [L,QSA]
 
 	RewriteCond %{HTTP_HOST} ^www\.(.*)$
 	RewriteRule ^(.*)$ https://%1/$1 [L,R=301]

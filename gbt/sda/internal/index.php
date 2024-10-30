@@ -43,6 +43,16 @@ if (!Loader::includeModule('ses.calendarmanager')) {
         }
     }
 
+    function UserFieldValue($ID)
+    {
+        $UserField = CUserFieldEnum::GetList(array(), array("ID" => $ID));
+        if($UserFieldAr = $UserField->GetNext())
+        {
+            return $UserFieldAr["VALUE"];
+        }
+        else return false;
+    }
+
     $formHash = isset($_GET['form_hash']) ? $_GET['form_hash'] : '';
     $course = null;
     if (!empty($formHash)) {
@@ -59,6 +69,7 @@ if (!Loader::includeModule('ses.calendarmanager')) {
     }
 ?>
 <?php if ($course && $course['UF_TICKETS'] > 0){ ?>
+
 <div class="form-container">
   <form id="contactForm" action="/gbt/sda/internal/handler.php" method="post" novalidate>
     <h2>Запись на курс SDA <br><?=$fullCityName . ' <br> ' . $course["UF_DATE"] . ' <br> ' . $fullName?></h2>
@@ -69,6 +80,10 @@ if (!Loader::includeModule('ses.calendarmanager')) {
     <div class="form-group">
       <label for="name">Имя</label>
       <input type="text" id="name" name="name" required>
+    </div>
+    <div class="form-group">
+      <label for="surname">Отчество</label>
+      <input type="text" id="second_name" name="second_name">
     </div>
     <div class="form-group">
       <label for="phone">Телефон</label>
@@ -82,6 +97,10 @@ if (!Loader::includeModule('ses.calendarmanager')) {
       <label for="clinic">Клиника</label>
       <input type="text" id="clinic" name="clinic" required>
     </div>
+    <input type="hidden" name="full_city_name" value="<?=$city["NAME"]?>">
+    <input type="hidden" name="date" value="<?=$course["UF_DATE"]?>">
+    <input type="hidden" name="course_type" value="<?=UserFieldValue($course['UF_TYPE'])?>">
+    
     <input type="hidden" name="form_hash" value="<?=$formHash?>">
     <button type="submit" class="submit-button">Отправить</button>
     <div id="formResult" class="form-result"></div>

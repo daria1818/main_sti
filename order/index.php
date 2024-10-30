@@ -2,14 +2,59 @@
 define("NEED_AUTH", true);
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 $APPLICATION->SetTitle("Оформление заказа");
-?>
-<?
-if ($USER->IsAdmin()) {
-	$template = "v3";
-}else{
-	$template = "v3";
+
+use Bitrix\Main\Loader;
+use Bitrix\Main\Type\DateTime;
+
+Loader::includeModule('main');
+Loader::includeModule('sale');
+
+global $USER;
+//Функционал для отключения работы бесплатной доставки при регистрации по QR по истечению срока
+if ($USER->IsAuthorized()) {
+    $userId = $USER->GetID();
+    $rsUser = CUser::GetByID($userId);
+    $arUser = $rsUser->Fetch();
+
+    if (!empty($arUser['UF_DATE_LIMIT_FREE_DELIVERY'])) {
+        $userDate = new DateTime($arUser['UF_DATE_LIMIT_FREE_DELIVERY'], 'd.m.Y H:i:s');
+        $currentDate = new DateTime();
+
+        if ($userDate < $currentDate) {
+            $user = new CUser;
+            $fields = ['UF_DATE_LIMIT_FREE_DELIVERY' => ''];
+            $userUpdateResult = $user->Update($userId, $fields);
+
+            if ($userUpdateResult) {
+                $ruleId = 95;
+                $res = CSaleDiscount::GetByID($ruleId);
+                if ($res && !empty($res['CONDITIONS'])) {
+                    $conditions = unserialize($res['CONDITIONS']);
+
+                    if (isset($conditions['CHILDREN'][0]['DATA']['value'])) {
+                        $userIds = $conditions['CHILDREN'][0]['DATA']['value'];
+
+                        if (($key = array_search($userId, $userIds)) !== false) {
+                            unset($userIds[$key]);
+                            $conditions['CHILDREN'][0]['DATA']['value'] = array_values($userIds);
+
+                            $fields = [
+                                'CONDITIONS' => serialize($conditions),
+                            ];
+                            $discount = new CSaleDiscount;
+                            $discount->Update($ruleId, $fields);
+                        }
+                    }
+                }
+            } else {
+                $logMessage = "Ошибка при обновлении пользователя {$userId}: " . $user->LAST_ERROR . PHP_EOL;
+                file_put_contents('freeDeliveryLog.log', $logMessage, FILE_APPEND);
+            }
+        }
+    }
 }
 ?>
+
 <?$APPLICATION->IncludeComponent(
 	"bitrix:sale.order.ajax", 
 	"v3", 

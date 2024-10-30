@@ -6,20 +6,29 @@ define("NEED_AUTH", true);
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 
-global $APPLICATION;
-$APPLICATION->SetPageProperty("HIDE_LEFT_BLOCK", "Y");
-$APPLICATION->SetTitle("Календарь курсов");
+global $APPLICATION, $USER;
+
+// if ($USER->IsAdmin()) {
+    $APPLICATION->SetPageProperty("HIDE_LEFT_BLOCK", "Y");
+    $APPLICATION->SetTitle("Календарь курсов");
+    ?>
+
+    <?$APPLICATION->IncludeComponent(
+        "ses:calendar.manager",
+        "",
+        array(
+            "COMPONENT_TEMPLATE" => ".default",
+            "SELECTION_DAYS" => "temp1",
+            "CALENDAR_TYPE" => array('SDA'),
+            "FILTER" => array(
+                "UF_TYPE" => array(244, 245, 252),
+                "UF_ROLE" => array("Лектор"),
+            ),
+        ),
+        false
+    );?>
+
+<?
+
+require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");
 ?>
-
-<?$APPLICATION->IncludeComponent(
-    "ses:calendar.manager", 
-    "", 
-    array(
-        "COMPONENT_TEMPLATE" => ".default",
-        "SELECTION_DAYS" => "temp1",
-    ),
-    false
-);?>
-
-
-<?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>

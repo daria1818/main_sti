@@ -6,6 +6,7 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
 use Bitrix\Main\Type\DateTime;
 use SES\CalendarManager\CalendarCourse;
+use SES\CalendarManager\CalendarUsers;
 use Bitrix\Crm\CompanyTable;
 use Bitrix\Crm\ContactTable;
 use Bitrix\Crm\DealTable;
@@ -47,9 +48,13 @@ $userBXId = 5754;
 $request = Application::getInstance()->getContext()->getRequest();
 $surname = htmlspecialchars($request->getPost('surname'));
 $name = htmlspecialchars($request->getPost('name'));
+$second_name = htmlspecialchars($request->getPost('second_name'));
 $phone = htmlspecialchars($request->getPost('phone'));
 $email = htmlspecialchars($request->getPost('email'));
 $clinic = htmlspecialchars($request->getPost('clinic'));
+$fullCityName = htmlspecialchars($request->getPost('full_city_name'));
+$date = htmlspecialchars($request->getPost('date'));
+$courseType = htmlspecialchars($request->getPost('course_type'));
 
 // Валидация данных
 if (empty($surname) || empty($name) || empty($phone) || empty($email) || empty($clinic)) {
@@ -67,6 +72,9 @@ if (empty($formHash)) {
 $calendarCourse = new CalendarCourse();
 $course = $calendarCourse->getCourseByLink($formHash, 'internal');
 
+$calendarUsers = new CalendarUsers();
+$arCourseLector = $calendarUsers->getCurUserModuleAr($course["UF_LECTOR"]);
+
 if (!$course) {
     logError('Course not found for form_hash: ' . $formHash);
     returnJson(['success' => false, 'message' => 'Курс не найден.']);
@@ -77,14 +85,6 @@ $remainingTickets = (int)$course['UF_TICKETS'];
 if ($remainingTickets <= 0) {
     logError('No tickets available for course ID: ' . $course['ID']);
     returnJson(['success' => false, 'message' => 'Нет доступных билетов.']);
-}
-
-// Уменьшаем количество билетов на 1
-$updateResult = $calendarCourse->updateCourseTickets($course['ID'], $remainingTickets - 1);
-
-if (!$updateResult['success']) {
-    logError('Error updating course tickets for course ID: ' . $course['ID'] . ' - ' . $updateResult['error']);
-    returnJson(['success' => false, 'message' => 'Ошибка обновления курса: ' . $updateResult['error']]);
 }
 
 // Получаем текущую дату и время с использованием Bitrix DateTime
@@ -106,6 +106,7 @@ if ($companyExists) {
         'ASSIGNED_BY_ID' => $userBXId,
         'CREATED_BY_ID' => $userBXId,
         'DATE_CREATE' => $formattedDate,
+        'MODIFY_BY_ID' => $userBXId,
     ];
     $companyResult = CompanyTable::add($companyFields);
 
@@ -156,13 +157,18 @@ if ($contactExists) {
     $contactId = $contactExists['ID'];
 } else {
     // Создание контакта в CRM
+
+    $event = $courseType . ', ' . $name . ' ' . $surname . ', ' . $date . ', ' . $fullCityName;
     $contactFields = [
         'NAME' => $name,
+        'SECOND_NAME' => $second_name,
         'LAST_NAME' => $surname,
         'COMPANY_ID' => $companyId,
         'ASSIGNED_BY_ID' => $userBXId,
         'CREATED_BY_ID' => $userBXId,
         'DATE_CREATE' => $formattedDate,
+        'MODIFY_BY_ID' => $userBXId,
+        'UF_CRM_1616125505615' => $event
     ];
     $contactResult = ContactTable::add($contactFields);
 
@@ -204,7 +210,7 @@ if ($contactExists) {
 
 // Создание сделки в CRM
 $dealFields = [
-    'TITLE' => "Сделка для {$name} {$surname}",
+    'TITLE' => "SDA {$date} {$fullCityName} {$arCourseLector['UF_FIRST_NAME']} {$arCourseLector['UF_LAST_NAME']}",
     'COMPANY_ID' => $companyId,
     'CONTACT_ID' => $contactId,
     'ASSIGNED_BY_ID' => $userBXId,
@@ -215,7 +221,16 @@ $dealFields = [
     'IS_NEW' => "Y",
     'IS_RECURRING' => "N",
     'STAGE_ID' => "C5:NEW",
+    'SOURCE_DESCRIPTION' => $course['ID'],
 ];
+
+if (!empty($course["UF_PRICE"])) {
+    // Удаляем пробелы и приводим строку к числовому значению с двумя десятичными знаками
+    $dealFields['OPPORTUNITY'] = number_format(floatval(str_replace(' ', '', $course["UF_PRICE"])), 2, '.', '');
+    // Устанавливаем валюту сделки
+    $dealFields['CURRENCY_ID'] = 'RUB';
+}
+
 $dealResult = DealTable::add($dealFields);
 
 if (!$dealResult->isSuccess()) {
@@ -224,6 +239,15 @@ if (!$dealResult->isSuccess()) {
 }
 
 $dealId = $dealResult->getId();
+
+// Уменьшаем количество билетов на 1
+$updateResult = $calendarCourse->updateCourseTickets($course['ID'], $remainingTickets - 1);
+
+if (!$updateResult['success']) {
+    logError('Error updating course tickets for course ID: ' . $course['ID'] . ' - ' . $updateResult['error']);
+    returnJson(['success' => false, 'message' => 'Ошибка обновления курса: ' . $updateResult['error']]);
+}
+
 
 returnJson(['success' => true, 'message' => 'Курс успешно обновлен, билет забронирован.', 'companyId' => $companyId, 'contactId' => $contactId, 'dealId' => $dealId]);
 

@@ -1,5 +1,13 @@
 <?php
 $arUrlRewrite=array (
+  999 => 
+  array (
+    'CONDITION' => '#^/rest/#',
+    'RULE' => '',
+    'ID' => NULL,
+    'PATH' => '/bitrix/services/rest/index.php',
+    'SORT' => 10,
+  ),
   6 => 
   array (
     'CONDITION' => '#^/bitrix/services/ymarket/([\\w\\d\\-]+)?(/)?(([\\w\\d\\-]+)(/)?)?#',
@@ -568,7 +576,7 @@ $arUrlRewrite=array (
     'PATH' => '/projects/index.php',
     'SORT' => 100,
   ),
-  249 => 
+  251 => 
   array (
     'CONDITION' => '#^/products/#',
     'RULE' => '',
@@ -576,7 +584,15 @@ $arUrlRewrite=array (
     'PATH' => '/products/index.php',
     'SORT' => 100,
   ),
-  250 => 
+  252 => 
+  array (
+    'CONDITION' => '#^/twofiles/#',
+    'RULE' => 'ls=24819805',
+    'ID' => '',
+    'PATH' => '/catalog/index.php',
+    'SORT' => 100,
+  ),
+  1001 => 
   array (
     'CONDITION' => '#^/catalog/#',
     'RULE' => '',
@@ -616,7 +632,7 @@ $arUrlRewrite=array (
     'PATH' => '/sale/index.php',
     'SORT' => 100,
   ),
-  237 => 
+  1000 => 
   array (
     'CONDITION' => '#^/blog/#',
     'RULE' => '',

@@ -69,7 +69,10 @@ if(in_array($sViewElementTemplate, $arWidePage))
 <?$sViewBigDataExtTemplate = ($arParams["BIGDATA_EXT"] ? $arParams["BIGDATA_EXT"] : "bigdata_2" );?>
 <div class="catalog_detail detail<?=($isWideBlock == "Y" ? " fixed_wrapper" : "");?> <?=$sViewElementTemplate;?>" itemscope itemtype="http://schema.org/Product">
 	<?
-	@include_once('page_blocks/'.$sViewElementTemplate.'.php');?>
+
+	@include_once('page_blocks/'.$sViewElementTemplate.'.php');
+
+	?>
 </div>
 
 <?CNext::checkBreadcrumbsChain($arParams, $arSection, $arElement);?>

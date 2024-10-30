@@ -658,6 +658,20 @@ if ($arResult['CATALOG'] && isset($arResult['OFFERS']) && !empty($arResult['OFFE
 			$arAddToBasketData["HTML"] = str_replace('data-item', 'data-props="'.$arOfferProps.'" data-item', $arAddToBasketData["HTML"]);
 
 			$firstPhoto = current($arOffer['MORE_PHOTO']);
+			$videos = [];
+			foreach ($arResult['PROPERTIES']['VIDEO']['VALUE'] as $video) {
+				$videos[] = array(
+					'SRC' => $video['path'], 
+					'ALT' => $video['desc'],
+					'WIDTH' => $video['width'],
+					'HEIGHT' => $video['height']
+				);
+			}
+			$arOffer['MORE_PHOTO'] = array_merge($arOffer['MORE_PHOTO'], $videos);
+
+			usort($arOffer['MORE_PHOTO'], 'sortSlider');
+
+			//Debug::pr($arOffer['MORE_PHOTO'], 'MORE_PHOTO', false);
 			$arOneRow = array(
 				'ID' => $arOffer['ID'],
 				'NAME' => $arOffer['~NAME'],
@@ -1210,4 +1224,35 @@ if(!empty($arResult['PROPERTIES']['BONUS_PRODUCT']['VALUE'])){
 		$arResult['BONUS_PRODUCTS'][$ob->GetFields()['ID']]['PRICE'] = CPrice::GetBasePrice($ob->GetFields()['ID']);
 	}
 }
+
+if(empty($arResult['OFFERS'] && is_array($arResult['PROPERTIES']['MORE_PHOTO']['VALUE']) && count($arResult['PROPERTIES']['MORE_PHOTO']['VALUE']) > 0)) {
+	//$firstPhoto = current($arResult['PROPERTIES']['MORE_PHOTO']['VALUE']);
+	$videos = [];
+	foreach ($arResult['PROPERTIES']['VIDEO']['VALUE'] as $video) {
+		$videos[] = array(
+			'SRC' => $video['path'], 
+			'ALT' => $video['desc'],
+			'WIDTH' => $video['width'],
+			'HEIGHT' => $video['height'],
+			'TYPE' => 'video'
+		);
+	}
+	$arResult['MORE_PHOTO'] = array_merge($arResult['MORE_PHOTO'], $videos);
+
+	Debug::pr($arResult['MORE_PHOTO'], 'OFFERSZZZZ', false);
+	Debug::pr($arResult['PROPERTIES']['VIDEO']['VALUE'], 'VIDEOZZZZ', false);
+
+	usort($arResult['MORE_PHOTO'], 'sortSlider');
+}
+
+function sortSlider($a, $b)
+{
+	if ($a["ALT"] == $b["ALT"]) {
+        return 0;
+    }
+    return ($a["ALT"] < $b["ALT"]) ? -1 : 1;
+}
+
+
+
 ?>

@@ -1,53 +1,53 @@
 <?
 $aMenuLinks = Array(
 	Array(
-		"Главная", 
-		"/", 
-		Array(), 
-		Array("ONLY_MOBILE"=>"Y"), 
-		"" 
+		"Главная",
+		"/",
+		Array(),
+		Array("ONLY_MOBILE"=>"Y"),
+		""
 	),
 	Array(
-		"Каталог", 
-		"/catalog/", 
-		Array(), 
-		Array("NOT_VISIBLE"=>"Y", "CLASS"=>"wide_menu catalog", "menu_item_class"=>"wide_menu", "IS_CATALOG"=>"1"), 
-		"" 
+		"Каталог",
+		"/catalog/",
+		Array(),
+		Array("NOT_VISIBLE"=>"Y", "CLASS"=>"wide_menu catalog", "menu_item_class"=>"wide_menu", "IS_CATALOG"=>"1"),
+		""
 	),
 	Array(
-		"Производители", 
-		"/info/brands/", 
-		Array(), 
-		Array(), 
-		"" 
+		"Производители",
+		"/info/brands/",
+		Array(),
+		Array(),
+		""
 	),
 	Array(
-		"Распродажа", 
-		"/sale_products/", 
-		Array(), 
-		Array(), 
-		"" 
+		"Распродажа",
+		"/sale_products/",
+		Array(),
+		Array(),
+		""
 	),
 	Array(
-		"Как купить", 
-		"/help/", 
-		Array(), 
-		Array(), 
-		"" 
+		"Как купить",
+		"/help/",
+		Array(),
+		Array(),
+		""
 	),
 	Array(
-		"О нас", 
-		"/company/", 
-		Array(), 
-		Array(), 
-		"" 
+		"О нас",
+		"/company/",
+		Array(),
+		Array(),
+		""
 	),
 	Array(
-		"GBT", 
-		"/gbt/", 
-		Array(), 
-		Array(), 
-		"" 
+		"GBT",
+		"/gbt/",
+		Array(),
+		Array(),
+		""
 	)
 );
 ?>

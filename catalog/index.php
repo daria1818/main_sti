@@ -1,5 +1,5 @@
 <?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
-$APPLICATION->SetPageProperty("title", "Купить стоматологические материалы по оптовым ценам в интернет магазине Stionline");
+$APPLICATION->SetPageProperty("title", "Купить стоматологические материалы на сайте Stionline");
 $APPLICATION->SetPageProperty("description", "Курсы, семинары и мастер-классы для стоматологов  - все специализации, теория и практика - Stionline");
 $APPLICATION->SetTitle("Каталог стоматологических товаров");
 
@@ -533,7 +533,7 @@ $APPLICATION->IncludeComponent(
 		"SECTIONS_SEARCH_COUNT" => "10",
 		"DETAIL_BLOCKS_ORDER" => "tizers,complect,nabor,tabs,stores,char,galery,exp_goods,services,gifts,goods,podborki,blog,recomend_goods,assoc_goods",
 		"DETAIL_BLOCKS_TAB_ORDER" => "offers,desc,char,buy,payment,delivery,video,reviews,ask,stores,custom_tab",
-		"DETAIL_BLOCKS_ALL_ORDER" => "tizers,complect,nabor,offers,desc,char,galery,video,reviews,gifts,ask,stores,services,docs,custom_tab,goods,recomend_goods,exp_goods,podborki,blog,assoc_goods",
+		"DETAIL_BLOCKS_ALL_ORDER" => "assoc_goods,tizers,complect,nabor,offers,desc,char,galery,video,reviews,gifts,ask,stores,services,docs,custom_tab,goods,recomend_goods,exp_goods,podborki,blog",
 		"BLOG_URL" => "catalog_comments",
 		"MAX_IMAGE_SIZE" => "0.5",
 		"DETAIL_BLOG_EMAIL_NOTIFY" => "Y",

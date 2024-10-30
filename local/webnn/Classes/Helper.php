@@ -1,12 +1,33 @@
 <?php
     namespace Classes;
 
-    // $exel = new \Classes\Helper();
-    // $exel->countProduts($arParams["IBLOCK_ID"], $arResult["IBLOCK_SECTION_ID"],$totalCount);
-
-
     class Helper
     {
+
+        public static function editSectionCourses()
+        {
+            $arSelect = array("ID", "NAME", "ACTIVE");
+            $arOrder = array('SORT'=>'ASC');
+            $arFilter = array(
+                'SECTION_ID'=>8374, // Id категории
+                'IBLOCK_ID' => 30,
+            );
+
+            $res = CIBlockElement::GetList($arOrder, $arFilter, $arSelect);
+            while ($aItem = $res->GetNext())
+            {
+                $productsID[] = $aItem['ID'];
+                if($aItem['ACTIVE'] === 'Y') {
+                    $el = new CIBlockElement;
+                    $el->Update(
+                        $aItem['ID'], // айди элемента
+                        ['ACTIVE' => 'Y'],
+                        true
+                    );
+                }
+            }
+        }
+
         public function countProduts($IBLOCK_ID,$IBLOCK_SECTION_ID,$totalCount) {
             $navChain = CIBlockSection::GetNavChain($IBLOCK_ID, $IBLOCK_SECTION_ID);
             $parentSection = $navChain->GetNext();

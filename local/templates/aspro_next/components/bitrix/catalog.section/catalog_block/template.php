@@ -1,5 +1,8 @@
 <?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();?>
 
+
+
+
 <?php
 	$navChain = CIBlockSection::GetNavChain($arParams["IBLOCK_ID"], $arResult['ORIGINAL_PARAMETERS']['SECTION_ID']);
 	$parentSection = $navChain->GetNext();

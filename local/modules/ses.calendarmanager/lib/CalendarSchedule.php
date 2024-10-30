@@ -8,6 +8,7 @@ use Bitrix\Main\Config\Option;
 use Bitrix\Highloadblock as HL;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Type\DateTime;
+use SES\CalendarManager\CalendarUsers;
 
 class CalendarSchedule
 {
@@ -304,13 +305,63 @@ class CalendarSchedule
         }
 
         if (!empty($filters)) {//хардкод, надо заменить ключ при установке 
+            if($filters['=UF_SPEC']){
+                unset($filters['=UF_SPEC']);
+            }
+            if($filters['UF_THIS_LOC_DENT']){
+                unset($filters['UF_THIS_LOC_DENT']);
+            }
             if (isset($filters['UF_LECTOR'])) {
                 $filters['UF_LECTURER_ID'] = $filters['UF_LECTOR'];
                 unset($filters['UF_LECTOR']);
             }
-            if (isset($filters['UF_CITY'])) {
+            if (isset($filters['UF_CITY']) || isset($filters['UF_TYPE'])) {
                 unset($filters['UF_CITY']);
+                unset($filters['UF_TYPE']);
             }
+            if (isset($filters['UF_ROLE'])) {
+                // Получаем класс работы с пользователями
+                $calendarUsers = new CalendarUsers();
+                $lecturerIds = [];
+
+                // Если переданы несколько ролей, обрабатываем каждую
+                if (is_array($filters['UF_ROLE'])) {
+                    foreach ($filters['UF_ROLE'] as $roleName) {
+                        // Получаем пользователей по роли
+                        $usersWithRole = $calendarUsers->getUsersByRoleName($roleName);
+                        
+                        // Если есть пользователи с этой ролью, добавляем их ID
+                        if (!empty($usersWithRole)) {
+                            $lecturerIds = array_merge($lecturerIds, array_keys($usersWithRole));
+                        }
+                    }
+                } else {
+                    // Если роль одна, обрабатываем её
+                    $usersWithRole = $calendarUsers->getUsersByRoleName($filters['UF_ROLE']);
+                    if (!empty($usersWithRole)) {
+                        $lecturerIds = array_keys($usersWithRole);
+                    }
+                }
+
+                // Если лекторы найдены, добавляем их в фильтр
+                if (!empty($lecturerIds)) {
+                    if(!empty($lecturerId)){
+                        $lecturerIds = array_filter($lecturerIds, function($value) use ($lecturerId) {
+                            return $value == $lecturerId;
+                        });
+                    }
+                    $filter['UF_LECTURER_ID'] = $lecturerIds;
+                } else {
+                    return [
+                        'success' => false,
+                        'error' => "Лекторы с указанными ролями не найдены."
+                    ];
+                }
+                       
+                // Убираем фильтр по ролям из оригинального массива
+                unset($filters['UF_ROLE']);
+            } 
+
             $filter = array_merge($filter, $filters);
         }
 
@@ -329,6 +380,7 @@ class CalendarSchedule
 
         return [
             'success' => true,
+            'end_filter' => $filter,
             'data' => $events
         ];
     }

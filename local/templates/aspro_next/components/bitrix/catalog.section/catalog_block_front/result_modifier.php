@@ -426,6 +426,7 @@ if (!empty($arResult['ITEMS'])){
 						$arItem['OFFERS'][$keyOffer] = array_merge($arOffer, CNext::formatPriceMatrix($arOffer));
 					}
 				}
+
 				$arItem['MIN_PRICE'] = CNext::getMinPriceFromOffersExt(
 					$arItem['OFFERS'],
 					$boolConvert ? $arResult['CONVERT_CURRENCY']['CURRENCY_ID'] : $strBaseCurrency
@@ -433,6 +434,7 @@ if (!empty($arResult['ITEMS'])){
 			}
 			else
 			{
+
 				foreach ($arItem['OFFERS'] as $keyOffer => $arOffer)
 				{
 					if ($arItem['OFFER_ID_SELECTED'] > 0){

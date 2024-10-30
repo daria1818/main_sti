@@ -2,7 +2,7 @@
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 $APPLICATION->SetPageProperty("description", "Практическое применение стоматологических материалов, публикации кейсов, обзоры.");
 $APPLICATION->SetPageProperty("title", "Информационные материалы по стоматологии на Stionline");
-$APPLICATION->SetTitle("Статьи, клининические случаи, обзоры материалов");
+$APPLICATION->SetTitle("Статьи, клинические случаи, обзоры материалов");
 ?>
 <?$APPLICATION->IncludeComponent(
 	"bitrix:news", 

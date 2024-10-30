@@ -67,7 +67,6 @@
 				}
 				elseif($arItem["OFFERS"])
 				{
-
 					$currentSKUIBlock = $arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]["IBLOCK_ID"];
 					$currentSKUID = $arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]["ID"];
 
@@ -102,12 +101,23 @@
 					$arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]['IS_OFFER'] = 'Y';
 					$offerIblockID = $arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]['IBLOCK_ID'];
 					$arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]['IBLOCK_ID'] = $arParams['IBLOCK_ID'];//fix add props to basket
-					$arAddToBasketData = CNext::GetAddToBasketArray($arItem["OFFERS"][$arItem["OFFERS_SELECTED"]], $totalCount, $arParams["DEFAULT_COUNT"], $arParams["BASKET_URL"], false, $arItemIDs["ALL_ITEM_IDS"], 'small', $arParams);
+
+
+					$arAddToBasketData = CNext::GetAddToBasketArray(
+						$arItem["OFFERS"][$arItem["OFFERS_SELECTED"]], 
+						$totalCount, 
+						$arParams["DEFAULT_COUNT"], $arParams["BASKET_URL"], 
+						false, 
+						$arItemIDs["ALL_ITEM_IDS"], 
+						'small', 
+						$arParams
+					);
 					$arItem["OFFERS"][$arItem["OFFERS_SELECTED"]]['IBLOCK_ID'] = $offerIblockID;
 				}
 			}
 			else
 			{
+
 				$arAddToBasketData = CNext::GetAddToBasketArray($arItem, $totalCount, $arParams["DEFAULT_COUNT"], $arParams["BASKET_URL"], false, array(), 'small', $arParams);
 			}
 			switch ($arParams["LINE_ELEMENT_COUNT"]){

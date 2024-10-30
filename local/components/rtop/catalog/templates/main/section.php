@@ -11,6 +11,8 @@ Loader::includeModule("iblock");
 global $arTheme, $NextSectionID, $arRegion;
 $arPageParams = $arSectionFilter = $arSection = $section = array();
 
+
+
 // get current section ID
 if($arResult["VARIABLES"]["SECTION_ID"] > 0){
 	$arSectionFilter = array('GLOBAL_ACTIVE' => 'Y', "ID" => $arResult["VARIABLES"]["SECTION_ID"], "IBLOCK_ID" => $arParams["IBLOCK_ID"]);
@@ -23,16 +25,67 @@ if($arSectionFilter){
 }
 $typeSKU = '';
 
+
+if($section['ID'] === '8374') {
+    $arSelect = array("ID", "NAME", "ACTIVE");
+    $arOrder = array('SORT'=>'ASC');
+    $arFilter = array(
+        'SECTION_ID'=>8374, // Id категории
+        'IBLOCK_ID' => 30,
+    );
+
+    $res = CIBlockElement::GetList($arOrder, $arFilter, $arSelect);
+    while ($aItem = $res->GetNext())
+    {
+        $productsID[] = $aItem['ID'];
+        $active = $aItem['ACTIVE'];
+    }
+
+	if($active === 'N') {
+        $arOffers = CCatalogSKU::getOffersList($productsID);
+        foreach ($arOffers as $key => $value) {
+            $el = new CIBlockElement;
+            $el->Update(
+                $key, // айди элемента
+                ['ACTIVE' => 'Y'],
+                true
+            );
+            foreach ($value as $sku) {
+                $el = new CIBlockElement;
+                $el->Update(
+                    $sku['ID'], // айди элемента
+                    ['ACTIVE' => 'Y'],
+                    true
+                );
+                $arFields = array('QUANTITY' => 5);
+                CCatalogProduct::Update($sku['ID'], $arFields);
+            }
+        }
+	}
+
+}
+
+
+
+
+
+
 if($section){
+
+
 	$arSection["ID"] = $section["ID"];
 	$arSection["NAME"] = $section["NAME"];
 	$arSection["IBLOCK_SECTION_ID"] = $section["IBLOCK_SECTION_ID"];
+
 	if($section[$arParams["SECTION_DISPLAY_PROPERTY"]]){
 		$arDisplayRes = CUserFieldEnum::GetList(array(), array("ID" => $section[$arParams["SECTION_DISPLAY_PROPERTY"]]));
 		if($arDisplay = $arDisplayRes->GetNext()){
 			$arSection["DISPLAY"] = $arDisplay["XML_ID"];
 		}
 	}
+
+
+
 	if(strlen($section["DESCRIPTION"]))
 		$arSection["DESCRIPTION"] = $section["DESCRIPTION"];
 	if(strlen($section["UF_SECTION_DESCR"]))
@@ -47,6 +100,8 @@ if($section){
 		"GLOBAL_ACTIVE" => "Y",
 	);
 	$iSectionsCount = CNextCache::CIBlockSection_GetCount(array('CACHE' => array("TAG" => CNextCache::GetIBlockCacheTag($arParams["IBLOCK_ID"]))), CNext::makeSectionFilterInRegion($arSubSectionFilter));
+
+
 
 	$catalog_available = $arParams['HIDE_NOT_AVAILABLE'];
 	if (!isset($arParams['HIDE_NOT_AVAILABLE']))
@@ -66,6 +121,12 @@ if($section){
 		$arElementFilter["CATALOG_AVAILABLE"] = $catalog_available;
 
 	$itemsCnt = CNextCache::CIBlockElement_GetList(array("CACHE" => array("TAG" => CNextCache::GetIBlockCacheTag($arParams["IBLOCK_ID"]))), CNext::makeElementFilterInRegion($arElementFilter, false, $bSetLinkRegionFilter = $arParams['FILTER_NAME'] === 'arRegionLink'), array());
+
+
+
+
+
+
 
 	// set offer type & smartfilter view
 	$typeTmpSKU = $viewTmpFilter = 0;
@@ -123,6 +184,8 @@ else{
 	);
 }
 
+
+
 if($arRegion)
 {
 	if($arRegion['LIST_PRICES'])
@@ -178,7 +241,7 @@ if($catalogInfoIblockId){
 
 	$arSeoItems = CNextCache::CIBLockElement_GetList(array('SORT' => 'ASC', 'CACHE' => array("MULTI" => "Y", "TAG" => CNextCache::GetIBlockCacheTag($catalogInfoIblockId))), array("IBLOCK_ID" => $catalogInfoIblockId, "ACTIVE" => "Y", "PROPERTY_FILTER_URL" => array($real_url, $current_url, $gaps_encode_current_url, $urldecodedCP_slash, $encode_current_url_slash, $replacedSpecChar)), false, false, array("ID", "IBLOCK_ID", "PROPERTY_FILTER_URL", "PROPERTY_LINK_REGION"));
 	$arSeoItem = $arTmpRegionsLanding = array();
-	
+
 	if($arSeoItems)
 	{
 		$iLandingItemID = 0;
@@ -291,7 +354,7 @@ if(CNext::GetFrontParametrValue('CATALOG_COMPARE') == 'N')
 
 if(CNext::GetFrontParametrValue('SHOW_DELAY_BUTTON') == 'N')
 	$arParams["DISPLAY_WISH_BUTTONS"] = 'N';
-	
+
 ?>
 <?if(!in_array("DETAIL_PAGE_URL", (array)$arParams["LIST_OFFERS_FIELD_CODE"]))
 	$arParams["LIST_OFFERS_FIELD_CODE"][] = "DETAIL_PAGE_URL";?>

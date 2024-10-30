@@ -2,7 +2,8 @@
 
 use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
-
+use Bitrix\Main\Loader;
+use Bitrix\Sale\Internals\DiscountTable;
 \Bitrix\Main\UI\Extension::load("ui.fonts.ruble");
 
 /**
@@ -78,6 +79,14 @@ if ($arParams['USE_GIFTS'] === 'Y')
 	$arParams['GIFTS_BLOCK_TITLE'] = isset($arParams['GIFTS_BLOCK_TITLE']) ? trim((string)$arParams['GIFTS_BLOCK_TITLE']) : Loc::getMessage('SBB_GIFTS_BLOCK_TITLE');
 
 	CBitrixComponent::includeComponentClass('bitrix:sale.products.gift.basket');
+		Loader::includeModule('sale');
+		$custDiscountId = 80;
+		$custDiscount = DiscountTable::getById($custDiscountId)->fetch();
+		$arResult['FULL_DISCOUNT_LIST'][$custDiscountId] = $custDiscount;
+        $arResult['FULL_DISCOUNT_LIST'][$custDiscountId]['ACTIONS'] = $custDiscount['ACTIONS_LIST'];
+        $arResult['FULL_DISCOUNT_LIST'][$custDiscountId]['CONDITIONS'] = $custDiscount['CONDITIONS_LIST'];
+        unset($arResult['FULL_DISCOUNT_LIST'][$custDiscountId]['ACTIONS_LIST']);
+        unset($arResult['FULL_DISCOUNT_LIST'][$custDiscountId]['CONDITIONS_LIST']);
 
 	$giftParameters = array(
 		'SHOW_PRICE_COUNT' => 1,

@@ -11,6 +11,8 @@ class Premission
 {
 	public static function get(){
 		global $USER;
+		if($USER == null)
+			return false;
 		$ID = $USER->GetId();
 		$user = BalanceTable::getList(['filter' => ['USERID' => $ID], 'select' => ['ROLE']])->fetch();
 

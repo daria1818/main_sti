@@ -522,7 +522,13 @@ class Event extends \IRestService
 		$limit = isset($query['limit']) ? intval($query['limit']) : static::LIST_LIMIT;
 
 		$getErrors = isset($query['error']) && intval($query['error']) === 1;
-
+		if ($processId == null) {
+		    $logFile = $_SERVER['DOCUMENT_ROOT'] . '/error_log_query.txt';
+		    $logData = "Запрос: " . print_r($query, true) . PHP_EOL;
+		    $logData .= "Ошибка: " . $query['error'] . PHP_EOL;
+		    $logData .= str_repeat("-", 30) . PHP_EOL;
+		    file_put_contents($logFile, $logData, FILE_APPEND);
+		}
 		$authData = $server->getAuthData();
 		$connectorId = isset($authData['auth_connector']) ? $authData['auth_connector'] : '';
 
@@ -557,7 +563,7 @@ class Event extends \IRestService
 
 		if($connectorId == '588') {
 	        // Устанавливаем значения фильтра для соответствия записям от 1С
-	        $queryFilter['>ID'] = '462962';
+	        $queryFilter['>ID'] = '511002';
 	        $queryFilter['=APP_ID'] = '2'; // Пример идентификатора приложения 1С
 	        $queryFilter['=CONNECTOR_ID'] = 'OneC'; // Пример идентификатора коннектора 1С
 	        $queryFilter['=PROCESS_ID'] = ''; // Пустой PROCESS_ID

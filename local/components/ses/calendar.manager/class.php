@@ -25,7 +25,7 @@ class CalendarComponent extends \CBitrixComponent
     protected $userInfo = [];
     protected $DayAvailableList = [];
     protected $filter = [];
-    protected $debug = [];
+    protected $DescFieldList = [];
 
     /**
      * Загружает языковые файлы компонента.
@@ -59,6 +59,7 @@ class CalendarComponent extends \CBitrixComponent
 
         $this->selectDays = $this->arParams['SELECTION_DAYS'];
         if (!$this->checkAccess()) {
+            $this->includeComponentTemplate();
             return;
         }
 
@@ -86,18 +87,33 @@ class CalendarComponent extends \CBitrixComponent
     protected function checkAccess()
     {
         $userInfo = !empty($this->userInfo) ? $this->userInfo : $this->getUserInfo();
-
-        if ($userInfo['ACCESS'] === 'N' && $this->selectDays != "temp2") {
+        if($this->arParams['CALENDAR_TYPE']){
+            if($userInfo['ACCESS'] === 'N' && $this->selectDays != "temp2"){
+                $this->AbortResultCache();
+                $this->arResult['ERROR'][] = Loc::getMessage('NOT_AVAILABLE_RIGHTS', ['#TYPE#' => $userInfo['TYPE']]);
+                return false;
+            }else{
+                if(in_array($userInfo['ACCESS'],$this->arParams['CALENDAR_TYPE']) || $userInfo['ACCESS'] === "ALL" || $this->selectDays == "temp2"){
+                    if($this->selectDays == "temp2"){
+                        $userInfo['ACCESS'] = 'Y';
+                        $this->arResult['USER_INFO'] = $userInfo;
+                        return true;
+                    }
+                    $this->setUserRights($userInfo['ROLE']);
+                    $this->setUserInfo($userInfo);
+                    $this->arResult['USER_INFO'] = $userInfo;
+                    return true;
+                }else{
+                    $this->arResult['ERROR'][] = Loc::getMessage('NOT_AVAILABLE_RIGHTS', ['#TYPE#' => "You have access to a different type of calendar"]);
+                    return false;
+                }
+            }
+        }else{
             $this->AbortResultCache();
-            $this->arResult['ERROR'][] = Loc::getMessage('NOT_AVAILABLE_RIGHTS', ['#TYPE#' => $userInfo['TYPE']]);
-            $this->includeComponentTemplate();
+            $this->arResult['ERROR'][] = Loc::getMessage('NOT_AVAILABLE_RIGHTS', ['#TYPE#' => "Select the calendar type in the component"]);
             return false;
         }
-        $this->setUserRights($userInfo['ROLE']);
-        $this->setUserInfo($userInfo);
 
-        $this->arResult['USER_INFO'] = $userInfo;
-        return true;
     }
 
     public function checkAdminFilter()
@@ -111,6 +127,13 @@ class CalendarComponent extends \CBitrixComponent
 
             if (isset($this->arParams['CITY_ID'])) {
                 $this->setFilter('UF_CITY', $this->arParams['CITY_ID']);
+            }
+        }
+        if(isset($this->arParams['FILTER'])){
+            $this->setHaveFilter(true);
+
+            foreach ($this->arParams['FILTER'] as $fltr_name => $fltr_val) {
+                $this->setFilter($fltr_name, $fltr_val);
             }
         }
     }
@@ -188,7 +211,7 @@ class CalendarComponent extends \CBitrixComponent
         }
 
         // Теперь проверяем роль пользователя
-        if ($this->userRights === 'Лектор') {
+        if ($this->userRights === 'Лектор' || $this->userRights === 'Лектор STIDent') {
             return 'Y'; // Лектор может редактировать текущие и будущие дни
         } else {
             return 'N'; // Другие роли не могут редактировать дни
@@ -288,7 +311,7 @@ class CalendarComponent extends \CBitrixComponent
         // if ($this->userRights === 'Администратор') {
             $this->fillUsers();
         // }
-
+        $this->fillDescFieldList(["UF_TYPE","UF_SPEC"]);
         // Эти методы вызываются для обоих типов пользователей
         $this->fillAvailableList();//Значения для доступности дня
         $this->fillMonth();
@@ -343,7 +366,11 @@ class CalendarComponent extends \CBitrixComponent
 
         $usrRights = $this->getUserRights();
         if($this->selectDays == 'temp1'){
-            $ModuleUserID = $usrRights == 'Администратор' ? '' : $this->userInfo['MODULE_ID']; // если админ передаем пустоту, если лектор - его ID
+            if($usrRights == 'Администратор'  || $usrRights ==  'Администратор STIDent'){// если админ передаем пустоту, если лектор - его ID
+                $ModuleUserID = '';
+            }else{
+                $ModuleUserID = $this->userInfo['MODULE_ID'];
+            }
         }else{
             $ModuleUserID = '';
         }
@@ -359,13 +386,12 @@ class CalendarComponent extends \CBitrixComponent
             $startDate = new DateTime();
             $startDateFormatted = $startDate->format("d.m.Y H:i:s");
             $nativeEndDate = new \DateTime($startDateFormatted);
-            $nativeEndDate->add(new \DateInterval('P1M'));
+            $nativeEndDate->add(new \DateInterval('P180D'));
             $endDateFormatted = $nativeEndDate->format("d.m.Y H:i:s");
             $startDate = new DateTime($startDateFormatted, "d.m.Y H:i:s");
             $endDate = new DateTime($endDateFormatted, "d.m.Y H:i:s");
             $dateFilt = array($startDate->format("d.m.Y H:i:s"), $endDate->format("d.m.Y H:i:s"));
-            $filters["!UF_TYPE"] = 244;
-
+            // $filters["!UF_TYPE"] = 244;
         }
 
 
@@ -375,10 +401,9 @@ class CalendarComponent extends \CBitrixComponent
         } else {
             $result = $CalendarCourse->getEventsByLectorAndDate($ModuleUserID,  $startDate, $endDate);
         }
-
-        $this->arResult['debug']['arParams'] = $this->arParams;
         if ($result['success']) {
             $this->course = $result['data'];
+            $this->arResult['future'] = $result;
         } else {
             // Логирование ошибки с использованием вашего класса Logger
             Logger::log('CalendarCourse', 'getEventsByLectorAndDate', $result['error']);
@@ -397,7 +422,12 @@ class CalendarComponent extends \CBitrixComponent
         $schedule = new CalendarSchedule();
 
         $usrRights = $this->getUserRights();
-        $ModuleUserID = $usrRights == 'Администратор' ? '' : $this->userInfo['MODULE_ID']; //если админ передаем пустоту(фильтр без лектора), если лектор передаем его ID
+
+        if($usrRights == 'Администратор'  || $usrRights ==  'Администратор STIDent'){ //если админ передаем пустоту(фильтр без лектора), если лектор передаем его ID
+            $ModuleUserID = '';
+        }else{
+            $ModuleUserID = $this->userInfo['MODULE_ID'];
+        }
 
         $filters = [];
         if ($this->getHaveFilter()) {
@@ -412,6 +442,7 @@ class CalendarComponent extends \CBitrixComponent
 
         if ($result['success']) {
             $this->schedule =  $result['data'];
+            $this->arResult['end_filter'] =  $result['end_filter'];
         }else{
             // Логирование ошибки с использованием вашего класса Logger
             Logger::log('CalendarSchedule', 'getEventsByLectorAndDate', $result['error']);
@@ -495,11 +526,11 @@ class CalendarComponent extends \CBitrixComponent
                 //     }      
                 // }
                 $availbable = $scheduleAccess->getEnumValueById("UF_DAY_AVAILABLE", $schedule['UF_DAY_AVAILABLE']);
-                if($usrRights == 'Администратор'){
+                if($usrRights == 'Администратор' || $usrRights == 'Администратор STIDent'){
                     if($availbable == 'Y'){
                         $scheduleForDate[] = $schedule;
                     }
-                }else if($usrRights == 'Лектор'){
+                }else if($usrRights == 'Лектор' || $usrRights == 'Лектор STIDent'){
                      if($availbable == 'Y' || $availbable == 'N'){
                         $scheduleForDate[] = $schedule;
                     }
@@ -518,8 +549,20 @@ class CalendarComponent extends \CBitrixComponent
     protected function fillUsers()
     {
         $CalendarUsers = new CalendarUsers;
+        $filters = [];
+        if ($this->getHaveFilter()) {
+            $filters = $this->getFilter();
+        }
+
         $this->users['ADMIN'] = $CalendarUsers->getAdminUsers();
-        $this->users['LECTOR'] = $CalendarUsers->getLecturerUsers();
+        if(isset($filters) && array_key_exists("UF_ROLE", $filters)){
+            foreach ($filters["UF_ROLE"] as $role) {
+                $usersByRole = $CalendarUsers->getUsersByRoleName($role);
+                $this->users['LECTOR'] = ($this->users['LECTOR'] ?? []) + $usersByRole;
+            }
+        }else{
+             $this->users['LECTOR'] = $CalendarUsers->getLecturerUsers();
+        }    
     }
 
     /**
@@ -548,7 +591,7 @@ class CalendarComponent extends \CBitrixComponent
     {
         $currentDate = new \Bitrix\Main\Type\DateTime();
         $endDate = new \Bitrix\Main\Type\DateTime();
-        $endDate->add("1M");
+        $endDate->add("6M");
 
         // Получаем текущую дату и дату через месяц
         $startTimestamp = $currentDate->getTimestamp();
@@ -640,7 +683,7 @@ class CalendarComponent extends \CBitrixComponent
             }
 
             $usrRights = $this->getUserRights();
-            if (empty($courses) || $usrRights == 'Администратор') {
+            if (empty($courses) || $usrRights == 'Администратор' || $usrRights == 'Администратор STIDent') {
                 $schedule = $this->findScheduleByDate($date);
             }
 
@@ -690,6 +733,21 @@ class CalendarComponent extends \CBitrixComponent
         }
     }
 
+    protected function fillDescFieldList(array $fields){
+
+        $CalendarCourse = new CalendarCourse;
+        foreach ($fields as $field) {
+            $arDescFieldList = $CalendarCourse->getFieldList($field);
+            if ($arDescFieldList === false) {
+                return [
+                    'success' => false,
+                    'error' => "Не удалось получить значения для свойства ,либо свойство не является списком."
+                ];
+            }
+            
+            $this->DescFieldList[$field] = $arDescFieldList;
+        }
+    }
     /**
      * Заполняет массив arResult.
      *
@@ -704,6 +762,11 @@ class CalendarComponent extends \CBitrixComponent
         if (!empty($this->DayAvailableList)) {
             $this->arResult['DayAvailableList'] = $this->DayAvailableList;
         }
+
+        if (!empty($this->DescFieldList)) {
+            $this->arResult['descFieldList'] = $this->DescFieldList;
+        }
+        $this->arResult['arParams'] = $this->arParams;
         $this->arResult['haveFilter'] = $this->getHaveFilter();
         $this->arResult['MONTH'] = [
             'prevMonth' => $this->getPrevMonth(),

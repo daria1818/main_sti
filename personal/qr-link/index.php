@@ -11,6 +11,12 @@ Asset::getInstance()->addJs(SITE_TEMPLATE_PATH . "/js/cabinet/qr_create.js");
         <label><span>Начислять по данной ссылке ₽ <span class="star">*</span></span></label>
 		<input type="number" name="currency" class="inputtext" value="3000">
     </div>
+    <div class="form-control">
+	    <label>
+	        <input type="checkbox" name="free_delivery" class="inputcheckbox">
+	        <span>Бесплатная доставка 3 мес. после регистрации</span>
+	    </label>
+	</div>
 	<button type="submit" class="btn btn-default"> Создать </button>
 </form>
 <div class="createQR__wrap">

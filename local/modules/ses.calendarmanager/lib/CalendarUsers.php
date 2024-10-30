@@ -5,6 +5,7 @@ namespace SES\CalendarManager;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\UserTable;
 use Bitrix\Highloadblock as HL;
 use Bitrix\Main\Entity;
 
@@ -101,11 +102,14 @@ class CalendarUsers
     public function getUsersByRoleName($roleName)
     {
         $roleIds = $this->getRoleIds();
+
+
         if (!array_key_exists($roleName, $roleIds)) {
             throw new \Exception("Роль с названием '$roleName' не найдена.");
         }
 
         $roleId = $roleIds[$roleName];
+
         $entityClass = $this->getEntity();
         if (!$entityClass) {
             throw new \Exception('HL-блок с указанным ID не найден.');
@@ -120,6 +124,7 @@ class CalendarUsers
         $result = [];
         foreach ($users as $user) {
             $result[$user['ID']] = $user;
+            $result[$user['ID']]['PHOTO'] = $this->getUserPhotoUrl($user['UF_USER_ID']);
         }
 
         return $result;
@@ -181,13 +186,18 @@ class CalendarUsers
         }
 
         $userGroups = $USER->GetUserGroupArray();
-        $adminGroupId = Option::get('ses.calendarmanager', 'ID_COURSES_GROUP_ADMIN');
-        $lectorGroupId = Option::get('ses.calendarmanager', 'ID_COURSES_GROUP_LECTOR');
+        $adminGroupId_SDA = Option::get('ses.calendarmanager', 'ID_COURSES_GROUP_ADMIN');
+        $lectorGroupId_SDA = Option::get('ses.calendarmanager', 'ID_COURSES_GROUP_LECTOR');
+        $adminGroupId_DENT = Option::get('ses.calendarmanager', 'ID_COURSES_GROUP_ADMIN_DENT');
 
+        $lectorGroupId_DENT = Option::get('ses.calendarmanager', 'ID_COURSES_GROUP_LECTOR_DENT');
         // Проверяем, входит ли пользователь в нужные группы
-        $isInRequiredGroup = in_array($adminGroupId, $userGroups) || in_array($lectorGroupId, $userGroups);
+        $isInRequiredGroupSDA = in_array($adminGroupId_SDA, $userGroups) || in_array($lectorGroupId_SDA, $userGroups);
+        $isInRequiredGroupDENT = in_array($adminGroupId_DENT, $userGroups);// || in_array($lectorGroupId_DENT, $userGroups) раскоментить когда доработаем лекторов
 
-        if (!$isInRequiredGroup) {
+        $access = ($isInRequiredGroupSDA && $isInRequiredGroupDENT) ? "ALL" : ($isInRequiredGroupSDA ? "SDA" : ($isInRequiredGroupDENT ? "DENT" : false));
+
+        if (!$access) {
             return ['ACCESS' => 'N', 'ROLE' => null, 'NAME' => null, 'TYPE' => 'User is not in the calendar group'];
         }
 
@@ -196,13 +206,15 @@ class CalendarUsers
         $name = $userRecord['UF_FIRST_NAME'] . " " . $userRecord['UF_LAST_NAME'];
         $user_id = $userRecord["ID"];
         $bx_user_id = $userRecord["UF_USER_ID"];
+        
 
         return [
-            'ACCESS' => 'Y',
+            'ACCESS' => $access,
             'MODULE_ID' => $user_id,
             'ROLE' => $role,
             'NAME' => $name,
             'BX_ID' => $bx_user_id,
+            
         ];
     }
 
@@ -290,6 +302,25 @@ class CalendarUsers
         return false;
     }
 
+
+    private function getUserPhotoUrl($userId)
+    {
+        // Получаем данные пользователя по ID
+        $user = UserTable::getById($userId)->fetch();
+
+        // Проверяем, существует ли пользователь
+        if ($user && !empty($user['PERSONAL_PHOTO'])) {
+            // Получаем ID фото
+            $photoId = $user['PERSONAL_PHOTO'];
+
+            // Получаем путь к фото
+            $file = \CFile::GetFileArray($photoId);
+            if ($file) {
+                return $file['SRC']; // Возвращаем URL фотографии
+            }
+        }
+        return "";
+    }
     /**
      * Добавление лектора в HL-блок.
      *

@@ -36,7 +36,7 @@ class EventManager
 	public static function OnBeforeCrmContactUpdateHandler($arFields)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		if(Premission::get() === '' || $arFields['ASSIGNED_BY_ID'] != $userId)
 
@@ -86,7 +86,7 @@ class EventManager
 	public static function OnBeforeCrmCompanyUpdateHandler($arFields)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		if(Premission::get() === '' || $arFields['ASSIGNED_BY_ID'] != $userId)
 			return;
@@ -143,7 +143,7 @@ class EventManager
 	public static function OnSaleOrderSavedHandler(BitrixEvent $event)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		if(Premission::get() === '' || $userId == self::$user1C)
 			return;
@@ -168,7 +168,7 @@ class EventManager
 	public static function OnSaleOrderBeforeSavedHandler(BitrixEvent $event)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		if(Premission::get() === '' || $userId == self::$user1C)
 			return;
@@ -190,7 +190,7 @@ class EventManager
 	public static function OnSaleStatusOrderChangeHandler(BitrixEvent $event)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		// $tstAr = array(
 		// 	"1" => $userId,
@@ -218,7 +218,7 @@ class EventManager
 	public static function OnSaleStatusOrderChangeDealSuccess(BitrixEvent $event)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 		$source_order = '';
 
 		/*if(Premission::get() === '' || $userId == self::$user1C)
@@ -249,7 +249,7 @@ class EventManager
 	public static function OnSaleOrderCanceledHandler(BitrixEvent $event)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		if(Premission::get() === '' || $userId == self::$user1C)
 			return;
@@ -265,7 +265,7 @@ class EventManager
 	public static function OnBeforeCrmContactUpdateStaging($arFields)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		if(Premission::get() === '' || $arFields['ASSIGNED_BY_ID'] != $userId)
 			return;
@@ -282,7 +282,7 @@ class EventManager
 	public static function OnBeforeCrmCompanyUpdateStaging($arFields)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		if(Premission::get() === '' || $arFields['ASSIGNED_BY_ID'] != $userId)
 			return;
@@ -489,6 +489,7 @@ class EventManager
 	}
 	protected static function getBuyerForBonus($order)
 	{
+		Log::writeLog($order);
 		$client = [];
 		$communications = $order->getContactCompanyCollection();
 		$companies = $communications->getCompanies();
@@ -514,7 +515,7 @@ class EventManager
 	public static function OnSaleStatusOrderChangeOffers(BitrixEvent $event)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 		$tstAr = array(
 			"1" => $userId,
 			"2" => self::$user1C,
@@ -634,7 +635,7 @@ class EventManager
 	public static function onCrmDealUpdateProductAll($arFields, $deal)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		\CModule::IncludeModule('crm');
 
@@ -699,7 +700,7 @@ class EventManager
 	public static function onCrmDealUpdateKO($arFields)
 	{
 		global $USER;
-		$userId = intval($USER->GetId());
+		$userId = $USER != null ? intval($USER->GetId()) : 0;
 
 		if ($arFields['STAGE_ID'] == 'WON') {
 			\CModule::IncludeModule('crm');

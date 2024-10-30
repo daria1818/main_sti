@@ -18,6 +18,7 @@ $arDefaultParams = array(
 );
 $arParams = array_merge($arDefaultParams, $arParams);
 
+
 if(isset($arParams['STORES'])) {
 	foreach($arParams['STORES'] as $key => $store) {
 		if(!$store) {
@@ -447,6 +448,7 @@ if (!empty($arResult['ITEMS'])){
 				$arItem['MIN_BASIS_PRICE'] = false;
 				foreach ($arItem['OFFERS'] as $keyOffer => $arOffer)
 				{
+
 					if ($arItem['OFFER_ID_SELECTED'] > 0){
 						$foundOffer = ($arItem['OFFER_ID_SELECTED'] == $arOffer['ID']);
 					}
@@ -642,8 +644,7 @@ if (!empty($arResult['ITEMS'])){
 					}
 				}
 			}
-
-			// get MIN_PRICE
+						// get MIN_PRICE
 			$arItem['MIN_PRICE'] = CNext::getMinPriceFromOffersExt(
 				$arItem['OFFERS'],
 				$boolConvert ? $arResult['CONVERT_CURRENCY']['CURRENCY_ID'] : $strBaseCurrency

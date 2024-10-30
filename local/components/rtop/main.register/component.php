@@ -24,6 +24,66 @@ global $USER_FIELD_MANAGER;
 use Rubyroid\Loyality\RBTransactions;
 use \Bitrix\Main\Loader;
 Loader::includeModule("rubyroid.bonusloyalty");
+
+function customUserFreeDeliveryAdd($userId){
+	CModule::IncludeModule("sale");
+	$newUserID = $userId;
+	$ruleID = 95;
+
+	// Получаем текущее правило работы с корзиной
+	$arRule = CSaleDiscount::GetByID($ruleID);
+	if ($arRule) {
+	    $arConditions = unserialize($arRule["CONDITIONS"]);
+
+	    // Получаем текущее правило работы с корзиной
+		$arRule = CSaleDiscount::GetByID($ruleID);
+		if ($arRule) {
+		    $arConditions = unserialize($arRule["CONDITIONS"]);
+
+		    // Проверяем, есть ли уже условие "Пользователь равен"
+		    $userConditionFound = false;
+		    if (isset($arConditions['CHILDREN']) && is_array($arConditions['CHILDREN'])) {
+		        foreach ($arConditions['CHILDREN'] as &$condition) {
+		            if ($condition['CLASS_ID'] == 'CondMainUserId') {
+		                $userConditionFound = true;
+		                // Добавляем нового пользователя, если его еще нет в списке
+		                if (!in_array($newUserID, $condition['DATA']['value'])) {
+		                    $condition['DATA']['value'][] = $newUserID;
+		                }
+		                break;
+		            }
+		        }
+		        unset($condition); // Разрешение на изменение внутри цикла
+		    }
+
+		    // Если условие "Пользователь равен" не найдено, добавляем его
+		    if (!$userConditionFound) {
+		        $arConditions['CHILDREN'][] = array(
+		            'CLASS_ID' => 'CondMainUserId',
+		            'DATA' => array(
+		                'logic' => 'Equal',
+		                'value' => array($newUserID)
+		            )
+		        );
+		    }
+
+		    // Обновляем правило работы с корзиной с новыми условиями
+		    $arFields = array(
+		        "CONDITIONS" => serialize($arConditions)
+		    );
+
+		    if (CSaleDiscount::Update($ruleID, $arFields)) {
+		        return array("SUCCESS" => print_r($arFields,true));
+		    } else {
+		        return array("ERROR" => "Ошибка при обновлении правила работы с корзиной.");
+		    }
+		} else {
+		    return array("ERROR" => "Правило работы с корзиной не найдено.");
+		}
+	}
+}
+
+
 // apply default param values
 $arDefaultValues = array(
 	"SHOW_FIELDS" => array(),
@@ -196,14 +256,13 @@ foreach($events as $arEvent)
     {
         if($err = $APPLICATION->GetException()){
             $arResult['ERRORS'][] = $err->GetString();
-            if (strpos($err->GetString(), "уже используется") !== false) {
-                
+            if (strpos($err->GetString(), "уже используется") !== false && $arParams["FREE_DELIVERY"] != "Y") {                
                 $dctFilter = [
                     '=EMAIL'=> $arResult['VALUES']["EMAIL"]
                 ];
                 $selectFields = ['ID', 'EMAIL', 'UF_LOYALTY_COIN'];
                 // $rdb = \CUser::GetList(($by='id'), ($order='desc'), $dctFilter);
-                                $rdb = \CUser::GetList(($by='id'), ($order='desc'), $dctFilter, ['SELECT' => $selectFields]);
+                $rdb = \CUser::GetList(($by='id'), ($order='desc'), $dctFilter, ['SELECT' => $selectFields]);
 
                 if ($dctUsers = $rdb->fetch()) {
                     $userID = $dctUsers["ID"];
@@ -258,7 +317,7 @@ foreach($events as $arEvent)
                             $user = new CUser;
                             $user->Update($userID, ['UF_LOYALTY_COIN' => $newCoins]);
                             
-                            $arResult['ERRORS'][] = " Вам добавлено " . $arParams['COINS'] . " бонусных баллов";
+                            $arResult['SUCCESS'][] = " Вам добавлено " . $arParams['COINS'] . " бонусных баллов";
                         }
                         else{
                             $arResult["ERRORS"][] = $el->LAST_ERROR;
@@ -266,6 +325,31 @@ foreach($events as $arEvent)
                     }
                     $arResult['DEBUG'][] = $lstElements;
                 }
+            }else if (strpos($err->GetString(), "уже используется") !== false && $arParams["FREE_DELIVERY"] == "Y") {
+            	$dctFilter = [
+                    '=EMAIL'=> $arResult['VALUES']["EMAIL"]
+                ];
+                $selectFields = ['ID', 'EMAIL', 'UF_DATE_LIMIT_FREE_DELIVERY'];
+                // $rdb = \CUser::GetList(($by='id'), ($order='desc'), $dctFilter);
+                $rdb = \CUser::GetList(($by='id'), ($order='desc'), $dctFilter, ['SELECT' => $selectFields]);
+                if ($dctUsers = $rdb->fetch()) {
+                	if (!empty($dctUsers["UF_DATE_LIMIT_FREE_DELIVERY"])){
+	                 	$arResult['ERRORS'][] = "У вас уже активирована бесплатная доставка, до " . $dctUsers["UF_DATE_LIMIT_FREE_DELIVERY"];
+                	}else{
+                		$user = new CUser;
+                        $newDate = date("d.m.Y H:i:s", strtotime("+90 days"));
+						$user->Update($dctUsers["ID"], ['UF_DATE_LIMIT_FREE_DELIVERY' => $newDate]);
+                		$arResult['SUCCESS'][] = "Вам доступна бесплатная доставка до " . $newDate;
+                		$res = customUserFreeDeliveryAdd($dctUsers["ID"]);
+                		if($res["SUCCESS"]){
+                			// $arResult['SUCCESS'][] = $res["SUCCESS"];
+                		}else{
+                			$arResult['ERRORS'][] = $res["ERROR"];
+                		}
+                	}
+                 }
+                
+
             }
         }
 
@@ -279,11 +363,25 @@ foreach($events as $arEvent)
 		$user = new CUser();
 		if ($bOk)
 		{
+			if($arParams["FREE_DELIVERY"] == "Y"){
+				$newDate = date("d.m.Y H:i:s", strtotime("+90 days"));
+				$arResult['VALUES']["UF_DATE_LIMIT_FREE_DELIVERY"] = $newDate;
+				unset($arResult['VALUES']["UF_LOYALTY_COIN"]);
+			}
+
+
 			$ID = $user->Add($arResult["VALUES"]);
 		}
 
 		if (intval($ID) > 0)
 		{
+			$res = customUserFreeDeliveryAdd($ID);
+    		if($res["SUCCESS"]){
+    			// $arResult['SUCCESS'][] = $res["SUCCESS"];
+    		}else{
+    			$arResult['ERRORS'][] = $res["ERROR"];
+    		}
+
 			if($arResult["PHONE_REGISTRATION"] == true && $arResult['VALUES']["PHONE_NUMBER"] <> '')
 			{
 				//added the phone number for the user, now sending a confirmation SMS
@@ -325,35 +423,46 @@ foreach($events as $arEvent)
 			$event = new CEvent;
 			$event->Send("NEW_USER", SITE_ID, $arEventFields,"N", 196);
 
-			CModule::IncludeModule('iblock'); 
+
+			CModule::IncludeModule('iblock');
 			global $USER;
 			$el = new CIBlockElement;
 			$PROP = array();
+
 			$PROP[1496] = $_REQUEST["REGISTER"]["EVENT"];
 			$PROP[1495] = $arResult['VALUES']["USER_ID"];
 			$PROP[1497] = $_GET["code"];
-			$PROP[1498] = date("d.m.Y", strtotime('+1 month'));
 			$PROP[1500] = date("d.m.Y");
-			$arLoadProductArray = Array(
-			  "MODIFIED_BY"    => 1,
-			  "IBLOCK_SECTION_ID" => 9053,
-			  "IBLOCK_ID"      => 98,
-			  "PROPERTY_VALUES"=> $PROP,
-			  "NAME"           => "Пользователь " . $arResult['VALUES']["USER_ID"],
-			  );
 
-			if($PRODUCT_ID = $el->Add($arLoadProductArray)){
-				RBTransactions::bonus([
-					"TYPE_EVENT" => "MANUAL",
-					"COIN" =>  $arResult['VALUES']["UF_LOYALTY_COIN"],
-					"USER_ID" => $arResult['VALUES']["USER_ID"],
-					"BALANCE" => 0,
-					"AFTER_BALANCE"  => $arResult['VALUES']["UF_LOYALTY_COIN"],
-				]);
+			if (isset($arParams["FREE_DELIVERY"]) && $arParams["FREE_DELIVERY"] == "Y") {
+			    $PROP[1521] = 3080; // Устанавливаем значение для списка
+			    $PROP[1498] = date("d.m.Y", strtotime('+90 days')); // Устанавливаем дату +90 дней
+			} else {
+			    $PROP[1498] = date("d.m.Y", strtotime('+1 month')); // Устанавливаем дату +1 месяц
 			}
-			else{
-			  $arResult["ERRORS"][] = $el->LAST_ERROR;
+
+			$arLoadProductArray = Array(
+			    "MODIFIED_BY"    => 1,
+			    "IBLOCK_SECTION_ID" => 9053,
+			    "IBLOCK_ID"      => 98,
+			    "PROPERTY_VALUES"=> $PROP,
+			    "NAME"           => "Пользователь " . $arResult['VALUES']["USER_ID"],
+			);
+
+			if ($PRODUCT_ID = $el->Add($arLoadProductArray)) {
+				if(isset($arResult['VALUES']["UF_LOYALTY_COIN"]) && !empty($arResult['VALUES']["UF_LOYALTY_COIN"])){
+				    RBTransactions::bonus([
+				        "TYPE_EVENT" => "MANUAL",
+				        "COIN" => $arResult['VALUES']["UF_LOYALTY_COIN"],
+				        "USER_ID" => $arResult['VALUES']["USER_ID"],
+				        "BALANCE" => 0,
+				        "AFTER_BALANCE" => $arResult['VALUES']["UF_LOYALTY_COIN"],
+				    ]);
+				}
+			} else {
+			    $arResult["ERRORS"][] = $el->LAST_ERROR;
 			}
+			
 
 
 			//if($bConfirmReq)

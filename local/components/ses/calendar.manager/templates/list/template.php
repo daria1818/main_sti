@@ -31,6 +31,12 @@ if(!empty($arResult["ERROR"])){
                 </option>
               <?}?>
             </select>
+            <select class="select-type" name="type" data-title="Выберите тип курса">
+              <option value="">Все курсы</option>
+              <? foreach ($arParams["FILTER"]["UF_TYPE"] as $value) {?>
+                  <option value="<?=$value?>"><?=$arResult["descFieldList"]["UF_TYPE"][$value]?></option>
+              <?}?>
+            </select>
             <div class="search-city">
               <div class="search-city__input search-icon">
                 <input type="input" id="city-input" name="city" placeholder="Поиск...">
@@ -83,9 +89,7 @@ if(!empty($arResult["ERROR"])){
     </div>
   </div>
 </div>
-<!-- <pre>
-<?print_r($arResult);?>
-</pre> -->
+
 <script>
 var dataObj = <?=CUtil::PhpToJSObject($arResult)?>;
 </script>

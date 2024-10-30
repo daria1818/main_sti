@@ -24,6 +24,7 @@ $monthId = getPostValue('month');
 $yearId = getPostValue('year');
 $lectorId = getPostValue('lector');
 $cityId = getPostValue('city');
+$filter = $_POST['FILTER'];
 
 try {
     $componentParams = [];
@@ -31,6 +32,7 @@ try {
     if (!is_null($monthId) && !is_null($yearId)) {
         $componentParams["MONTH_ID"] = $monthId;
         $componentParams["YEAR_ID"] = $yearId;
+
         $componentParams["SELECTION_DAYS"] = "temp1";
     } else {
         $componentParams["SELECTION_DAYS"] = "temp2";
@@ -44,6 +46,10 @@ try {
         $componentParams["CITY_ID"] = $cityId;
     }
 
+    if (!is_null($filter) && isset($filter)) {
+        $componentParams["FILTER"] = $filter;
+    }
+    $componentParams["CALENDAR_TYPE"] = array("SDA","DENT");
     $APPLICATION->IncludeComponent(
         "ses:calendar.manager", 
         ".default", 

@@ -1,0 +1,3 @@
+<?
+$arResult['arParams'] = $arParams;
+?>

@@ -201,8 +201,12 @@
 			    BX.ajax.processScripts(processed.SCRIPT);
 			}
 
+			console.log('debag ses')
+			console.log(BX('custom__orderPriceValue'))
+			console.log(BX.Sale.BasketComponent.giftPriceOrder)
+
 			if (BX('custom__orderPriceValue') && BX.Sale.BasketComponent.giftPriceOrder) {
-				BX('custom__orderPriceValue').innerText = 'Добавьте в заказ еще товаров на ' + BX.Sale.BasketComponent.giftPriceOrder.value + ' рублей, чтобы получить подарок:';
+				BX('custom__orderPriceValue').innerHTML = 'Добавьте в заказ еще товаров на ' + BX.Sale.BasketComponent.giftPriceOrder.value + ', чтобы получить подарок:';
 				BX('custom__orderPriceValue').style.display = !!BX.Sale.BasketComponent.giftPriceOrder.display ? 'block' : 'none';
 			}
 		},

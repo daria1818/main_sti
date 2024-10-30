@@ -44,6 +44,7 @@ $GLOBALS[$arComponentParams["FILTER_NAME"]] = $arGlobalFilter;
 		$arComponentParams["AJAX_REQUEST"] = 'Y';
 	}
 $arComponentParams["PROPERTY_AFP_DISCOUNT_LIST"] = '188';
+$arComponentParams['COMPATIBLE_MODE'] = 'Y';
 	?>
 
 	<?$APPLICATION->IncludeComponent(

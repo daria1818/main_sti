@@ -113,7 +113,7 @@ $generalParams = array(
 
 $obName = 'ob'.preg_replace('/[^a-zA-Z0-9_]/', 'x', $this->GetEditAreaId($this->randString()));
 $containerName = 'sale-products-gift-container';
-
+		
 if (!empty($arResult['ITEMS'])){
 	// REGIONALITY_FILTER_ITEM == Y
 	if(
@@ -165,6 +165,7 @@ if (!empty($arResult['ITEMS'])){
 		}
 	}
 }
+
 ?>
 <div class="sale-products-gift bx-<?=$arParams['TEMPLATE_THEME']?>" data-entity="<?=$containerName?>">
 	<?
@@ -172,7 +173,7 @@ if (!empty($arResult['ITEMS'])){
 	if (!empty($arResult['ITEMS']) && !empty($arResult['ITEM_ROWS']))
 	{
 		$areaIds = array();
-
+	
 		foreach ($arResult['ITEMS'] as &$item)
 		{
 			$uniqueId = $item['ID'].'_'.md5($this->randString().$component->getAction());
@@ -193,6 +194,7 @@ if (!empty($arResult['ITEMS'])){
 		foreach ($arResult['ITEM_ROWS'] as $rowData)
 		{
 			$rowItems = array_splice($arResult['ITEMS'], 0, $rowData['COUNT']);
+
 			if(!$rowItems){
 				break;
 			}
@@ -200,6 +202,7 @@ if (!empty($arResult['ITEMS'])){
 			<div class="row <?=$rowData['CLASS']?>" data-entity="items-row">
 				<div class="<?=$rowData['VARIANT']?>"></div>
 				<?
+
 				switch ($rowData['VARIANT'])
 				{
 					case 0:
@@ -746,6 +749,9 @@ if (!empty($arResult['ITEMS'])){
 	}
 	else
 	{
+			echo "<pre id='ajdasjdaksjdkajdkjaskdsa' style='display:none'>";
+				print_r($component);
+				echo "</pre>";
 		// load css for bigData/deferred load
 		$APPLICATION->IncludeComponent(
 			'bitrix:catalog.item',

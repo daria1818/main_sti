@@ -104,7 +104,7 @@ if (!empty($arResult['ITEMS'])){
 	$boolConvert = isset($arResult['CONVERT_CURRENCY']['CURRENCY_ID']);
 	if (!$boolConvert)
 		$strBaseCurrency = CCurrency::GetBaseCurrency();
-	
+
 	$arNewItemsList = array();
 	foreach ($arResult['ITEMS'] as $key => $arItem)
 	{
@@ -279,4 +279,8 @@ if (!empty($arResult['ITEMS'])){
 		$arResult["ITEMS"]=$arTmp;
 		unset($arTmp);
 	}
-}?>
+}
+
+
+
+?>

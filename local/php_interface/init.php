@@ -6,7 +6,7 @@ use Rubyroid\Loyality\RBTransactions;
 
 use function Sentry\init;
 
-
+include_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/wsrubi.smtp/classes/general/wsrubismtp.php");
 require_once __DIR__ . '/include/constants.php';
 require_once($_SERVER["DOCUMENT_ROOT"] . "/local/php_interface/api/include.php");
 require_once $_SERVER['DOCUMENT_ROOT'] . '/vendor/spaceonfire/bitrix-tools/resources/autoload.php';
@@ -472,3 +472,23 @@ endif;
 // }
 
 
+if (isset($_SERVER['HTTP_REFERER']))
+{
+    $metrikaHosts = [
+        'webvisor.com',
+        'metrika.yandex',
+        'metrika.yandex.ru',
+        'metrika.yandex.com',
+        'metrika.yandex.by',
+        'metrica.yandex.com.tr',
+        'securityheaders.com',
+        $_SERVER['HTTP_HOST'],
+    ];
+
+    $refHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
+
+    if (in_array($refHost, $metrikaHosts))
+    {
+        define('BX_SECURITY_SKIP_FRAMECHECK', true);
+    }
+}

@@ -128,7 +128,15 @@ class RtopSaleOrderPrice extends CSaleCondCtrlComplex
 
     public static function applyOrderPrice($value, $type)
     {
-        return true;
+        $basket = Sale\Basket::loadItemsForFUser(Sale\Fuser::getId(), Main\Context::getCurrent()->getSite());
+        $price = $basket->getPrice();
+        if ($price <= $value) {
+            return false;
+        }
+        else {
+            return true;
+        }
+        // return true;
     }
 }
 ?>

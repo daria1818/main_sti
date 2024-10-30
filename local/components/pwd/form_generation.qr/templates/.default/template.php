@@ -14,7 +14,9 @@ if ($arResult['GENERATION_MODE']) {
 } else {
     require __DIR__ . '/.component.form-contact.php';
 }
-
+echo "<pre style='display:none'>";
+print_r($arResult);
+echo "</pre>";
 ?>
 <div id="okay" class="modal fade">
     Вы успешно зарегистрированы

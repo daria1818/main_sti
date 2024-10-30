@@ -1,4 +1,7 @@
 <?
+$arResult['arParams'] = $arParams;
+?>
+<?
 $groupedByMonth = [];
 
 foreach ($arResult['DAYS'] as $day) {

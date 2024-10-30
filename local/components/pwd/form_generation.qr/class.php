@@ -146,7 +146,8 @@ class QrGenerationFormComponent extends BaseComponent implements Controllerable
             $oDep = \CIntranetUtils::GetStructure();
             foreach ($oDep['DATA'] as $dep) {
                 if ($dep['NAME'] === 'Бренд менеджеры'
-                    || $dep['NAME'] === 'Клиентский отдел') {
+                    || $dep['NAME'] === 'Клиентский отдел'
+                        || $dep['NAME'] === 'Интернет-магазин') {
                     foreach ($dep['EMPLOYEES'] as $depEmp) {
                         $emp = $emp . "$depEmp | ";
                     }

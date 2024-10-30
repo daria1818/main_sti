@@ -43,6 +43,16 @@ if (!Loader::includeModule('ses.calendarmanager')) {
         }
     }
 
+    function UserFieldValue($ID)
+    {
+        $UserField = CUserFieldEnum::GetList(array(), array("ID" => $ID));
+        if($UserFieldAr = $UserField->GetNext())
+        {
+            return $UserFieldAr["VALUE"];
+        }
+        else return false;
+    }
+
     $formHash = isset($_GET['form_hash']) ? $_GET['form_hash'] : '';
     $course = null;
     if (!empty($formHash)) {
@@ -72,6 +82,10 @@ if (!Loader::includeModule('ses.calendarmanager')) {
       <input type="text" id="name" name="name" required>
     </div>
     <div class="form-group">
+      <label for="surname">Отчество</label>
+      <input type="text" id="second_name" name="second_name">
+    </div>
+    <div class="form-group">
       <label for="phone">Телефон</label>
       <input data-telinput type="tel" id="phone" name="phone" pattern="[0-9]{10}" required>
     </div>
@@ -83,6 +97,10 @@ if (!Loader::includeModule('ses.calendarmanager')) {
       <label for="clinic">Клиника</label>
       <input type="text" id="clinic" name="clinic" required>
     </div>
+    <input type="hidden" name="full_city_name" value="<?=$fullCityName?>">
+    <input type="hidden" name="date" value="<?=$course["UF_DATE"]?>">
+    <input type="hidden" name="course_type" value="<?=UserFieldValue($course['UF_TYPE'])?>">
+
     <input type="hidden" name="form_hash" value="<?=$formHash?>">
     <button type="submit" class="submit-button">Отправить</button>
     <div id="formResult" class="form-result"></div>

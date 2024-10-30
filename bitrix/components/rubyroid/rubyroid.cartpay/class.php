@@ -1430,6 +1430,7 @@ class CBitrixBasketComponent extends CBitrixComponent
 	// legacy method
 	public function getBasketItems()
 	{
+		
 		if (!$this->isFastLoadRequest())
 		{
 			$this->refreshAndCorrectRatio();
@@ -2565,7 +2566,7 @@ class CBitrixBasketComponent extends CBitrixComponent
 	protected function getAffectedReformattedBasketItemsInDiscount(Sale\BasketBase $basket, array $discountData, array $calcResults)
 	{
 		$items = [];
-
+		echo '<pre hidden>'; print_r($calcResults); echo '</pre>';
 		foreach ($calcResults['PRICES']['BASKET'] as $basketCode => $priceData)
 		{
 			if (empty($priceData['DISCOUNT']) || !empty($priceData['PRICE']) || empty($calcResults['RESULT']['BASKET'][$basketCode]))
@@ -2591,6 +2592,7 @@ class CBitrixBasketComponent extends CBitrixComponent
 			}
 
 			$basketItem = $basket->getItemByBasketCode($basketCode);
+			
 			if (!$basketItem || $basketItem->getField('MODULE') != 'catalog')
 			{
 				continue;

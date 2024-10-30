@@ -670,7 +670,7 @@ if(count($arrFilterProducts) > 0){
 	</div>
 <?endif;?>
 <?if($isShowCatalogSections || $isShowCatalogElements || $isShowMiddleAdvBottomBanner):?>
-	<div class="maxwidth-theme">
+	<div class="maxwidth-theme h">
 		<?$APPLICATION->IncludeComponent("bitrix:main.include", ".default",
 			array(
 				"COMPONENT_TEMPLATE" => ".default",

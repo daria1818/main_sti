@@ -23,7 +23,8 @@ if ($_GET['code'] && !$USER->IsAuthorized()){
 		        "USER_PROPERTY" => Array(), 
 		        "SEF_FOLDER" => "/", 
 		        "VARIABLE_ALIASES" => Array(),
-		        "COINS" => $res["ACCRUAL"]["~VALUE"]
+		        "COINS" => $res["ACCRUAL"]["~VALUE"],
+		        "FREE_DELIVERY" => $res["FREE_DELIVERY"]["~VALUE"],
 		    )
 		);?> 
 		<?}else{

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<link
+			href="https://fonts.googleapis.com/css?family=PT+Sans+Caption:regular,700"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="./css/template_styles.css" />
+		<link rel="stylesheet" href="./css/width-2.css" />
+		<link rel="stylesheet" href="./css/font-6.css" />
+		<link rel="stylesheet" href="./css/styles.css" />
+
+		<link
+			rel="stylesheet"
+			href="./assets/plugins/nouislider/nouislider.min.css"
+		/>
+		<link rel="stylesheet" href="./css/new_style.css" />
+	</head>
+	<body>
+		<div style="max-width: 984px;padding: 30px;">
+			<div class="training-courses__detail">
+				<div class="training-courses__dates">
+					<button class="training-courses__date modal-enroll__open">30 июня 2024 г.</button>
+					<button class="training-courses__date modal-enroll__open">30 июня 2024 г.</button>
+					<button class="training-courses__date modal-enroll__open">30 июня 2024 г.</button>
+					<button class="training-courses__date modal-enroll__open">30 июня 2024 г.</button>
+					<button class="training-courses__date modal-enroll__open">30 июня 2024 г.</button>
+				</div>
+				<div class="training-courses__person">
+					<div class="training-courses__img">
+						<img src="./assets/img/person.png" alt="" />
+					</div>
+					<div class="training-courses__name">Максимова А.В</div>
+				</div>
+				<div class="training-courses__content">
+					<div class="training-courses__desc">
+						<p>
+							GBT протокол у детей. Продвинутый практический курс для врачей и
+							гигиенистов стоматологических. Интеграция в ежедневную практику.
+							Профилактика как суперэффективный пусть развития специалиста.
+						</p>
+						<a class='training-courses__more' href="#">узнать подробнее</a>
+					</div>
+					<div class="training-courses__price">10 000 руб.</div>
+					<button class="training-courses__enroll modal-enroll__open">
+						Записаться
+					</button>
+					<div class="training-courses__available">
+						<span>Количество свободных мест:</span>
+						<div class="training-courses__count"><span>6/</span>12</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="modal modal-enroll">
+			<form class="modal-enroll__content" action="" novalidate>
+				<div class="modal__title">Записаться на курс</div>
+				<div class="modal-enroll__inputs">
+					<div class="modal-enroll__surname">
+						<input type="text" placeholder="Фамилия*" required />
+					</div>
+					<div class="modal-enroll__firstname">
+						<input type="text" placeholder="Имя*" required />
+					</div>
+					<div class="modal-enroll__tel">
+						<input
+							data-telinput
+							type="text"
+							placeholder="+7 (999) 999-99-99*"
+							required
+						/>
+					</div>
+					<div class="modal-enroll__email">
+						<input type="email" placeholder="Email" required />
+					</div>
+					<div class="modal-enroll__clinic">
+						<input type="text" placeholder="Наименование клиники*" required />
+					</div>
+					<div class="modal-enroll__date-course">
+						<select name="" data-title="Выберите дату курса">
+							<option value="16.07.24">16.07.24</option>
+							<option value="16.07.24">16.07.24</option>
+							<option value="16.07.24">16.07.24</option>
+						</select>
+					</div>
+				</div>
+				<div class="modal-enroll__personal">
+					<input type="checkbox" name="" id="personal" required />
+					<label for="personal"
+						>Я согласен на обработку персональных данных, а также соглашаюсь с
+						<a href="">политикой конфиденциальности</a>
+					</label>
+				</div>
+				<button class="modal__submit">Записаться</button>
+			</form>
+			<div class="modal-enroll__success">
+				<div class="modal-enroll__success-title">Успешно!</div>
+				<div class="modal-enroll__success-desc">
+					Сейчас вы будете перенаправлены на страницу оплату
+				</div>
+			</div>
+		</div>
+		<script src="./assets/plugins/nouislider/nouislider.min.js"></script>
+		<script src="./assets/plugins/inputmask.min.js"></script>
+		<script src="./assets/plugins/just-validate.min.js"></script>
+		<script src="./js/course.js"></script>
+	</body>
+</html>
